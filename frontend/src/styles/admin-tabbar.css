@@ -1,0 +1,125 @@
+/* Admin Tab Bar Styles - Mobile First */
+
+.admin-tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: #000;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 0;
+  z-index: 1000;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-tabbar__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex: 1;
+  max-width: 80px;
+}
+
+.admin-tabbar__item:active {
+  transform: scale(0.95);
+}
+
+.admin-tabbar__icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Active state with smooth scale animation */
+.admin-tabbar__item--active .admin-tabbar__icon {
+  transform: scale(1.1);
+}
+
+/* Ripple effect on tap */
+.admin-tabbar__item::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.admin-tabbar__item:active::before {
+  width: 48px;
+  height: 48px;
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+  .admin-tabbar {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 72px;
+    height: 100vh;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 24px 0;
+    border-top: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .admin-tabbar__item {
+    max-width: none;
+    width: 100%;
+    padding: 16px 0;
+    margin-bottom: 8px;
+  }
+
+  .admin-tabbar__item:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .admin-tabbar__item--active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .admin-tabbar__item--active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 32px;
+    background: white;
+    border-radius: 0 2px 2px 0;
+  }
+}
+
+/* Animation for icon change */
+@keyframes iconPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.admin-tabbar__item--active .admin-tabbar__icon svg {
+  animation: iconPulse 0.4s ease-out;
+}

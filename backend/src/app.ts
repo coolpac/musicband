@@ -1,0 +1,186 @@
+import express, { Express } from 'express';
+import { createServer, Server as HTTPServer } from 'http';
+import cors from 'cors';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
+import { errorHandler } from './presentation/middleware/errorHandler';
+import { logger } from './shared/utils/logger';
+import { connectDatabase } from './config/database';
+import { connectRedis } from './config/redis';
+import authRoutes from './presentation/routes/auth.routes';
+import songsRoutes from './presentation/routes/songs.routes';
+import bookingsRoutes from './presentation/routes/bookings.routes';
+import votesRoutes from './presentation/routes/votes.routes';
+import adminSongsRoutes from './presentation/routes/admin/songs.routes';
+import adminVotesRoutes from './presentation/routes/admin/votes.routes';
+import adminFormatsRoutes from './presentation/routes/admin/formats.routes';
+import adminPartnersRoutes from './presentation/routes/admin/partners.routes';
+import adminPostersRoutes from './presentation/routes/admin/posters.routes';
+import adminReviewsRoutes from './presentation/routes/admin/reviews.routes';
+import adminAgentsRoutes from './presentation/routes/admin/agents.routes';
+import adminBookingsRoutes from './presentation/routes/admin/bookings.routes';
+import formatsRoutes from './presentation/routes/formats.routes';
+import partnersRoutes from './presentation/routes/partners.routes';
+import postersRoutes from './presentation/routes/posters.routes';
+import reviewsRoutes from './presentation/routes/reviews.routes';
+import agentRoutes from './presentation/routes/agent.routes';
+import uploadRoutes from './presentation/routes/upload.routes';
+import publicVoteRoutes from './presentation/routes/public/vote.routes';
+import { SocketServer } from './presentation/socket/socketServer';
+import { VoteService } from './domain/services/VoteService';
+import { SongService } from './domain/services/SongService';
+import { AuthService } from './domain/services/AuthService';
+import { BookingService } from './domain/services/BookingService';
+import { ReferralService } from './domain/services/ReferralService';
+import {
+  PrismaVoteRepository,
+  PrismaSongRepository,
+  PrismaUserRepository,
+  PrismaBookingRepository,
+  PrismaBlockedDateRepository,
+  PrismaFormatRepository,
+  PrismaReferralLinkRepository,
+  PrismaReferralEventRepository,
+  PrismaAgentRepository,
+} from './infrastructure/database/repositories';
+import { BotManager, setBotManager } from './infrastructure/telegram/botManager';
+
+// Загружаем переменные окружения
+dotenv.config();
+
+const app: Express = express();
+const httpServer: HTTPServer = createServer(app);
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(helmet());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true,
+  })
+);
+app.use(cookieParser());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Статические файлы для загруженных изображений
+const uploadDir = process.env.UPLOAD_DIR || 'uploads';
+app.use('/uploads', express.static(uploadDir));
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// API routes
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'Музыканты API',
+    version: '1.0.0',
+  });
+});
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/songs', songsRoutes);
+app.use('/api/bookings', bookingsRoutes);
+app.use('/api/votes', votesRoutes);
+app.use('/api/formats', formatsRoutes);
+app.use('/api/partners', partnersRoutes);
+app.use('/api/posters', postersRoutes);
+app.use('/api/reviews', reviewsRoutes);
+app.use('/api/agent', agentRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/public/vote', publicVoteRoutes);
+
+// Admin routes
+app.use('/api/admin/songs', adminSongsRoutes);
+app.use('/api/admin/votes', adminVotesRoutes);
+app.use('/api/admin/bookings', adminBookingsRoutes);
+app.use('/api/admin/formats', adminFormatsRoutes);
+app.use('/api/admin/partners', adminPartnersRoutes);
+app.use('/api/admin/posters', adminPostersRoutes);
+app.use('/api/admin/reviews', adminReviewsRoutes);
+app.use('/api/admin/agents', adminAgentsRoutes);
+
+// Error handler (должен быть последним)
+app.use(errorHandler);
+
+// Инициализация сервера
+async function startServer() {
+  try {
+    // Подключаемся к БД
+    await connectDatabase();
+    logger.info('Database connected');
+
+    // Подключаемся к Redis
+    await connectRedis();
+    logger.info('Redis connected');
+
+    // Создаем репозитории
+    const userRepository = new PrismaUserRepository();
+    const songRepository = new PrismaSongRepository();
+    const voteRepository = new PrismaVoteRepository();
+
+    // Создаем сервисы
+    const authService = new AuthService(
+      userRepository,
+      process.env.JWT_SECRET || '',
+      process.env.JWT_EXPIRES_IN || '7d',
+      process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
+      process.env.TELEGRAM_USER_BOT_TOKEN || undefined
+    );
+
+    const songService = new SongService(songRepository);
+    const voteService = new VoteService(voteRepository, songRepository, userRepository);
+
+    // Создаем сервисы для бронирований и рефералов
+    const bookingRepository = new PrismaBookingRepository();
+    const blockedDateRepository = new PrismaBlockedDateRepository();
+    const formatRepository = new PrismaFormatRepository();
+    const bookingService = new BookingService(
+      bookingRepository,
+      blockedDateRepository,
+      userRepository,
+      formatRepository
+    );
+
+    const agentRepository = new PrismaAgentRepository();
+    const referralLinkRepository = new PrismaReferralLinkRepository();
+    const referralEventRepository = new PrismaReferralEventRepository();
+    const referralService = new ReferralService(
+      referralLinkRepository,
+      referralEventRepository,
+      agentRepository,
+      userRepository
+    );
+
+    // Инициализируем Socket.io сервер
+    const socketServer = new SocketServer(httpServer, voteService, songService, authService);
+    (global as any).socketServer = socketServer;
+    logger.info('Socket.io server initialized');
+
+    // Инициализируем Telegram Bots
+    const botManager = new BotManager(referralService, bookingService, userRepository, bookingRepository);
+    await botManager.initialize();
+    setBotManager(botManager);
+    logger.info('Telegram bots initialized');
+
+    // Запускаем сервер
+    httpServer.listen(PORT, () => {
+      logger.info(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server', { error });
+    process.exit(1);
+  }
+}
+
+startServer();
+
+export default app;

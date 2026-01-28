@@ -1,0 +1,183 @@
+@import url("https://fonts.googleapis.com/css2?family=Geologica:wght@400;600;800&display=swap");
+
+@font-face {
+  font-family: "Proletarsk";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/Proletarsk.ttf") format("truetype");
+  unicode-range: U+0000-044A, U+044C-FFFF;
+}
+
+@font-face {
+  font-family: "Evolventa";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/Evolventa-Regular.ttf") format("truetype");
+  unicode-range: U+0400-04FF, U+0500-052F, U+2DE0-2DFF, U+A640-A69F;
+}
+
+:root {
+  color-scheme: dark;
+  --bg: #111111;
+  --white: #ffffff;
+  --accent: #ff3135;
+  --accent-dark: #c8001f;
+  --glass: rgba(255, 255, 255, 0.1);
+  --glass-strong: rgba(107, 107, 107, 0.3);
+  --border-light: rgba(255, 255, 255, 0.6);
+  --radius-lg: 25px;
+  --radius-md: 15px;
+  --shadow-glow: 0 0 32px rgba(255, 255, 255, 0.6);
+  --text-size-lg: clamp(28px, 6vw, 40px);
+  --text-size-md: clamp(18px, 4vw, 24px);
+  --text-size-sm: 16px;
+  --container-width: min(440px, 100vw);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--white);
+  font-family: "Geologica", "Inter", "Arial", sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root,
+.app-shell {
+  overflow-x: hidden;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.screen {
+  width: var(--container-width);
+  margin: 0 auto;
+  padding: 20px 16px 80px;
+  padding-top: calc(clamp(64px, 11svh, 107px) + 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section-title {
+  margin: 0;
+  font-family: "Proletarsk", "Evolventa", "Geologica", "Arial", sans-serif !important;
+  font-size: var(--text-size-lg);
+  font-weight: 400;
+  text-align: center;
+  font-feature-settings: normal;
+}
+
+.btn {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  font-size: var(--text-size-md);
+  font-family: "Geologica", sans-serif;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--white);
+  color: #000000;
+}
+
+.card {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.card-media {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.card-body {
+  padding: 20px;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.card-title {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.card-text {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.2));
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dot--active {
+  background: var(--white);
+}
+
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.tile-grid--multi {
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.tile {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  height: 88px;
+  background: rgba(217, 217, 217, 0.01);
+  backdrop-filter: blur(5px);
+}
+
+@media (min-width: 768px) {
+  .screen {
+    padding: 30px 20px 100px;
+  }
+}

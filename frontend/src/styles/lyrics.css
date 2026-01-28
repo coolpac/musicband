@@ -1,0 +1,399 @@
+/* Оверлей текста песни — всплывает снизу до хедера, не налезает на него */
+.lyrics-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.lyrics-overlay[role="dialog"] {
+  pointer-events: auto;
+}
+
+.lyrics-overlay__backdrop {
+  position: absolute;
+  top: clamp(64px, 11svh, 107px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000000;
+  opacity: 0;
+  animation: lyrics-overlay-backdrop-in 0.3s ease forwards;
+  pointer-events: auto;
+}
+
+.lyrics-overlay__panel {
+  position: absolute;
+  top: clamp(64px, 11svh, 107px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  transform: translateY(100%);
+  animation: lyrics-overlay-slide-up 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+/* Тот же фон, что на экранах голосования — непрозрачный чёрный + картинка */
+.lyrics-overlay__bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #000000;
+}
+
+.lyrics-overlay__bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.lyrics-overlay__handle,
+.lyrics-overlay__title,
+.lyrics-overlay__meta,
+.lyrics-overlay__scroll {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes lyrics-overlay-backdrop-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lyrics-overlay-slide-up {
+  to {
+    transform: translateY(0);
+  }
+}
+
+.lyrics-overlay__handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  margin-top: max(12px, env(safe-area-inset-top));
+  flex-shrink: 0;
+}
+
+.lyrics-overlay__close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--white);
+  cursor: pointer;
+  padding: 0;
+  border-radius: 50%;
+  transition: background 0.2s ease, transform 0.15s ease;
+  z-index: 2;
+}
+
+.lyrics-overlay__close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.lyrics-overlay__close:active {
+  transform: scale(0.95);
+}
+
+.lyrics-overlay__title {
+  margin: 8px 0 8px;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--white);
+  font-family: "Proletarsk", "Evolventa", "Geologica", sans-serif;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 56px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.lyrics-overlay__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 20px;
+  padding: 0 16px;
+}
+
+.lyrics-overlay__song-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+}
+
+.lyrics-overlay__artist {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: "Geologica", sans-serif;
+}
+
+.lyrics-overlay__scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  padding: 0 20px 32px;
+  scroll-behavior: smooth;
+}
+
+.lyrics-overlay__content {
+  max-width: 420px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 8px 0 48px;
+}
+
+.lyrics-overlay__content .lyrics-line {
+  font-size: 22px;
+  line-height: 1.75;
+  margin-bottom: 12px;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+  font-weight: 400;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.lyrics-overlay__content .lyrics-line--break {
+  height: 24px;
+  margin-bottom: 0;
+  opacity: 0;
+}
+
+@media (min-width: 900px) {
+  .lyrics-overlay__content .lyrics-line {
+    font-size: 26px;
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-overlay__backdrop,
+  .lyrics-overlay__panel {
+    animation: none;
+  }
+  .lyrics-overlay__panel {
+    transform: translateY(0);
+  }
+  .lyrics-overlay__backdrop {
+    opacity: 1;
+  }
+}
+
+/* Экран текста песни (отдельная страница) — базово как в Figma, вариант spotify — современный центрированный */
+
+.screen--lyrics {
+  width: 100vw !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 100vh;
+  background: #000000;
+  position: relative;
+  overflow-x: hidden;
+  gap: 0 !important;
+  display: block !important;
+}
+
+.lyrics-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding-top: calc(clamp(64px, 11svh, 107px) + 24px);
+  padding-bottom: 48px;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.lyrics-title {
+  margin: 0 auto 24px;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--white);
+  font-family: "Proletarsk", "Evolventa", "Geologica", sans-serif;
+  text-align: center;
+  line-height: 1.3;
+  padding: 0 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lyrics-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 24px;
+  padding: 0 16px;
+}
+
+.lyrics-song-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+}
+
+.lyrics-artist-name {
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.75);
+  font-family: "Geologica", sans-serif;
+}
+
+.lyrics-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px 24px;
+}
+
+/* Вариант Figma: текст слева, компактно */
+.lyrics-scroll--figma {
+  padding: 0 20px 32px;
+}
+
+.lyrics-scroll--figma .lyrics-content {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.lyrics-scroll--figma .lyrics-line {
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 4px;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+}
+
+.lyrics-scroll--figma .lyrics-line--break {
+  height: 12px;
+  margin-bottom: 0;
+}
+
+/* Вариант Spotify: центрированный, крупнее, больше воздуха */
+.lyrics-scroll--spotify .lyrics-content {
+  max-width: 420px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 16px 0 48px;
+}
+
+.lyrics-scroll--spotify .lyrics-line {
+  font-size: 22px;
+  line-height: 1.75;
+  margin-bottom: 12px;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+  font-weight: 400;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.lyrics-scroll--spotify .lyrics-line--break {
+  height: 24px;
+  margin-bottom: 0;
+  opacity: 0;
+}
+
+/* Общие стили строки (если нужны доп. классы под «текущую» строку при синхронизации) */
+.lyrics-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Плавный скролл */
+.lyrics-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Desktop */
+@media (min-width: 900px) {
+  .lyrics-container {
+    padding-top: calc(clamp(64px, 11svh, 107px) + 32px);
+    padding-bottom: 64px;
+  }
+
+  .lyrics-title {
+    font-size: 24px;
+    margin-bottom: 28px;
+  }
+
+  .lyrics-meta {
+    margin-bottom: 32px;
+  }
+
+  .lyrics-song-name {
+    font-size: 20px;
+  }
+
+  .lyrics-artist-name {
+    font-size: 17px;
+  }
+
+  .lyrics-scroll {
+    padding: 0 40px 32px;
+  }
+
+  .lyrics-scroll--figma .lyrics-line {
+    font-size: 18px;
+    line-height: 1.65;
+  }
+
+  .lyrics-scroll--spotify .lyrics-content {
+    padding: 24px 0 64px;
+  }
+
+  .lyrics-scroll--spotify .lyrics-line {
+    font-size: 26px;
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-scroll {
+    scroll-behavior: auto;
+  }
+  .lyrics-scroll--spotify .lyrics-line {
+    transition: none;
+  }
+}

@@ -1,0 +1,274 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  user
+  admin
+  agent
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  cancelled
+}
+
+enum AgentStatus {
+  active
+  inactive
+  suspended
+}
+
+enum ReferralEventType {
+  click
+  registration
+  booking
+  vote
+}
+
+enum ReferralEventStatus {
+  pending
+  confirmed
+  rejected
+}
+
+model User {
+  id          String   @id @default(uuid())
+  telegramId BigInt   @unique @map("telegram_id")
+  username   String?
+  firstName  String?  @map("first_name")
+  lastName   String?  @map("last_name")
+  role       UserRole @default(user)
+  referrerId String?  @map("referrer_id")
+  referrer   User?    @relation("UserReferrals", fields: [referrerId], references: [id], onDelete: SetNull)
+  referrals  User[]   @relation("UserReferrals")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  agent           Agent?
+  bookings        Booking[]
+  votes           Vote[]
+  reviews         Review[]
+  activityLogs    UserActivityLog[]
+  referralEvents  ReferralEvent[]
+
+  @@index([referrerId])
+  @@map("users")
+}
+
+model Agent {
+  id                   String      @id @default(uuid())
+  userId               String      @unique @map("user_id")
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentCode            String      @unique @map("agent_code")
+  status               AgentStatus @default(active)
+  totalReferrals       Int         @default(0) @map("total_referrals")
+  totalActiveReferrals Int         @default(0) @map("total_active_referrals")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+
+  referralLinks ReferralLink[]
+  events        ReferralEvent[]
+
+  @@index([agentCode])
+  @@map("agents")
+}
+
+model ReferralLink {
+  id              String    @id @default(uuid())
+  agentId         String    @map("agent_id")
+  agent           Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  linkCode        String    @unique @map("link_code")
+  name            String?
+  isActive        Boolean   @default(true) @map("is_active")
+  expiresAt       DateTime? @map("expires_at")
+  clickCount      Int       @default(0) @map("click_count")
+  conversionCount Int       @default(0) @map("conversion_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  events ReferralEvent[]
+
+  @@index([agentId])
+  @@index([linkCode])
+  @@map("referral_links")
+}
+
+model ReferralEvent {
+  id            String              @id @default(uuid())
+  agentId       String              @map("agent_id")
+  agent         Agent               @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  referralLinkId String?            @map("referral_link_id")
+  referralLink    ReferralLink?     @relation(fields: [referralLinkId], references: [id], onDelete: SetNull)
+  referredUserId  String?           @map("referred_user_id")
+  referredUser    User?             @relation(fields: [referredUserId], references: [id], onDelete: Cascade)
+  eventType      ReferralEventType  @map("event_type")
+  ipAddress      String?           @map("ip_address")
+  userAgent      String?           @map("user_agent")
+  status         ReferralEventStatus @default(pending)
+  metadata       Json?
+  createdAt      DateTime          @default(now()) @map("created_at")
+
+  @@index([agentId, createdAt])
+  @@index([referredUserId])
+  @@index([eventType])
+  @@index([status])
+  @@map("referral_events")
+}
+
+model Song {
+  id         String   @id @default(uuid())
+  title      String
+  artist     String
+  coverUrl   String?  @map("cover_url")
+  lyrics     String?
+  isActive   Boolean  @default(false) @map("is_active")
+  orderIndex Int      @default(0) @map("order_index")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  votes Vote[]
+
+  @@index([isActive])
+  @@map("songs")
+}
+
+model VotingSession {
+  id         String    @id @default(uuid())
+  startedAt  DateTime  @default(now()) @map("started_at")
+  endedAt    DateTime? @map("ended_at")
+  isActive   Boolean   @default(true) @map("is_active")
+  totalVoters Int      @default(0) @map("total_voters")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  votes Vote[]
+
+  @@index([isActive])
+  @@map("voting_sessions")
+}
+
+model Vote {
+  id        String         @id @default(uuid())
+  userId    String         @map("user_id")
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  songId    String         @map("song_id")
+  song      Song           @relation(fields: [songId], references: [id], onDelete: Cascade)
+  sessionId String         @map("session_id")
+  session   VotingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@unique([userId, songId, sessionId])
+  @@index([sessionId, songId])
+  @@index([sessionId, userId])
+  @@index([songId])
+  @@index([userId])
+  @@map("votes")
+}
+
+model Format {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  shortDescription String?  @map("short_description")
+  description      String?
+  imageUrl         String?  @map("image_url")
+  suitableFor      Json?    @map("suitable_for")
+  performers       Json?
+  status           String   @default("available")
+  order            Int      @default(0)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  bookings Booking[]
+
+  @@map("formats")
+}
+
+model Partner {
+  id        String   @id @default(uuid())
+  name      String
+  logoUrl   String?  @map("logo_url")
+  link      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("partners")
+}
+
+model Poster {
+  id        String   @id @default(uuid())
+  title     String
+  description String?
+  imageUrl  String?  @map("image_url")
+  link      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("posters")
+}
+
+model BlockedDate {
+  id         String   @id @default(uuid())
+  blockedDate DateTime @unique @map("blocked_date") @db.Date
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([blockedDate])
+  @@map("blocked_dates")
+}
+
+model Booking {
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formatId    String?       @map("format_id")
+  format      Format?       @relation(fields: [formatId], references: [id], onDelete: SetNull)
+  bookingDate DateTime      @map("booking_date") @db.Date
+  fullName    String        @map("full_name")
+  contactType String?       @map("contact_type")
+  contactValue String       @map("contact_value")
+  city        String?
+  source      String?
+  income      Decimal?      @db.Decimal(10, 2)
+  status      BookingStatus @default(pending)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@index([bookingDate])
+  @@index([userId])
+  @@index([bookingDate, status])
+  @@map("bookings")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int
+  text      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("reviews")
+}
+
+model UserActivityLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actionType String   @map("action_type")
+  actionData Json?    @map("action_data")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([actionType])
+  @@map("user_activity_logs")
+}

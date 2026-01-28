@@ -1,0 +1,48 @@
+# Root .gitignore for monorepo (frontend + backend)
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.cursor/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Dependencies
+**/node_modules/
+
+# Env files (never commit real secrets)
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# Build outputs
+**/dist/
+**/build/
+**/.vite/
+**/dist-ssr/
+**/*.tsbuildinfo
+
+# Tests / coverage
+**/coverage/
+**/.nyc_output/
+
+# Prisma
+**/prisma/migrations/
+
+# Local uploads/exports (backend)
+backend/uploads/
+!backend/uploads/.gitkeep
+backend/exports/
+!backend/exports/.gitkeep
+

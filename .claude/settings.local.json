@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.figma.com)",
+      "Bash(tree:*)",
+      "Bash(xargs basename:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npm run prisma:migrate:*)",
+      "Bash(ls:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

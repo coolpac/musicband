@@ -1,0 +1,705 @@
+/* Переопределяем базовые стили .screen для голосования */
+.screen--voting {
+  width: 100vw !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 100vh;
+  background: #000000;
+  position: relative;
+  overflow-x: hidden;
+  gap: 0 !important;
+  display: block !important;
+}
+
+.voting-back-btn {
+  position: fixed;
+  top: clamp(64px, 11svh, 107px);
+  left: 0;
+  z-index: 100;
+  background: transparent;
+  border: none;
+  color: var(--white);
+  font-size: 20px;
+  font-family: "Geologica", sans-serif;
+  cursor: pointer;
+  padding: 16px;
+}
+
+.voting-back-btn:hover {
+  opacity: 0.8;
+}
+
+.voting-hero {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000000;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.voting-bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  z-index: 1;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.voting-container {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  padding-top: calc(clamp(64px, 11svh, 107px) + 40px);
+  padding-bottom: 100px;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.voting-title {
+  margin: 0 auto 32px;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--white);
+  font-family: "Proletarsk", "Evolventa", "Geologica", sans-serif;
+  text-align: center;
+  line-height: 1.4;
+  padding: 0 16px;
+  max-width: 300px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.voting-songs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 16px;
+  flex: 1;
+}
+
+.voting-song-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.2));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: left;
+  min-height: 70px;
+}
+
+.voting-song-card:hover {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.25));
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.voting-song-card--selected {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0.3));
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.voting-song-cover {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #E5E5E5;
+}
+
+.voting-song-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.voting-song-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #E5E5E5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+}
+
+.voting-song-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.voting-song-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voting-song-artist {
+  font-size: 16px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: "Geologica", sans-serif;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voting-song-heart {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voting-confirm-btn {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 400px;
+  height: 60px;
+  margin: 0 0 20px;
+  border-radius: var(--radius-lg);
+  z-index: 50;
+  background: var(--white);
+  color: #000000;
+  border: none;
+}
+
+.voting-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #5A5A5A;
+  color: var(--white);
+}
+
+/* Desktop styles */
+@media (min-width: 900px) {
+  .voting-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding-top: calc(clamp(64px, 11svh, 107px) + 60px);
+    padding-bottom: 120px;
+  }
+
+  .voting-title {
+    font-size: 32px;
+    padding: 0 40px 40px;
+  }
+
+  .voting-songs-list {
+    padding: 0 40px;
+    gap: 20px;
+  }
+
+  .voting-song-card {
+    padding: 20px;
+  }
+
+  .voting-song-cover {
+    width: 80px;
+    height: 80px;
+  }
+
+  .voting-song-title {
+    font-size: 20px;
+  }
+
+  .voting-song-artist {
+    font-size: 18px;
+  }
+
+  .voting-confirm-btn {
+    max-width: 500px;
+    margin-bottom: 30px;
+  }
+
+  .voting-back-btn {
+    left: 40px;
+  }
+}
+
+/* Voting Results Screen — те же размеры/отступы, что и у списка голосования */
+.screen--voting-results {
+  width: 100vw !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 100vh;
+  background: #000000;
+  position: relative;
+  overflow-x: hidden;
+  gap: 0 !important;
+  display: block !important;
+}
+
+.screen--voting-results .voting-container {
+  animation: voting-results-fade-in 0.4s ease forwards;
+}
+
+@keyframes voting-results-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.voting-results-title {
+  margin: 0 auto 32px;
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--white);
+  font-family: "Proletarsk", "Evolventa", "Geologica", sans-serif;
+  text-align: center;
+  line-height: 1.3;
+  padding: 0 16px;
+  max-width: 400px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* как .voting-songs-list: тот же gap и padding */
+.voting-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 16px;
+  flex: 1;
+}
+
+/* как .voting-song-card: те же padding, min-height, gap, border-radius */
+.voting-result-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px;
+  min-height: 70px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.2));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #363636;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  text-align: left;
+  overflow: hidden;
+  opacity: 0;
+  animation: voting-result-card-in 0.35s ease forwards;
+}
+
+.voting-result-card--clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.voting-result-card--clickable:hover {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.25));
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.voting-result-card--clickable:active {
+  transform: translateY(0);
+}
+
+@keyframes voting-result-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.voting-result-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: 1;
+  transition: width 0.5s ease;
+}
+
+.voting-result-content {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  z-index: 2;
+}
+
+.voting-result-percentage {
+  flex-shrink: 0;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+  line-height: 1.4;
+  margin-left: auto;
+}
+
+/* Desktop: результаты — те же размеры, что и у голосования */
+@media (min-width: 900px) {
+  .voting-results-title {
+    font-size: 32px;
+    padding: 0 40px;
+    max-width: 500px;
+  }
+
+  .voting-results-list {
+    padding: 0 40px;
+    gap: 20px;
+  }
+
+  .voting-result-card {
+    padding: 20px;
+  }
+
+  .voting-result-percentage {
+    font-size: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen--voting-results .voting-container,
+  .voting-result-card {
+    animation: none;
+  }
+  .voting-result-card {
+    opacity: 1;
+  }
+}
+
+/* Winning Song Screen */
+.screen--winning-song {
+  width: 100vw !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 100vh;
+  background: #000000;
+  position: relative;
+  overflow-x: hidden;
+  gap: 0 !important;
+  display: block !important;
+}
+
+.screen--winning-song .voting-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 40px;
+}
+
+.winning-song-title {
+  margin: 0 auto 28px;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--white);
+  font-family: "Proletarsk", "Evolventa", "Geologica", sans-serif;
+  text-align: center;
+  line-height: 1.3;
+  padding: 0 16px;
+  max-width: 360px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.winning-song-cover-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 28px;
+  padding: 0 20px;
+}
+
+.winning-song-cover {
+  width: 100%;
+  max-width: 335px;
+  aspect-ratio: 1;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #E5E5E5;
+  position: relative;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.winning-song-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.winning-song-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #E5E5E5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.winning-song-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 335px;
+  padding: 0 20px;
+  margin-bottom: 36px;
+}
+
+.winning-song-artist-avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #FFFFFF;
+}
+
+.winning-song-artist-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #FFFFFF;
+  border-radius: 50%;
+}
+
+.winning-song-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.winning-song-name {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+  line-height: 1.25;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.winning-song-artist-name {
+  font-size: 16px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: "Geologica", sans-serif;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.winning-song-player {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  margin-bottom: 36px;
+  padding: 0 20px;
+}
+
+.winning-song-control {
+  background: transparent;
+  border: none;
+  color: var(--white);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.winning-song-control:hover {
+  opacity: 0.85;
+}
+
+.winning-song-control:active {
+  transform: scale(0.92);
+}
+
+.winning-song-control--prev,
+.winning-song-control--next {
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+}
+
+.winning-song-control--prev svg,
+.winning-song-control--next svg {
+  width: 32px;
+  height: 32px;
+}
+
+.winning-song-control--play {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  color: #000000;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.winning-song-control--play:hover {
+  opacity: 0.92;
+  transform: scale(1.04);
+}
+
+.winning-song-control--play:active {
+  transform: scale(0.96);
+}
+
+.winning-song-control--play svg {
+  width: 28px;
+  height: 28px;
+  margin-left: 2px;
+}
+
+.winning-song-lyrics-btn {
+  width: calc(100% - 32px);
+  max-width: 400px;
+  height: 60px;
+  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  z-index: 50;
+  background: #FFFFFF;
+  color: #000000;
+  border: none;
+  font-size: 18px;
+  font-weight: 600;
+  font-family: "Geologica", sans-serif;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.winning-song-lyrics-btn:hover {
+  opacity: 0.92;
+}
+
+.winning-song-lyrics-btn:active {
+  transform: scale(0.98);
+}
+
+/* Desktop styles for winning song */
+@media (min-width: 900px) {
+  .screen--winning-song .voting-container {
+    padding-bottom: 56px;
+  }
+
+  .winning-song-title {
+    font-size: 22px;
+    margin-bottom: 32px;
+    letter-spacing: 0.04em;
+  }
+
+  .winning-song-cover-wrapper {
+    padding: 0 40px;
+    margin-bottom: 32px;
+  }
+
+  .winning-song-cover {
+    max-width: 380px;
+    border-radius: 28px;
+  }
+
+  .winning-song-info {
+    max-width: 380px;
+    padding: 0 40px;
+    margin-bottom: 40px;
+  }
+
+  .winning-song-artist-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .winning-song-name {
+    font-size: 26px;
+  }
+
+  .winning-song-artist-name {
+    font-size: 18px;
+  }
+
+  .winning-song-player {
+    gap: 36px;
+    margin-bottom: 44px;
+  }
+
+  .winning-song-control--play {
+    width: 72px;
+    height: 72px;
+  }
+
+  .winning-song-control--play svg {
+    width: 32px;
+    height: 32px;
+    margin-left: 3px;
+  }
+
+  .winning-song-control--prev,
+  .winning-song-control--next {
+    width: 48px;
+    height: 48px;
+  }
+
+  .winning-song-control--prev svg,
+  .winning-song-control--next svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .winning-song-lyrics-btn {
+    max-width: 500px;
+    height: 60px;
+    font-size: 20px;
+    border-radius: var(--radius-lg);
+  }
+}

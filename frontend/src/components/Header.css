@@ -1,0 +1,28 @@
+.app-header {
+  background: var(--bg);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: clamp(64px, 11svh, 107px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.app-topbar {
+  width: var(--container-width);
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12px;
+}
+
+.app-topbar-logo {
+  height: 24px;
+  width: auto;
+  max-width: 110px;
+  object-fit: contain;
+}

@@ -1,0 +1,82 @@
+/* Content Screen Styles */
+
+.content-screen {
+  display: flex;
+  flex-direction: column;
+}
+
+.content-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  background: var(--admin-bg);
+  border-bottom: 1px solid var(--admin-border);
+  position: sticky;
+  top: clamp(64px, 11svh, 107px);
+  z-index: 90;
+}
+
+.content-tab {
+  min-width: 120px;
+  padding: 12px 20px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.2));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-md);
+  color: var(--admin-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.content-tab:hover {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.25));
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.content-tab:active {
+  transform: scale(0.98);
+}
+
+.content-tab--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  box-shadow: 0 4px 12px rgba(255, 49, 53, 0.3);
+}
+
+.content-tab--active:hover {
+  background: var(--accent-dark);
+  box-shadow: 0 6px 16px rgba(255, 49, 53, 0.4);
+}
+
+.content-view {
+  flex: 1;
+}
+
+/* Remove duplicate header from child screens */
+.content-view .admin-screen {
+  padding-top: 0;
+}
+
+.content-view .app-header,
+.content-view .admin-header {
+  display: none;
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+  .content-tabs {
+    padding: 20px 32px;
+    gap: 12px;
+  }
+
+  .content-tab {
+    min-width: 140px;
+  }
+}

@@ -1,0 +1,332 @@
+.review-back-btn {
+  position: fixed;
+  top: clamp(64px, 11svh, 107px);
+  left: 0;
+  z-index: 100;
+  background: transparent;
+  border: none;
+  color: var(--white);
+  font-size: 20px;
+  font-family: "Geologica", sans-serif;
+  cursor: pointer;
+  padding: 16px;
+}
+
+.review-back-btn:hover {
+  opacity: 0.8;
+}
+
+@media (min-width: 900px) {
+  .review-back-btn {
+    left: 40px;
+  }
+}
+
+/* Review Form Screen */
+.screen--review-form {
+  width: 100vw !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 100vh;
+  background: #000000;
+  position: relative;
+  overflow-x: hidden;
+  gap: 0 !important;
+  display: block !important;
+}
+
+.review-form-hero {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.review-form-bg-image {
+  position: absolute;
+  top: 10%;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  z-index: 1;
+}
+
+.review-form-container {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  padding-top: calc(clamp(64px, 11svh, 107px) + 40px);
+  padding-bottom: 100px;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.review-form-card {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.2));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: calc(100% - 32px);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.review-form-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.review-form-textarea {
+  width: 100%;
+  min-height: 200px;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  color: var(--white);
+  font-size: 16px;
+  font-family: "Geologica", sans-serif;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+
+.review-form-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.review-form-textarea:focus {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.review-form-rating {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.review-form-star {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1;
+  transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.review-form-star:hover {
+  transform: scale(1.1);
+}
+
+.review-form-star--filled {
+  color: var(--white);
+}
+
+.review-form-submit {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 400px;
+  height: 60px;
+  margin: 0 0 20px;
+  border-radius: var(--radius-lg);
+  z-index: 50;
+}
+
+.review-form-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Desktop styles for review form */
+@media (min-width: 900px) {
+  .review-form-container {
+    padding-top: calc(clamp(64px, 11svh, 107px) + 60px);
+    padding-bottom: 120px;
+  }
+
+  .review-form-card {
+    max-width: 500px;
+    padding: 32px 28px;
+  }
+
+  .review-form-title {
+    font-size: 28px;
+  }
+
+  .review-form-textarea {
+    min-height: 250px;
+    font-size: 18px;
+    padding: 20px;
+  }
+
+  .review-form-star {
+    font-size: 32px;
+  }
+
+  .review-form-submit {
+    max-width: 500px;
+    margin-bottom: 30px;
+  }
+}
+
+/* Review Success Screen */
+.screen--review-success {
+  width: 100vw !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: 100vh;
+  background: #000000;
+  position: relative;
+  overflow-x: hidden;
+  gap: 0 !important;
+  display: block !important;
+}
+
+.review-success-container {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  padding-top: calc(clamp(64px, 11svh, 107px) + 40px);
+  padding-bottom: 100px;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.review-success-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+  text-align: center;
+  line-height: 1.2;
+  padding: 0 16px;
+}
+
+.review-success-image-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+}
+
+.review-success-image {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  display: block;
+}
+
+.review-success-image-gradient {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 120px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.review-success-image-gradient--top {
+  top: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.8) 30%, rgba(0, 0, 0, 0) 100%);
+}
+
+.review-success-image-gradient--bottom {
+  bottom: 0;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.8) 30%, rgba(0, 0, 0, 0) 100%);
+}
+
+.review-success-note {
+  margin: 0;
+  margin-top: -20px;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: "Geologica", sans-serif;
+  text-align: center;
+  line-height: 1.4;
+  padding: 0 16px;
+}
+
+.review-success-button {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 400px;
+  height: 60px;
+  margin: 0 0 20px;
+  border-radius: var(--radius-lg);
+  z-index: 50;
+}
+
+/* Desktop styles for review success */
+@media (min-width: 900px) {
+  .review-success-container {
+    padding-top: calc(clamp(64px, 11svh, 107px) + 60px);
+    padding-bottom: 120px;
+    gap: 32px;
+  }
+
+  .review-success-title {
+    font-size: 48px;
+    padding: 0 40px;
+  }
+
+  .review-success-image-wrapper {
+    padding: 0 40px;
+  }
+
+  .review-success-image-gradient {
+    height: 150px;
+  }
+
+  .review-success-note {
+    font-size: 16px;
+    padding: 0 40px;
+  }
+
+  .review-success-button {
+    max-width: 500px;
+    margin-bottom: 30px;
+  }
+}

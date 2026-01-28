@@ -1,0 +1,74 @@
+import { Router } from 'express';
+import { AdminBookingController } from '../../controllers/AdminBookingController';
+import { BookingService } from '../../../domain/services/BookingService';
+import {
+  PrismaBookingRepository,
+  PrismaBlockedDateRepository,
+  PrismaUserRepository,
+  PrismaFormatRepository,
+} from '../../../infrastructure/database/repositories';
+import { validate } from '../../middleware/validator';
+import {
+  UpdateBookingStatusSchema,
+  UpdateBookingIncomeSchema,
+  BlockDateSchema,
+} from '../../../application/dto/booking.dto';
+import { authenticate, requireAdmin } from '../../middleware/auth';
+import { AuthService } from '../../../domain/services/AuthService';
+import { adminRateLimiter } from '../middleware/rateLimit';
+
+const router = Router();
+
+// Создаем зависимости
+const bookingRepository = new PrismaBookingRepository();
+const blockedDateRepository = new PrismaBlockedDateRepository();
+const userRepository = new PrismaUserRepository();
+const formatRepository = new PrismaFormatRepository();
+const bookingService = new BookingService(
+  bookingRepository,
+  blockedDateRepository,
+  userRepository,
+  formatRepository
+);
+const adminBookingController = new AdminBookingController(bookingService);
+
+// Создаем authService для middleware
+const authService = new AuthService(
+  userRepository,
+  process.env.JWT_SECRET || '',
+  process.env.JWT_EXPIRES_IN || '7d',
+  process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
+  process.env.TELEGRAM_USER_BOT_TOKEN || undefined
+);
+
+// Все маршруты требуют авторизацию админа
+router.use(authenticate(authService));
+router.use(requireAdmin);
+
+// Применяем rate limiting для админских endpoints
+router.use(adminRateLimiter);
+
+// Бронирования
+router.get('/', adminBookingController.getAllBookings.bind(adminBookingController));
+router.get('/stats', adminBookingController.getStats.bind(adminBookingController));
+router.put(
+  '/:id/status',
+  validate(UpdateBookingStatusSchema),
+  adminBookingController.updateBookingStatus.bind(adminBookingController)
+);
+router.put(
+  '/:id/income',
+  validate(UpdateBookingIncomeSchema),
+  adminBookingController.updateBookingIncome.bind(adminBookingController)
+);
+router.get('/calendar', adminBookingController.getCalendar.bind(adminBookingController));
+
+// Блокировка дат
+router.post(
+  '/block-date',
+  validate(BlockDateSchema),
+  adminBookingController.blockDate.bind(adminBookingController)
+);
+router.delete('/block-date/:id', adminBookingController.unblockDate.bind(adminBookingController));
+
+export default router;
