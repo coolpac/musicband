@@ -119,5 +119,7 @@ export const CACHE_KEYS = {
   VOTE_SESSION_ACTIVE: (sessionId: string) => `votes:session:${sessionId}:active`,
   VOTE_RESULTS: (sessionId: string) => `votes:session:${sessionId}:results`,
   BLOCKED_DATES: (month?: string) => (month ? `bookings:blocked-dates:${month}` : 'bookings:blocked-dates'),
+  /** Кеш результата getAvailableDates (dates + blockedDates) по месяцу */
+  AVAILABLE_DATES: (month: string) => `bookings:available:${month}`,
   AGENT_STATS: (agentId: string) => `agent:stats:${agentId}`,
 } as const;

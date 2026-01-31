@@ -5,6 +5,14 @@ import { logger } from '../../shared/utils/logger';
 import { RateLimitError } from '../../shared/errors';
 import { RATE_LIMIT } from '../../shared/constants';
 
+declare global {
+  namespace Express {
+    interface Request {
+      rateLimit?: { limit: number; remaining: number; reset: Date };
+    }
+  }
+}
+
 /**
  * Redis-based rate limiter для масштабирования
  */
@@ -84,7 +92,7 @@ export function createRedisRateLimiter(options: RateLimitOptions) {
       logger.error('Rate limiter error - denying request for security', {
         error,
         path: req.path,
-        identifier
+        key: req.path,
       });
 
       res.status(503).json({

@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { getSongs } from '../services/songService';
 import { getSongLyrics } from '../services/songService';
 import { Song } from '../types/vote';
+import NetworkError from '../components/NetworkError';
 import votingBg from '../assets/figma/voting-bg-only.svg';
 import '../styles/voting.css';
 import '../styles/lyrics.css';
@@ -57,7 +58,12 @@ export default function SongLyricsScreen({ onBack, songId, variant = 'spotify' }
       </div>
       <div className="lyrics-container">
         <h1 className="lyrics-title">Текст песни</h1>
-        {!song ? (
+        {error ? (
+          <NetworkError
+            message="Не удалось загрузить текст песни."
+            onRetry={loadData}
+          />
+        ) : !song ? (
           <div className="voting-loading">Загрузка...</div>
         ) : (
           <>

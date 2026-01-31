@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "analyze": "ANALYZE=true vite build",
+    "optimize": "node scripts/optimize-assets.mjs"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +20,6 @@
     "@types/qrcode": "^1.5.6",
     "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
-    "moment": "^2.30.1",
     "qrcode": "^1.5.4",
     "react": "^19.2.3",
     "react-big-calendar": "^1.19.4",
@@ -29,7 +30,13 @@
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
+    "rollup-plugin-visualizer": "^5.12.0",
+    "sharp": "^0.34.0",
+    "svgo": "^4.0.0",
+    "terser": "^5.36.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-image-optimizer": "^2.0.3"
   }
 }

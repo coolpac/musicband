@@ -33,7 +33,8 @@ export class ImageController {
 
       logger.info('Image uploaded and processed', {
         originalUrl: result.originalUrl,
-        optimizedUrl: result.optimizedUrl,
+        webpUrl: result.webpUrl,
+        avifUrl: result.avifUrl,
         thumbnailUrl: result.thumbnailUrl,
       });
 
@@ -46,15 +47,16 @@ export class ImageController {
             height: result.metadata.height,
             size: result.metadata.size,
           },
+          originalUrl: result.originalUrl,
+          webpUrl: result.webpUrl ?? undefined,
+          avifUrl: result.avifUrl ?? undefined,
+          thumbnailUrl: result.thumbnailUrl ?? undefined,
+          srcSet: result.srcSet ?? undefined,
           optimized: result.optimizedUrl
-            ? {
-                url: result.optimizedUrl,
-              }
+            ? { url: result.optimizedUrl }
             : undefined,
           thumbnail: result.thumbnailUrl
-            ? {
-                url: result.thumbnailUrl,
-              }
+            ? { url: result.thumbnailUrl }
             : undefined,
         },
       });

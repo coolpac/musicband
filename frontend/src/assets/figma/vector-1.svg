@@ -1,3 +1,1 @@
-<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 99 66" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path id="Vector" d="M0 45.8231C13.8939 46.9693 26.7407 51.7784 37.5623 59.2785C40.5781 61.3654 43.4371 63.5955 46.1143 66H99C98.5298 64.9597 98.0282 63.9132 97.5203 62.8604C90.4166 48.184 80.153 35.3017 67.6134 25.0794C49.1113 9.99811 25.6309 0.697688 0 0V45.8293V45.8231Z" fill="#111111"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" overflow="visible" preserveAspectRatio="none" style="display:block" viewBox="0 0 99 66"><path fill="#111" d="M0 45.823A76.9 76.9 0 0 1 37.562 59.28c3.016 2.086 5.875 4.316 8.552 6.721H99a139 139 0 0 0-1.48-3.14c-7.103-14.676-17.367-27.558-29.907-37.78C49.111 9.997 25.631.697 0 0v45.83z"/></svg>

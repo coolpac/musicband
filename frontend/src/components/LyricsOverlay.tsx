@@ -16,29 +16,31 @@ export default function LyricsOverlay({ isOpen, onClose, songId }: LyricsOverlay
   const overlayRef = useRef<HTMLElement>(null);
   const [song, setSong] = useState<Song | null>(null);
   const [lines, setLines] = useState<string[]>([]);
+  const [error, setError] = useState<Error | null>(null);
   const ariaLabel = song ? `Текст песни: ${song.title}` : 'Текст песни';
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const songs = await getSongs();
-        const foundSong = songId ? songs.find((s) => s.id === songId) || songs[0] : songs[0];
-        setSong(foundSong || null);
-        setLines([]);
+  const loadData = useCallback(async () => {
+    setError(null);
+    try {
+      const songs = await getSongs();
+      const foundSong = songId ? songs.find((s) => s.id === songId) || songs[0] : songs[0];
+      setSong(foundSong || null);
+      setLines([]);
 
-        if (foundSong) {
-          const lyrics = await getSongLyrics(foundSong.id);
-          setLines(lyrics);
-        }
-      } catch (error) {
-        console.error('Failed to load song lyrics:', error);
+      if (foundSong) {
+        const lyrics = await getSongLyrics(foundSong.id);
+        setLines(lyrics);
       }
-    };
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+    }
+  }, [songId]);
 
+  useEffect(() => {
     if (isOpen) {
       loadData();
     }
-  }, [isOpen, songId]);
+  }, [isOpen, loadData]);
 
   useEffect(() => {
     if (isOpen && scrollRef.current) {
@@ -73,7 +75,12 @@ export default function LyricsOverlay({ isOpen, onClose, songId }: LyricsOverlay
           </svg>
         </button>
         <h2 className="lyrics-overlay__title">Текст песни</h2>
-        {!song ? (
+        {error ? (
+          <NetworkError
+            message="Не удалось загрузить текст песни."
+            onRetry={loadData}
+          />
+        ) : !song ? (
           <div className="lyrics-overlay__loading">Загрузка...</div>
         ) : (
           <>

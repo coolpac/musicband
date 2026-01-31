@@ -44,19 +44,29 @@
 }
 
 .content-tab--active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: white;
-  box-shadow: 0 4px 12px rgba(255, 49, 53, 0.3);
+  background: var(--admin-card-bg);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--admin-text);
+  box-shadow: none;
 }
 
 .content-tab--active:hover {
-  background: var(--accent-dark);
-  box-shadow: 0 6px 16px rgba(255, 49, 53, 0.4);
+  background: #2c2c2e;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .content-view {
   flex: 1;
+  padding: 0 16px 20px;
+}
+
+/* Выравнивание заголовка «Управление форматами» с табами: отступ только у content-view, контент не центрировать */
+.content-view .admin-content {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* Remove duplicate header from child screens */
@@ -72,11 +82,16 @@
 /* Responsive */
 @media (min-width: 768px) {
   .content-tabs {
-    padding: 20px 32px;
+    padding: 20px 24px;
     gap: 12px;
   }
 
   .content-tab {
     min-width: 140px;
+  }
+
+  .content-view {
+    padding-left: 24px;
+    padding-right: 24px;
   }
 }

@@ -3,7 +3,7 @@ import { AuthService } from '../../domain/services/AuthService';
 import { UnauthorizedError, ForbiddenError } from '../../shared/errors';
 import { USER_ROLES } from '../../shared/constants';
 
-// Расширяем тип Request для хранения user
+// Расширяем тип Request для хранения user и токена (для logout/revoke)
 declare global {
   namespace Express {
     interface Request {
@@ -12,6 +12,8 @@ declare global {
         telegramId: string;
         role: string;
       };
+      /** JWT строка — заполняется authenticate, используется в logout для отзыва */
+      token?: string;
     }
   }
 }
@@ -39,7 +41,12 @@ export function authenticate(authService: AuthService) {
       // Верифицируем токен
       const payload = authService.verifyToken(token);
 
-      // Сохраняем данные пользователя в request
+      // Проверка blacklist (отзыв токена)
+      if (await authService.isRevoked(payload.jti)) {
+        throw new UnauthorizedError('Token has been revoked');
+      }
+
+      req.token = token;
       req.user = {
         userId: payload.userId,
         telegramId: payload.telegramId,

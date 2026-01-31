@@ -12,29 +12,22 @@ export type BookingData = {
 
 /**
  * Get available dates for a given month
- * @param month Optional month in format 'YYYY-MM', defaults to current month
- * @returns Array of available date numbers (1-31)
+ * @param month Month in format 'YYYY-MM'
+ * @returns Array of available day-of-month numbers (1-31)
  */
 export async function getAvailableDates(month?: string): Promise<number[]> {
   if (isMockMode()) {
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // Mock: all dates except 12th are available
     const allDates = Array.from({ length: 31 }, (_, i) => i + 1);
-    return allDates.filter(day => day !== 12);
+    return allDates.filter((day) => day !== 12);
   }
 
-  try {
-    const params = month ? `?month=${month}` : '';
-    const response = await apiGet<{ availableDates: number[] }>(`/api/bookings/available-dates${params}`);
-    return response.availableDates;
-  } catch (error) {
-    console.warn('Failed to fetch available dates from API, falling back to mock data', error);
-    // Fallback: all dates except 12th
-    const allDates = Array.from({ length: 31 }, (_, i) => i + 1);
-    return allDates.filter(day => day !== 12);
-  }
+  const params = month ? `?month=${encodeURIComponent(month)}` : '';
+  const data = await apiGet<{ dates: string[]; blockedDates: string[] }>(
+    `/api/bookings/available-dates${params}`
+  );
+  // Backend returns dates as 'YYYY-MM-DD'; extract day of month for calendar
+  return (data.dates ?? []).map((d) => parseInt(d.split('-')[2], 10));
 }
 
 /**

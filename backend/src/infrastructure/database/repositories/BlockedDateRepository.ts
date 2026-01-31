@@ -9,6 +9,7 @@ export interface IBlockedDateRepository {
   create(data: CreateBlockedDateData): Promise<BlockedDate>;
   delete(id: string): Promise<void>;
   getBlockedDatesInRange(startDate: Date, endDate: Date): Promise<Date[]>;
+  findInRange(startDate: Date, endDate: Date): Promise<BlockedDate[]>;
 }
 
 export interface CreateBlockedDateData {
@@ -84,5 +85,18 @@ export class PrismaBlockedDateRepository implements IBlockedDateRepository {
     });
 
     return blockedDates.map((bd) => bd.blockedDate);
+  }
+
+  /** Полный список заблокированных дат в диапазоне (для админки) */
+  async findInRange(startDate: Date, endDate: Date): Promise<BlockedDate[]> {
+    return this.client.blockedDate.findMany({
+      where: {
+        blockedDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      orderBy: { blockedDate: 'asc' },
+    });
   }
 }

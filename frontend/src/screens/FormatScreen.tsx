@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import '../styles/format.css';
 import { Format } from '../types/format';
 import { getFormats } from '../services/formatService';
 import formatIcon from '../assets/figma/format-icon.svg';
+import NetworkError from '../components/NetworkError';
+import { OptimizedImage } from '../components/OptimizedImage';
+import { getOptimizedImageProps } from '../types/image';
 
 type FormatScreenProps = {
   onFormatClick: (formatId: string) => void;
@@ -11,6 +15,7 @@ type FormatScreenProps = {
 export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProps) {
   const [formats, setFormats] = useState<Format[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const sliderRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
@@ -128,6 +133,22 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
 
   const activeFormat = formats[activeIndex];
 
+  if (error) {
+    return (
+      <main className="screen screen--format">
+        <button className="format-back-btn" onClick={onBack} type="button">
+          Назад
+        </button>
+        <div className="format-container">
+          <NetworkError
+            message="Не удалось загрузить форматы."
+            onRetry={loadFormats}
+          />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="screen screen--format">
       <button className="format-back-btn" onClick={onBack} type="button">
@@ -145,7 +166,9 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
-              {formats.map((format) => (
+              {formats.map((format) => {
+                const formatImageProps = getOptimizedImageProps(format.imageUrl);
+                return (
                 <div key={format.id} className="format-slide">
                   <div className="format-hero">
                     {format.status === 'coming-soon' ? (
@@ -153,7 +176,16 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
                         <img alt="Иконка замка" className="format-lock-icon" src={formatIcon} />
                       </div>
                     ) : (
-                      <img alt={format.name} className="format-image" src={format.imageUrl} />
+                      formatImageProps ? (
+                        <OptimizedImage
+                          {...formatImageProps}
+                          alt={format.name}
+                          className="format-image"
+                          loading="eager"
+                          sizes="100vw"
+                          objectFit="cover"
+                        />
+                      ) : null
                     )}
                     <div className="format-overlay">
                       <div className="format-content">
@@ -177,7 +209,8 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
 
             {activeFormat && (

@@ -123,6 +123,52 @@ export class AdminBookingController {
   }
 
   /**
+   * DELETE /api/admin/bookings/:id
+   * Удалить заявку (например, спам)
+   */
+  async deleteBooking(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      await this.bookingService.deleteBooking(id);
+
+      logger.info('Booking deleted by admin', {
+        bookingId: id,
+        adminId: req.user?.userId,
+      });
+
+      res.json({
+        success: true,
+        message: 'Booking deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/admin/bookings/blocked-dates
+   * Список заблокированных дат за месяц (?month=YYYY-MM)
+   */
+  async getBlockedDates(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const month = req.query.month as string | undefined;
+      const blockedDates = await this.bookingService.getBlockedDates(month);
+
+      res.json({
+        success: true,
+        data: blockedDates.map((bd) => ({
+          id: bd.id,
+          date: bd.blockedDate.toISOString().split('T')[0],
+          reason: bd.reason ?? undefined,
+        })),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /api/admin/bookings/block-date
    * Заблокировать дату для бронирования
    */

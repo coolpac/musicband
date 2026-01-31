@@ -5,6 +5,7 @@ import HomeScreen from './screens/HomeScreen';
 import Header from './components/Header';
 import MenuOverlay from './components/MenuOverlay';
 import {
+  type BookingDraft,
   NavigationScreen,
   RequestCalendarScreen,
   RequestFormScreen,
@@ -18,8 +19,9 @@ import VotingScreen from './screens/VotingScreen';
 import VotingResultsScreen from './screens/VotingResultsScreen';
 import WinningSongScreen from './screens/WinningSongScreen';
 import SongLyricsScreen from './screens/SongLyricsScreen';
+import ResidentsScreen from './screens/ResidentsScreen';
 
-type Screen = 'home' | 'nav' | 'calendar' | 'form' | 'success' | 'formats' | 'format-detail' | 'review-form' | 'review-success' | 'voting' | 'voting-results' | 'winning-song' | 'song-lyrics';
+type Screen = 'home' | 'nav' | 'calendar' | 'form' | 'success' | 'formats' | 'format-detail' | 'review-form' | 'review-success' | 'voting' | 'voting-results' | 'winning-song' | 'song-lyrics' | 'residents';
 type MenuTarget = 'home' | 'formats' | 'live' | 'partners' | 'socials';
 
 export default function App() {
@@ -46,6 +48,7 @@ export default function App() {
 
   const [currentScreen, setCurrentScreen] = useState<Screen>(initialScreen);
   const [currentFormatId, setCurrentFormatId] = useState<string | null>(formatIdParam);
+  const [bookingDraft, setBookingDraft] = useState<BookingDraft | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -73,7 +76,8 @@ export default function App() {
         screenParam === 'voting' ||
         screenParam === 'voting-results' ||
         screenParam === 'winning-song' ||
-        screenParam === 'song-lyrics'
+        screenParam === 'song-lyrics' ||
+        screenParam === 'residents'
       ) {
         setCurrentScreen(screenParam);
         if (formatIdParam) {
@@ -142,9 +146,29 @@ export default function App() {
       case 'nav':
         return <NavigationScreen />;
       case 'calendar':
-        return <RequestCalendarScreen onContinue={() => setCurrentScreen('form')} />;
+        return (
+          <RequestCalendarScreen
+            onContinue={(draft) => {
+              setBookingDraft(draft);
+              setCurrentScreen('form');
+              window.history.pushState({}, '', '?screen=form');
+            }}
+          />
+        );
       case 'form':
-        return <RequestFormScreen onSubmit={() => setCurrentScreen('success')} />;
+        return (
+          <RequestFormScreen
+            bookingDraft={bookingDraft}
+            onSubmit={() => {
+              setCurrentScreen('success');
+              setBookingDraft(null);
+              window.history.pushState({}, '', '?screen=success');
+            }}
+            onSubmitError={(message) => {
+              alert(message);
+            }}
+          />
+        );
       case 'success':
         return <RequestSuccessScreen onBackHome={() => setCurrentScreen('home')} />;
       case 'formats':
@@ -259,8 +283,22 @@ export default function App() {
           />
         );
       }
+      case 'residents':
+        return <ResidentsScreen />;
       default:
-        return <HomeScreen onMenuOpen={() => setMenuOpen(true)} />;
+        return (
+          <HomeScreen
+            onMenuOpen={() => setMenuOpen(true)}
+            onGoToCalendar={() => {
+              setCurrentScreen('calendar');
+              window.history.pushState({}, '', '?screen=calendar');
+            }}
+            onGoToResidents={() => {
+              setCurrentScreen('residents');
+              window.history.pushState({}, '', '?screen=residents');
+            }}
+          />
+        );
     }
   };
 

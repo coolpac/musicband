@@ -13,6 +13,20 @@ export class ApiError extends Error {
   }
 }
 
+/** Опции запроса: таймаут и внешний signal (например для отмены при unmount) */
+export interface ApiRequestOptions {
+  timeout?: number;
+  signal?: AbortSignal;
+}
+
+const DEFAULT_TIMEOUT_MS = 15000;
+const GET_RETRY_MAX = 2;
+const GET_RETRY_BACKOFF_MS = [1000, 2000];
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
 /**
  * Check if we're in mock mode based on environment variable
  */
@@ -28,39 +42,138 @@ function getApiBaseUrl(): string {
   return baseUrl || '';
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Generic GET request
+ * Выполняет fetch с таймаутом и опциональной привязкой к внешнему AbortSignal.
+ * В finally всегда очищает таймер.
  */
-export async function apiGet<T>(path: string): Promise<T> {
-  const url = `${getApiBaseUrl()}${path}`;
+async function fetchWithAbort(
+  url: string,
+  init: RequestInit,
+  options?: ApiRequestOptions
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutMs = options?.timeout ?? DEFAULT_TIMEOUT_MS;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  if (options?.signal) {
+    if (options.signal.aborted) {
+      clearTimeout(timeoutId);
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    options.signal.addEventListener('abort', () => controller.abort());
+  }
 
   try {
     const response = await fetch(url, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      ...init,
+      signal: controller.signal,
     });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new ApiError(
-        errorData.message || `HTTP error ${response.status}`,
-        response.status,
-        errorData
+async function parseResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(
+      errorData.message || `HTTP error ${response.status}`,
+      response.status,
+      errorData
+    );
+  }
+
+  const data = await response.json();
+
+  if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
+    return data.data as T;
+  }
+
+  return data as T;
+}
+
+/**
+ * Generic GET request with timeout, optional external signal and retry for network errors.
+ */
+export async function apiGet<T>(
+  path: string,
+  options?: ApiRequestOptions
+): Promise<T> {
+  const url = `${getApiBaseUrl()}${path}`;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= GET_RETRY_MAX; attempt++) {
+    try {
+      const response = await fetchWithAbort(
+        url,
+        {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        },
+        options
       );
+      return await parseResponse<T>(response);
+    } catch (error) {
+      lastError = error;
+
+      if (isAbortError(error)) {
+        throw error;
+      }
+
+      if (error instanceof ApiError && error.statusCode != null) {
+        throw error;
+      }
+
+      if (attempt < GET_RETRY_MAX) {
+        await delay(GET_RETRY_BACKOFF_MS[attempt]);
+      } else {
+        break;
+      }
     }
+  }
 
-    const data = await response.json();
+  if (lastError instanceof ApiError) {
+    throw lastError;
+  }
+  throw new ApiError(
+    lastError instanceof Error ? lastError.message : 'Network error',
+    undefined,
+    lastError
+  );
+}
 
-    // Handle envelope response { success, data }
-    if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-      return data.data as T;
-    }
+/**
+ * Generic POST request with timeout and optional external signal.
+ */
+export async function apiPost<T>(
+  path: string,
+  body?: unknown,
+  options?: ApiRequestOptions
+): Promise<T> {
+  const url = `${getApiBaseUrl()}${path}`;
 
-    return data as T;
+  try {
+    const response = await fetchWithAbort(
+      url,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+      },
+      options
+    );
+    return await parseResponse<T>(response);
   } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
     if (error instanceof ApiError) {
       throw error;
     }
@@ -73,39 +186,31 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 /**
- * Generic POST request
+ * Generic PUT request with timeout and optional external signal.
  */
-export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
+export async function apiPut<T>(
+  path: string,
+  body?: unknown,
+  options?: ApiRequestOptions
+): Promise<T> {
   const url = `${getApiBaseUrl()}${path}`;
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetchWithAbort(
+      url,
+      {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
       },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new ApiError(
-        errorData.message || `HTTP error ${response.status}`,
-        response.status,
-        errorData
-      );
-    }
-
-    const data = await response.json();
-
-    // Handle envelope response { success, data }
-    if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-      return data.data as T;
-    }
-
-    return data as T;
+      options
+    );
+    return await parseResponse<T>(response);
   } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
     if (error instanceof ApiError) {
       throw error;
     }
@@ -118,83 +223,29 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
 }
 
 /**
- * Generic PUT request
+ * Generic DELETE request with timeout and optional external signal.
  */
-export async function apiPut<T>(path: string, body?: unknown): Promise<T> {
+export async function apiDelete<T>(
+  path: string,
+  options?: ApiRequestOptions
+): Promise<T> {
   const url = `${getApiBaseUrl()}${path}`;
 
   try {
-    const response = await fetch(url, {
-      method: 'PUT',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetchWithAbort(
+      url,
+      {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new ApiError(
-        errorData.message || `HTTP error ${response.status}`,
-        response.status,
-        errorData
-      );
-    }
-
-    const data = await response.json();
-
-    // Handle envelope response { success, data }
-    if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-      return data.data as T;
-    }
-
-    return data as T;
+      options
+    );
+    return await parseResponse<T>(response);
   } catch (error) {
-    if (error instanceof ApiError) {
+    if (isAbortError(error)) {
       throw error;
     }
-    throw new ApiError(
-      error instanceof Error ? error.message : 'Network error',
-      undefined,
-      error
-    );
-  }
-}
-
-/**
- * Generic DELETE request
- */
-export async function apiDelete<T>(path: string): Promise<T> {
-  const url = `${getApiBaseUrl()}${path}`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'DELETE',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new ApiError(
-        errorData.message || `HTTP error ${response.status}`,
-        response.status,
-        errorData
-      );
-    }
-
-    const data = await response.json();
-
-    // Handle envelope response { success, data }
-    if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-      return data.data as T;
-    }
-
-    return data as T;
-  } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }

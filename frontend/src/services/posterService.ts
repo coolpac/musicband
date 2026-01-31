@@ -1,5 +1,5 @@
 import { apiGet, isMockMode } from './apiClient';
-import posterImage from '../assets/figma/poster.png';
+import posterImage from '../assets/figma/poster.webp';
 
 export type Poster = {
   id: string;

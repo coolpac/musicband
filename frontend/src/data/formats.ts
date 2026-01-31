@@ -1,5 +1,5 @@
 import { Format } from '../types/format';
-import formatImage from '../assets/figma/format.png';
+import formatImage from '../assets/figma/format.webp';
 
 // Моковые данные для форматов (позже будут загружаться с бэкенда)
 export const mockFormats: Format[] = [

@@ -1,0 +1,137 @@
+/* Отзывы — карточки в стиле админки */
+
+.reviews-screen .admin-title {
+  margin-bottom: 8px;
+}
+
+.reviews-screen__desc {
+  font-size: 14px;
+  color: var(--admin-text-secondary);
+  margin: 0 0 20px 0;
+}
+
+.reviews-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--admin-text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+}
+
+.reviews-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reviews-card {
+  position: relative;
+  padding: 16px 20px;
+  padding-right: 52px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  transition: border-color 0.2s;
+}
+
+.reviews-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.reviews-card__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.reviews-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.reviews-card__author {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.reviews-card__date {
+  font-size: 12px;
+  color: var(--admin-text-secondary);
+}
+
+.reviews-card__rating {
+  font-size: 14px;
+  color: var(--admin-warning);
+  letter-spacing: 0.05em;
+}
+
+.reviews-card__rating-out-of {
+  color: var(--admin-text-secondary);
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+.reviews-card__text {
+  font-size: 14px;
+  color: var(--admin-text);
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reviews-card__actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.reviews-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(255, 59, 48, 0.4);
+  border-radius: var(--admin-radius);
+  background: transparent;
+  color: var(--admin-danger);
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.reviews-delete-btn:hover:not(:disabled) {
+  background: rgba(255, 59, 48, 0.12);
+}
+
+.reviews-delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reviews-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--admin-border);
+}
+
+.reviews-pagination__info {
+  font-size: 14px;
+  color: var(--admin-text-secondary);
+}

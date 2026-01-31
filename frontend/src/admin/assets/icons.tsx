@@ -4,7 +4,7 @@
  */
 
 export const HomeIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path
       d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z"
       stroke={active ? "white" : "#666"}
@@ -24,7 +24,7 @@ export const HomeIcon = ({ active = false }: { active?: boolean }) => (
 );
 
 export const CalendarIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <rect
       x="3"
       y="4"
@@ -39,14 +39,14 @@ export const CalendarIcon = ({ active = false }: { active?: boolean }) => (
     />
     <path
       d="M16 2V6"
-      stroke={active ? (active ? "white" : "#000") : "#666"}
+      stroke={active ? "#000" : "#666"}
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
     <path
       d="M8 2V6"
-      stroke={active ? (active ? "white" : "#000") : "#666"}
+      stroke={active ? "#000" : "#666"}
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -62,7 +62,7 @@ export const CalendarIcon = ({ active = false }: { active?: boolean }) => (
 );
 
 export const ClockIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <circle
       cx="12"
       cy="12"
@@ -84,7 +84,7 @@ export const ClockIcon = ({ active = false }: { active?: boolean }) => (
 );
 
 export const LinkIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path
       d="M10 13C10.4295 13.5741 10.9774 14.0492 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59696 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.45791 20.4791 3.53087C19.5521 2.60383 18.298 2.07799 16.987 2.0666C15.676 2.0552 14.413 2.55918 13.47 3.47L11.75 5.18"
       stroke={active ? "white" : "#666"}
@@ -104,9 +104,9 @@ export const LinkIcon = ({ active = false }: { active?: boolean }) => (
 );
 
 export const EditIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path
-      d="M11 4H4C3.46957 4 2.96086 4.21071 2.58579 4.58579C2.21071 4.96086 2 5.46957 2 6V20C2 20.5304 2.21071 21.0391 2.58579 21.4142C2.96086 21.7893 3.46957 22 4 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V13"
+      d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
       stroke={active ? "white" : "#666"}
       strokeWidth="2"
       strokeLinecap="round"
@@ -114,7 +114,7 @@ export const EditIcon = ({ active = false }: { active?: boolean }) => (
       fill={active ? "white" : "none"}
     />
     <path
-      d="M18.5 2.50001C18.8978 2.10219 19.4374 1.87869 20 1.87869C20.5626 1.87869 21.1022 2.10219 21.5 2.50001C21.8978 2.89784 22.1213 3.4374 22.1213 4.00001C22.1213 4.56262 21.8978 5.10219 21.5 5.50001L12 15L8 16L9 12L18.5 2.50001Z"
+      d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"
       stroke={active ? "white" : "#666"}
       strokeWidth="2"
       strokeLinecap="round"
@@ -124,7 +124,7 @@ export const EditIcon = ({ active = false }: { active?: boolean }) => (
 );
 
 export const MusicIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path
       d="M9 18V5L21 3V16"
       stroke={active ? "white" : "#666"}
@@ -156,9 +156,9 @@ export const MusicIcon = ({ active = false }: { active?: boolean }) => (
 );
 
 export const FileIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path
-      d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
+      d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
       stroke={active ? "white" : "#666"}
       strokeWidth="2"
       strokeLinecap="round"
@@ -176,7 +176,7 @@ export const FileIcon = ({ active = false }: { active?: boolean }) => (
 );
 
 export const VideoIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path
       d="M23 7L16 12L23 17V7Z"
       stroke={active ? "white" : "#666"}
@@ -201,7 +201,7 @@ export const VideoIcon = ({ active = false }: { active?: boolean }) => (
 );
 
 export const ImageIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <rect
       x="3"
       y="3"
@@ -233,8 +233,55 @@ export const ImageIcon = ({ active = false }: { active?: boolean }) => (
   </svg>
 );
 
+export const ListIcon = ({ active = false }: { active?: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M8 6H21"
+      stroke={active ? "white" : "#666"}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M8 12H21"
+      stroke={active ? "white" : "#666"}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M8 18H21"
+      stroke={active ? "white" : "#666"}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M3 6H3.01"
+      stroke={active ? "white" : "#666"}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M3 12H3.01"
+      stroke={active ? "white" : "#666"}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M3 18H3.01"
+      stroke={active ? "white" : "#666"}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const BarChartIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <path
       d="M12 20V10"
       stroke={active ? "white" : "#666"}
@@ -260,7 +307,7 @@ export const BarChartIcon = ({ active = false }: { active?: boolean }) => (
 );
 
 export const SettingsIcon = ({ active = false }: { active?: boolean }) => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
     <circle
       cx="12"
       cy="12"
@@ -277,6 +324,61 @@ export const SettingsIcon = ({ active = false }: { active?: boolean }) => (
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+    />
+  </svg>
+);
+
+/** Иконки действий для таблиц (подтвердить / отменить / удалить) — компактные, currentColor */
+export const IconCheck = ({ size = 18, className }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <path d="M5 12l5 5L20 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export const IconX = ({ size = 18, className }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export const IconTrash = ({ size = 18, className }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/** Агенты (рефералы) — люди/партнёры */
+export const UsersIcon = ({ active = false }: { active?: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"
+      stroke={active ? 'white' : '#666'}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="9" cy="7" r="4" stroke={active ? 'white' : '#666'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <path
+      d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+      stroke={active ? 'white' : '#666'}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+/** Отзывы — звезда */
+export const StarIcon = ({ active = false }: { active?: boolean }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+      stroke={active ? 'white' : '#666'}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill={active ? 'white' : 'none'}
     />
   </svg>
 );

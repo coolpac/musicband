@@ -1,0 +1,135 @@
+/* Residents landing — только фото по всей ширине, слитно друг за другом */
+/* Переопределяем .screen: контент на всю ширину вьюпорта, без чёрных полос по бокам */
+.screen.residents-screen {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 100%;
+  min-height: 100vh;
+  background: #111;
+  padding: 0 !important;
+  /* отступ сверху под фиксированный хедер (как у .screen в base.css) */
+  padding-top: calc(clamp(64px, 11svh, 107px) + 20px) !important;
+  margin: 0 !important;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.residents-landing {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  width: 100%;
+  min-width: 100%;
+}
+
+/* Карточка музыканта: фото + плашка с именем/коротким описанием, по клику — плашка с полным описанием */
+.residents-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+}
+
+.residents-card__img {
+  display: block;
+  width: 100%;
+  min-width: 100%;
+  height: auto;
+  vertical-align: top;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Оверлей «описание» из SVG: поверх карточки, плавное появление; прелоад при наведении */
+.residents-card__svg-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.residents-card__svg-overlay--open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Плашка с полным описанием (вычленена из Саша описание.svg: скругление 25px, стекло, обводка) */
+.residents-card__panel {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  max-height: 45vh;
+  padding: 20px 20px 48px;
+  border-radius: 25px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px);
+  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.residents-card__panel--open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.residents-card__panel-text {
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+  color: #fff;
+  font-size: clamp(15px, 3.2vw, 18px);
+  line-height: 1.5;
+  -webkit-overflow-scrolling: touch;
+}
+
+.residents-card__panel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.residents-card__panel-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.residents-card__panel-close:active {
+  transform: scale(0.95);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .residents-card__panel {
+    background: rgba(40, 40, 40, 0.95);
+  }
+}

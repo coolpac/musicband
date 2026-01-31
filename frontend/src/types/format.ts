@@ -1,9 +1,10 @@
-export type FormatStatus = 'available' | 'coming-soon';
+/** available = показывать в бронировании, hidden = скрыт из выбора */
+export type FormatStatus = 'available' | 'hidden' | 'coming-soon';
 
 export type Format = {
   id: string;
   name: string;
-  shortDescription: string;
+  shortDescription?: string;
   description?: string;
   imageUrl?: string;
   suitableFor?: string[];

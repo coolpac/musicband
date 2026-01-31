@@ -20,7 +20,12 @@ const referralLinkRepository = new PrismaReferralLinkRepository();
 const referralEventRepository = new PrismaReferralEventRepository();
 const userRepository = new PrismaUserRepository();
 
-const agentService = new AgentService(agentRepository, userRepository);
+const agentService = new AgentService(
+  agentRepository,
+  userRepository,
+  referralLinkRepository,
+  referralEventRepository
+);
 const referralService = new ReferralService(
   referralLinkRepository,
   referralEventRepository,
@@ -36,7 +41,8 @@ const authService = new AuthService(
   process.env.JWT_SECRET || '',
   process.env.JWT_EXPIRES_IN || '7d',
   process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
-  process.env.TELEGRAM_USER_BOT_TOKEN || undefined
+  process.env.TELEGRAM_USER_BOT_TOKEN || undefined,
+  redis
 );
 
 // Все маршруты требуют авторизацию админа

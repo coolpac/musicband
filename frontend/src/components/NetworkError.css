@@ -1,0 +1,45 @@
+.network-error {
+  padding: 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+}
+
+.network-error__glass {
+  background: var(--glass, rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md, 15px);
+  padding: 24px;
+  text-align: center;
+  max-width: 320px;
+}
+
+.network-error__icon {
+  color: var(--white, #fff);
+  opacity: 0.8;
+  margin-bottom: 12px;
+}
+
+.network-error__message {
+  margin: 0 0 16px;
+  color: var(--white, #fff);
+  font-size: var(--text-size-sm, 16px);
+  line-height: 1.4;
+}
+
+.network-error__btn {
+  padding: 10px 20px;
+  background: var(--accent, #ff3135);
+  color: var(--white, #fff);
+  border: none;
+  border-radius: var(--radius-md, 15px);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.network-error__btn:hover {
+  opacity: 0.9;
+}

@@ -25,12 +25,7 @@ export async function getVoteResults(): Promise<VoteResult[]> {
     return mockResults;
   }
 
-  try {
-    return await apiGet<VoteResult[]>('/api/votes/results');
-  } catch (error) {
-    console.warn('Failed to fetch vote results from API, falling back to mock data', error);
-    return mockResults;
-  }
+  return await apiGet<VoteResult[]>('/api/votes/results');
 }
 
 /**

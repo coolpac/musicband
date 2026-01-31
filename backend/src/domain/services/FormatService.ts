@@ -9,6 +9,13 @@ export class FormatService {
     return this.formatRepository.findAll();
   }
 
+  /**
+   * Форматы, доступные для выбора при бронировании (status = 'available').
+   */
+  async getFormatsForBooking() {
+    return this.formatRepository.findAllForBooking();
+  }
+
   async getFormatById(id: string) {
     const format = await this.formatRepository.findById(id);
     if (!format) {
@@ -17,10 +24,21 @@ export class FormatService {
     return format;
   }
 
-  async createFormat(data: { name: string; description?: string }) {
+  async createFormat(data: {
+    name: string;
+    description?: string;
+    shortDescription?: string;
+    imageUrl?: string;
+    suitableFor?: unknown;
+    performers?: unknown;
+    status?: string;
+    order?: number;
+  }) {
     if (!data.name || data.name.trim().length === 0) {
       throw new ValidationError('Format name is required');
     }
+
+    const status = data.status && ['available', 'hidden'].includes(data.status) ? data.status : 'available';
 
     // Проверяем, не существует ли уже формат с таким именем
     const existing = await this.formatRepository.findByName(data.name);
@@ -28,17 +46,32 @@ export class FormatService {
       throw new ConflictError('Format with this name already exists');
     }
 
-    const format = await this.formatRepository.create(data);
+    const format = await this.formatRepository.create({
+      ...data,
+      status,
+      order: data.order ?? 0,
+    });
 
     logger.info('Format created', { formatId: format.id, name: format.name });
 
     return format;
   }
 
-  async updateFormat(id: string, data: { name?: string; description?: string }) {
+  async updateFormat(
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      shortDescription?: string;
+      imageUrl?: string;
+      suitableFor?: unknown;
+      performers?: unknown;
+      status?: string;
+      order?: number;
+    }
+  ) {
     await this.getFormatById(id);
 
-    // Если меняется имя, проверяем уникальность
     if (data.name) {
       const existing = await this.formatRepository.findByName(data.name);
       if (existing && existing.id !== id) {
@@ -46,7 +79,12 @@ export class FormatService {
       }
     }
 
-    return this.formatRepository.update(id, data);
+    const updateData = { ...data };
+    if (data.status !== undefined && !['available', 'hidden'].includes(data.status)) {
+      updateData.status = 'available';
+    }
+
+    return this.formatRepository.update(id, updateData);
   }
 
   async deleteFormat(id: string) {

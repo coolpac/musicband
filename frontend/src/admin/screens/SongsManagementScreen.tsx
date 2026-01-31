@@ -20,6 +20,8 @@ import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
+import { OptimizedImage } from '../../components/OptimizedImage';
+import { getOptimizedImageProps } from '../../types/image';
 import { getTracks, createTrack, updateTrack, deleteTrack, Track, TrackInput } from '../../services/adminService';
 import '../../styles/admin.css';
 import './SongsManagementScreen.css';
@@ -32,6 +34,7 @@ interface SortableItemProps {
 }
 
 function SortableItem({ song, onEdit, onDelete, onToggleActive }: SortableItemProps) {
+  const coverProps = getOptimizedImageProps(song.coverUrl);
   const {
     attributes,
     listeners,
@@ -65,9 +68,15 @@ function SortableItem({ song, onEdit, onDelete, onToggleActive }: SortableItemPr
 
       {/* Song Info */}
       <div className="song-item__info">
-        {song.coverUrl && (
+        {coverProps && (
           <div className="song-item__cover">
-            <img src={song.coverUrl} alt={song.title} />
+            <OptimizedImage
+              {...coverProps}
+              alt={song.title}
+              loading="lazy"
+              sizes="(max-width: 440px) 100vw, 120px"
+              objectFit="cover"
+            />
           </div>
         )}
         <div className="song-item__text">
@@ -398,6 +407,7 @@ export default function SongsManagementScreen() {
               onUpload={handleImageUpload}
               accept="image/*"
               maxSize={5}
+              preset="cover"
             />
           </div>
 

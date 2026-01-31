@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
+import '../styles/format.css';
 import { Format } from '../types/format';
 import { getFormatById } from '../services/formatService';
 import formatIcon from '../assets/figma/format-icon.svg';
+import { OptimizedImage } from '../components/OptimizedImage';
+import { getOptimizedImageProps } from '../types/image';
 
 type FormatDetailScreenProps = {
   formatId: string;
@@ -68,13 +71,19 @@ export default function FormatDetailScreen({
             </div>
           ) : (
             <>
-              {format.imageUrl && (
-                <img
-                  alt={format.name}
-                  className="format-detail-bg-image"
-                  src={format.imageUrl}
-                />
-              )}
+              {(() => {
+                const imgProps = getOptimizedImageProps(format.imageUrl);
+                return imgProps ? (
+                  <OptimizedImage
+                    {...imgProps}
+                    alt={format.name}
+                    className="format-detail-bg-image"
+                    loading="eager"
+                    sizes="100vw"
+                    objectFit="cover"
+                  />
+                ) : null;
+              })()}
               <div className="format-detail-overlay"></div>
             </>
           )}

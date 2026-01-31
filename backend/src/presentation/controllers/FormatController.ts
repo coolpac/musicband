@@ -15,4 +15,20 @@ export class FormatController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/formats/for-booking
+   * Форматы, доступные для выбора при бронировании (status = 'available').
+   */
+  async getFormatsForBooking(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const formats = await this.formatService.getFormatsForBooking();
+      res.json({
+        success: true,
+        data: formats,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

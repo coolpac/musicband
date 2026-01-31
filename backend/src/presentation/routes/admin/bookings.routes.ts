@@ -38,7 +38,8 @@ const authService = new AuthService(
   process.env.JWT_SECRET || '',
   process.env.JWT_EXPIRES_IN || '7d',
   process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
-  process.env.TELEGRAM_USER_BOT_TOKEN || undefined
+  process.env.TELEGRAM_USER_BOT_TOKEN || undefined,
+  redis
 );
 
 // Все маршруты требуют авторизацию админа
@@ -61,7 +62,9 @@ router.put(
   validate(UpdateBookingIncomeSchema),
   adminBookingController.updateBookingIncome.bind(adminBookingController)
 );
+router.delete('/:id', adminBookingController.deleteBooking.bind(adminBookingController));
 router.get('/calendar', adminBookingController.getCalendar.bind(adminBookingController));
+router.get('/blocked-dates', adminBookingController.getBlockedDates.bind(adminBookingController));
 
 // Блокировка дат
 router.post(

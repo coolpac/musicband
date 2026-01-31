@@ -1,24 +1,24 @@
-/* Admin Panel Styles - Hybrid Glassmorphism Theme */
+/* Admin Panel Styles - Figma color palette */
 
 :root {
-  /* Используем переменные из base.css для единообразия */
-  --admin-bg: var(--bg); /* #111111 вместо #000 */
-  --admin-card-bg: #1a1a1a;
-  --admin-text: var(--white);
-  --admin-text-secondary: #999;
-  --admin-border: rgba(255, 255, 255, 0.3); /* Увеличена прозрачность для glassmorphism */
-  --admin-success: #4ade80;
-  --admin-warning: #fbbf24;
-  --admin-danger: #f87171;
-  --admin-radius: var(--radius-lg); /* 25px из base.css */
-  --admin-radius-md: var(--radius-md); /* 15px из base.css */
+  /* Палитра из Figma (тёмная тема админки) */
+  --admin-bg: #000000;
+  --admin-card-bg: #1c1c1e;
+  --admin-text: #ffffff;
+  --admin-text-secondary: #8e8e93;
+  --admin-border: rgba(255, 255, 255, 0.12);
+  --admin-success: #34c759;
+  --admin-warning: #ffcc00;
+  --admin-danger: #ff3b30;
+  --admin-radius: var(--radius-lg);
+  --admin-radius-md: var(--radius-md);
 }
 
 .admin-screen {
   min-height: 100vh;
   background: var(--admin-bg);
   color: var(--admin-text);
-  padding-bottom: 80px; /* Space for TabBar */
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)); /* Space for TabBar + safe area */
 }
 
 /* Header */
@@ -92,16 +92,18 @@
 .admin-title {
   font-size: 28px;
   font-weight: 700;
-  margin: 0 0 24px 0;
+  margin: 0 0 20px 0;
+  letter-spacing: -0.02em;
 }
 
-/* Grid */
+/* Grid — отступы между карточками и блоками */
 .admin-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
+
 
 /* Cards - Glassmorphism Effect */
 .admin-card {
@@ -118,13 +120,112 @@
   transform: scale(0.98);
 }
 
+.admin-card--clickable {
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.admin-card--clickable:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.admin-card__action {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  opacity: 0.9;
+}
+
+.admin-card--clickable:hover .admin-card__action {
+  color: var(--admin-text);
+}
+
 .admin-card--large {
   grid-column: 1 / -1;
+  margin-bottom: 16px;
+}
+
+.admin-card--large:last-child {
+  margin-bottom: 0;
+}
+
+/* Быстрый доступ с дашборда: Агенты, Отзывы */
+.dashboard-quick {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--admin-border);
+}
+
+.dashboard-quick__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 14px 0;
+}
+
+.admin-grid--quick {
+  margin-bottom: 0;
+}
+
+.admin-card--quick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.admin-card--quick .admin-card__number {
+  display: none;
+}
+
+.admin-card__icon--muted {
+  color: var(--admin-text-secondary);
+}
+
+.admin-card--quick:hover .admin-card__icon--muted {
+  color: var(--admin-text);
 }
 
 .admin-card__icon {
-  font-size: 24px;
-  margin-bottom: 8px;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  color: inherit;
+}
+
+.admin-card__icon svg {
+  width: 100%;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.admin-card .admin-card__icon {
+  color: var(--admin-text);
+}
+
+.admin-card--success .admin-card__icon {
+  color: var(--admin-success);
+}
+
+.admin-card--warning .admin-card__icon {
+  color: var(--admin-warning);
+}
+
+.admin-card--danger .admin-card__icon {
+  color: var(--admin-danger);
 }
 
 .admin-card__number {
@@ -153,10 +254,10 @@
   font-weight: 700;
 }
 
-/* Card Variants */
+/* Card Variants — Figma palette */
 .admin-card--success {
-  border-color: var(--admin-success);
-  background: linear-gradient(160deg, rgba(74, 222, 128, 0.15), rgba(0, 0, 0, 0.2));
+  border-color: rgba(52, 199, 89, 0.4);
+  background: linear-gradient(160deg, rgba(52, 199, 89, 0.12), rgba(0, 0, 0, 0.3));
 }
 
 .admin-card--success .admin-card__number {
@@ -164,8 +265,8 @@
 }
 
 .admin-card--warning {
-  border-color: var(--admin-warning);
-  background: linear-gradient(160deg, rgba(251, 191, 36, 0.15), rgba(0, 0, 0, 0.2));
+  border-color: rgba(255, 204, 0, 0.4);
+  background: linear-gradient(160deg, rgba(255, 204, 0, 0.12), rgba(0, 0, 0, 0.3));
 }
 
 .admin-card--warning .admin-card__number {
@@ -173,8 +274,8 @@
 }
 
 .admin-card--danger {
-  border-color: var(--admin-danger);
-  background: linear-gradient(160deg, rgba(248, 113, 113, 0.15), rgba(0, 0, 0, 0.2));
+  border-color: rgba(255, 59, 48, 0.4);
+  background: linear-gradient(160deg, rgba(255, 59, 48, 0.12), rgba(0, 0, 0, 0.3));
 }
 
 .admin-card--danger .admin-card__number {
@@ -344,6 +445,80 @@
   padding-right: 40px;
 }
 
+/* Toggle row: label + slider */
+.admin-form-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-form-toggle-label {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.admin-form-hint {
+  font-size: 13px;
+  color: var(--admin-text-secondary);
+  margin-top: 4px;
+}
+
+/* Toggle switch (slider) */
+.admin-toggle {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 52px;
+  height: 28px;
+}
+
+.admin-toggle__input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.admin-toggle__slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--admin-border);
+  border-radius: 28px;
+  transition: 0.25s;
+}
+
+.admin-toggle__slider::before {
+  content: "";
+  position: absolute;
+  height: 22px;
+  width: 22px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.25s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.admin-toggle__input:checked + .admin-toggle__slider {
+  background: var(--admin-success);
+  border-color: var(--admin-success);
+}
+
+.admin-toggle__input:checked + .admin-toggle__slider::before {
+  transform: translateX(24px);
+}
+
+.admin-toggle__input:focus-visible + .admin-toggle__slider {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
 /* Buttons */
 .admin-btn {
   background: var(--accent);
@@ -404,22 +579,24 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--accent);
-  color: white;
-  border: none;
+  background: var(--admin-card-bg);
+  color: var(--admin-text);
+  border: 1px solid var(--admin-border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(255, 49, 53, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease;
   z-index: 50;
 }
 
 .admin-fab:hover {
   transform: scale(1.05);
-  box-shadow: 0 12px 32px rgba(255, 49, 53, 0.5), 0 6px 16px rgba(0, 0, 0, 0.4);
+  background: #2c2c2e;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
 .admin-fab:active {
@@ -548,7 +725,7 @@
   opacity: 0.7;
 }
 
-/* Modal */
+/* Modal — выше таб-бара (z-index), перекрывает весь экран; контент с отступом под safe area */
 .admin-modal {
   position: fixed;
   top: 0;
@@ -561,7 +738,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1100;
   padding: 0;
 }
 
@@ -575,7 +752,11 @@
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0));
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

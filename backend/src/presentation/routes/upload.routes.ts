@@ -4,6 +4,7 @@ import { ImageStorage } from '../../infrastructure/storage/ImageStorage';
 import { upload, handleUploadError } from '../middleware/upload';
 import { authenticate, requireAdmin } from '../middleware/auth';
 import { AuthService } from '../../domain/services/AuthService';
+import { redis } from '../../config/redis';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/UserRepository';
 import { uploadRateLimiter } from '../middleware/rateLimit';
 
@@ -29,7 +30,8 @@ const authService = new AuthService(
   process.env.JWT_SECRET || '',
   process.env.JWT_EXPIRES_IN || '7d',
   process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
-  process.env.TELEGRAM_USER_BOT_TOKEN || undefined
+  process.env.TELEGRAM_USER_BOT_TOKEN || undefined,
+  redis
 );
 
 // Все маршруты требуют авторизацию админа

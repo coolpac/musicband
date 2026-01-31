@@ -1,6 +1,1 @@
-<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 77 77" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="Group">
-<path id="Vector" d="M38.5 77C59.763 77 77 59.763 77 38.5C77 17.237 59.763 0 38.5 0C17.237 0 0 17.237 0 38.5C0 59.763 17.237 77 38.5 77Z" fill="var(--fill-0, #E0E0E0)" fill-opacity="0.6"/>
-<path id="ic play arrow 24px" d="M28.5505 19.504V57.5159L58.4157 38.5193L28.5505 19.5227V19.504Z" fill="var(--fill-0, #303030)"/>
-</g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" overflow="visible" preserveAspectRatio="none" style="display:block" viewBox="0 0 77 77"><path fill="var(--fill-0, #e0e0e0)" fill-opacity=".6" d="M38.5 77C59.763 77 77 59.763 77 38.5S59.763 0 38.5 0 0 17.237 0 38.5 17.237 77 38.5 77"/><path fill="var(--fill-0, #303030)" d="M28.55 19.504v38.012l29.866-18.997L28.55 19.523z"/></svg>

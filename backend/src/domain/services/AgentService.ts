@@ -1,5 +1,7 @@
 import { IAgentRepository } from '../../infrastructure/database/repositories/AgentRepository';
 import { IUserRepository } from '../../infrastructure/database/repositories/UserRepository';
+import { IReferralLinkRepository } from '../../infrastructure/database/repositories/ReferralLinkRepository';
+import { IReferralEventRepository } from '../../infrastructure/database/repositories/ReferralEventRepository';
 import { NotFoundError, ValidationError, ConflictError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
 import { USER_ROLES } from '../../shared/constants';
@@ -8,7 +10,9 @@ import crypto from 'crypto';
 export class AgentService {
   constructor(
     private agentRepository: IAgentRepository,
-    private userRepository: IUserRepository
+    private userRepository: IUserRepository,
+    private referralLinkRepository: IReferralLinkRepository,
+    private referralEventRepository: IReferralEventRepository
   ) {}
 
   /**

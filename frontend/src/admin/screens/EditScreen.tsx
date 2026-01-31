@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { FileIcon, VideoIcon, ImageIcon, MusicIcon } from '../assets/icons';
+import AdminHeader from '../components/AdminHeader';
+import { OptimizedImage } from '../../components/OptimizedImage';
+import { getOptimizedImageProps } from '../../types/image';
 import '../../styles/admin.css';
 
 type EditCategory = 'tracks' | 'videos' | 'images' | 'files';
@@ -37,33 +40,7 @@ export default function EditScreen() {
 
   return (
     <div className="admin-screen">
-      <header className="admin-header">
-        <div className="admin-header__left">
-          <button className="admin-header__back" type="button">
-            Назад
-          </button>
-        </div>
-        <div className="admin-header__logo">
-          <svg width="60" height="24" viewBox="0 0 60 24" fill="white">
-            <text x="0" y="18" fontFamily="Arial, sans-serif" fontSize="16" fontWeight="bold">
-              ГРУП
-            </text>
-          </svg>
-        </div>
-        <div className="admin-header__right">
-          <button className="admin-header__menu" type="button" aria-label="Меню">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="5" r="1.5" fill="white" />
-              <circle cx="12" cy="12" r="1.5" fill="white" />
-              <circle cx="12" cy="19" r="1.5" fill="white" />
-            </svg>
-          </button>
-          <div className="admin-header__avatar">
-            <span>В</span>
-          </div>
-        </div>
-      </header>
-
+      <AdminHeader showBack onBack={() => window.history.back()} />
       <main className="admin-content">
         <h1 className="admin-title">Редактировать</h1>
 
@@ -94,11 +71,19 @@ export default function EditScreen() {
             </div>
 
             <div className="admin-list">
-              {tracks.map((track) => (
+              {tracks.map((track) => {
+                const coverProps = getOptimizedImageProps(track.coverUrl);
+                return (
                 <div key={track.id} className="admin-list-item">
                   <div className="admin-list-item__avatar">
-                    {track.coverUrl ? (
-                      <img src={track.coverUrl} alt={track.title} />
+                    {coverProps ? (
+                      <OptimizedImage
+                        {...coverProps}
+                        alt={track.title}
+                        loading="lazy"
+                        sizes="80px"
+                        objectFit="cover"
+                      />
                     ) : (
                       <MusicIcon />
                     )}
@@ -130,7 +115,8 @@ export default function EditScreen() {
                     </button>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </>
         )}

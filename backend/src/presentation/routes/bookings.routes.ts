@@ -11,6 +11,7 @@ import { validate } from '../middleware/validator';
 import { CreateBookingSchema } from '../../application/dto/booking.dto';
 import { authenticate } from '../middleware/auth';
 import { AuthService } from '../../domain/services/AuthService';
+import { redis } from '../../config/redis';
 import { bookingRateLimiter, publicApiRateLimiter } from '../middleware/rateLimit';
 
 const router = Router();
@@ -34,7 +35,8 @@ const authService = new AuthService(
   process.env.JWT_SECRET || '',
   process.env.JWT_EXPIRES_IN || '7d',
   process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
-  process.env.TELEGRAM_USER_BOT_TOKEN || undefined
+  process.env.TELEGRAM_USER_BOT_TOKEN || undefined,
+  redis
 );
 
 // Публичные маршруты

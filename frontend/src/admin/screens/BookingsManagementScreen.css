@@ -1,0 +1,715 @@
+/* Bookings Management Screen - Modern Calendar (dark theme best practices) */
+
+.bookings-screen .admin-title {
+  margin-bottom: 20px;
+}
+
+/* Calendar wrapper — карточка с лёгким фоном (#1E1E1E вместо чистого чёрного) */
+.modern-calendar {
+  background: linear-gradient(160deg, rgba(28, 28, 30, 0.95), rgba(0, 0, 0, 0.6));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+/* Header: навигация + месяц + «Сегодня» */
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.calendar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--admin-text);
+  min-width: 140px;
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+.calendar-nav-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  color: var(--admin-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.calendar-nav-btn:active {
+  transform: scale(0.96);
+}
+
+.calendar-today-btn {
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: var(--admin-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-today-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Calendar Grid */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  padding: 8px 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+/* Calendar Day Cell */
+.calendar-day {
+  aspect-ratio: 1;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.3));
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+
+.calendar-day:hover {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.4));
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.calendar-day--other-month {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.calendar-day--today {
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.35));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.calendar-day--past {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calendar-day--past:hover {
+  transform: none;
+}
+
+.calendar-day--blocked {
+  background: linear-gradient(160deg, rgba(255, 59, 48, 0.2), rgba(0, 0, 0, 0.4));
+  border-color: rgba(255, 59, 48, 0.4);
+}
+
+.calendar-day--booked {
+  background: linear-gradient(160deg, rgba(52, 199, 89, 0.15), rgba(0, 0, 0, 0.35));
+  border-color: rgba(52, 199, 89, 0.35);
+}
+
+.calendar-day__number {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.calendar-day__status {
+  font-size: 14px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.calendar-day__blocked-icon {
+  font-size: 12px;
+  line-height: 1;
+  margin-top: 2px;
+  opacity: 0.9;
+}
+
+.calendar-day__indicator {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #ff3135);
+}
+
+/* Legend — цветные точки и подписи (как в топовых календарях) */
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--admin-border);
+  justify-content: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--admin-text-secondary);
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-dot--confirmed {
+  background: var(--admin-success);
+  box-shadow: 0 0 8px rgba(52, 199, 89, 0.4);
+}
+
+.legend-dot--pending {
+  background: var(--admin-warning);
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.3);
+}
+
+.legend-dot--blocked {
+  background: var(--admin-danger);
+  box-shadow: 0 0 8px rgba(255, 59, 48, 0.3);
+}
+
+/* Совместимость со старым классом */
+.calendar-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--admin-text-secondary);
+}
+
+.calendar-legend-item__icon {
+  font-size: 16px;
+}
+
+/* Полоска с кнопкой перехода к календарю */
+.bookings-nav-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+}
+
+.bookings-nav-strip__text {
+  flex: 1;
+  min-width: 200px;
+  font-size: 14px;
+  color: var(--admin-text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.bookings-nav-strip__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.25));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: var(--admin-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bookings-nav-strip__btn:hover {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.3));
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+.bookings-nav-strip__btn:active {
+  transform: translateY(0);
+}
+
+.bookings-nav-strip__btn-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Day Modal — отступы и структура */
+.day-modal {
+  padding: 4px 0 0;
+}
+
+.day-modal .booking-details {
+  margin-bottom: 0;
+}
+
+.day-modal .booking-details__section {
+  margin-bottom: 24px;
+}
+
+.day-modal .booking-details__section:last-child {
+  margin-bottom: 0;
+}
+
+.day-modal .booking-details__section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 14px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.day-modal .booking-detail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.day-modal .booking-detail-group:last-of-type {
+  margin-bottom: 0;
+}
+
+.day-modal .booking-detail-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.day-modal .booking-detail-group span {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--admin-text);
+}
+
+.day-modal .booking-detail-group--income {
+  margin-bottom: 18px;
+}
+
+.day-modal .booking-income-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.day-modal .booking-income-input {
+  flex: 1;
+  min-width: 120px;
+  max-width: 180px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.day-modal .booking-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.day-modal .booking-actions .admin-btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+.day-modal .admin-btn--success {
+  background: var(--admin-success);
+  color: #0a0a0a;
+  border: 1px solid rgba(52, 199, 89, 0.5);
+}
+
+.day-modal .admin-btn--success:hover {
+  background: #22c55e;
+  box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3);
+}
+
+.day-modal .blocked-info {
+  margin-bottom: 20px;
+}
+
+.day-modal .blocked-message {
+  font-size: 15px;
+  color: var(--admin-text);
+  margin: 0 0 12px 0;
+}
+
+.day-modal .block-controls {
+  margin-top: 8px;
+}
+
+.day-modal .block-controls .admin-form-group {
+  margin-bottom: 16px;
+}
+
+.day-modal .block-controls .admin-form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--admin-text-secondary);
+}
+
+.day-modal .block-controls .admin-form-input {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.day-modal .block-controls .admin-btn--full {
+  margin-top: 20px;
+  width: 100%;
+  padding: 14px 20px;
+}
+
+/* Кнопка «Заблокировать дату» — приглушённый красный из палитры */
+.day-modal .block-controls .admin-btn--danger {
+  background: rgba(255, 59, 48, 0.9);
+  border: 1px solid rgba(255, 59, 48, 0.5);
+}
+
+.day-modal .block-controls .admin-btn--danger:hover {
+  background: rgba(255, 59, 48, 1);
+}
+
+/* Day Modal (legacy content) */
+.day-modal-content h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: white;
+}
+
+.day-modal-content p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 24px 0;
+}
+
+.day-status {
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-status--available {
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.2), rgba(27, 94, 32, 0.3));
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #a5d6a7;
+}
+
+.day-status--blocked {
+  background: linear-gradient(160deg, rgba(255, 49, 53, 0.2), rgba(139, 0, 0, 0.3));
+  border: 1px solid rgba(255, 49, 53, 0.4);
+  color: #ef9a9a;
+}
+
+.day-status--past {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Booking Info */
+.booking-info {
+  margin-bottom: 20px;
+}
+
+.booking-info h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  margin: 0 0 12px 0;
+}
+
+.booking-item {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.2));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 8px;
+}
+
+.booking-item__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.booking-item__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+.booking-status-badge {
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.booking-status-badge--confirmed {
+  background: rgba(76, 175, 80, 0.2);
+  color: #a5d6a7;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.booking-status-badge--pending {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffe082;
+  border: 1px solid rgba(255, 193, 7, 0.4);
+}
+
+.booking-status-badge--cancelled {
+  background: rgba(158, 158, 158, 0.2);
+  color: #bdbdbd;
+  border: 1px solid rgba(158, 158, 158, 0.4);
+}
+
+.booking-item__details {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.booking-item__phone {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Modal Actions */
+.day-modal-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.day-modal-actions button {
+  flex: 1;
+}
+
+.btn-block {
+  background: linear-gradient(135deg, #ff3135, #d32f2f);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-block:hover {
+  background: linear-gradient(135deg, #e62e32, #c62828);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255, 49, 53, 0.4);
+}
+
+.btn-unblock {
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.3), rgba(27, 94, 32, 0.4));
+  color: #a5d6a7;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-unblock:hover {
+  background: linear-gradient(160deg, rgba(76, 175, 80, 0.4), rgba(27, 94, 32, 0.5));
+  transform: translateY(-2px);
+}
+
+.btn-cancel {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.2));
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.3));
+}
+
+/* Responsive Design */
+@media (min-width: 640px) {
+  .bookings-stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .modern-calendar {
+    padding: 16px;
+  }
+
+  .calendar-title {
+    font-size: 16px;
+  }
+
+  .calendar-nav-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .calendar-day {
+    min-height: 50px;
+    padding: 6px;
+  }
+
+  .calendar-day__number {
+    font-size: 14px;
+  }
+
+  .calendar-day__status {
+    font-size: 12px;
+  }
+
+  .calendar-weekday {
+    font-size: 10px;
+  }
+
+  .calendar-legend {
+    gap: 12px;
+  }
+
+  .legend-item {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .day-modal-actions {
+    flex-direction: column;
+  }
+
+  .day-modal-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .bookings-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card__number {
+    font-size: 20px;
+  }
+
+  .stat-card__revenue {
+    font-size: 18px;
+  }
+
+  .calendar-grid {
+    gap: 6px;
+  }
+
+  .calendar-day {
+    min-height: 44px;
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  .calendar-day__number {
+    font-size: 13px;
+  }
+
+  .calendar-legend {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .legend-item {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+  }
+}

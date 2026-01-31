@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Song } from '../types/vote';
 import { getSongs } from '../services/songService';
+import { useApiRequest } from '../hooks/useApiRequest';
+import NetworkError from '../components/NetworkError';
 import votingBg from '../assets/figma/voting-bg-only.svg';
+import { OptimizedImage } from '../components/OptimizedImage';
+import { getOptimizedImageProps } from '../types/image';
 import '../styles/voting.css';
 
 type VotingScreenProps = {
@@ -13,21 +17,34 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const { execute } = useApiRequest<Song[]>();
+  const mountedRef = useRef(true);
+
+  const loadSongs = useCallback(() => {
+    setError(null);
+    setLoading(true);
+    execute(async (signal) => getSongs({ signal }))
+      .then((data) => {
+        if (mountedRef.current) setSongs(data);
+      })
+      .catch((err) => {
+        if (err?.name !== 'AbortError' && mountedRef.current) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+        }
+      })
+      .finally(() => {
+        if (mountedRef.current) setLoading(false);
+      });
+  }, [execute]);
 
   useEffect(() => {
-    const loadSongs = async () => {
-      try {
-        const data = await getSongs();
-        setSongs(data);
-      } catch (error) {
-        console.error('Failed to load songs:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    mountedRef.current = true;
     loadSongs();
-  }, []);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [loadSongs]);
 
   const handleSongSelect = (songId: string) => {
     setSelectedSongId(songId);
@@ -38,6 +55,27 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
       onSubmit?.(selectedSongId);
     }
   };
+
+  if (error) {
+    return (
+      <main className="screen screen--voting">
+        {onBack && (
+          <button className="voting-back-btn" onClick={onBack} type="button">
+            Назад
+          </button>
+        )}
+        <div className="voting-hero">
+          <img alt="" className="voting-bg-image" src={votingBg} />
+        </div>
+        <div className="voting-container">
+          <NetworkError
+            message="Не удалось загрузить список песен."
+            onRetry={loadSongs}
+          />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="screen screen--voting">
@@ -57,7 +95,9 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
           <div className="voting-loading">Загрузка...</div>
         ) : (
           <div className="voting-songs-list">
-          {songs.map((song) => (
+          {songs.map((song) => {
+            const coverProps = getOptimizedImageProps(song.coverUrl);
+            return (
             <button
               key={song.id}
               type="button"
@@ -65,8 +105,15 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
               onClick={() => handleSongSelect(song.id)}
             >
               <div className="voting-song-cover">
-                {song.coverUrl ? (
-                  <img alt={song.title} className="voting-song-cover-image" src={song.coverUrl} />
+                {coverProps ? (
+                  <OptimizedImage
+                    {...coverProps}
+                    alt={song.title}
+                    className="voting-song-cover-image"
+                    loading="lazy"
+                    sizes="(max-width: 440px) 100vw, 200px"
+                    objectFit="cover"
+                  />
                 ) : (
                   <div className="voting-song-cover-placeholder"></div>
                 )}
@@ -95,7 +142,8 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
                 )}
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
         )}
         <button

@@ -80,9 +80,12 @@ export class AuthController {
 
   /**
    * POST /api/auth/logout
-   * Выход из системы
+   * Выход из системы + отзыв токена (jti в Redis blacklist)
    */
   async logout(req: Request, res: Response): Promise<void> {
+    if (req.token) {
+      await this.authService.revokeToken(req.token);
+    }
     res.clearCookie('token');
     res.json({
       success: true,

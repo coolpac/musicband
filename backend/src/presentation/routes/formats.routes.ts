@@ -13,5 +13,6 @@ const formatController = new FormatController(formatService);
 
 // Публичные маршруты с rate limiting
 router.get('/', publicApiRateLimiter, formatController.getAllFormats.bind(formatController));
+router.get('/for-booking', publicApiRateLimiter, formatController.getFormatsForBooking.bind(formatController));
 
 export default router;

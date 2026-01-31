@@ -1,0 +1,234 @@
+/* Лог заявок — отдельная страница для снижения нагрузки на календарь */
+
+.bookings-log-screen .admin-title {
+  margin-bottom: 12px;
+}
+
+.bookings-log-screen .bookings-nav-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.bookings-log-screen .bookings-nav-strip__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  color: var(--admin-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bookings-log-screen .bookings-nav-strip__btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.bookings-log-screen .bookings-nav-strip__btn-icon {
+  font-size: 16px;
+}
+
+.bookings-log__desc {
+  font-size: 14px;
+  color: var(--admin-text-secondary);
+  margin: 0 0 20px 0;
+}
+
+.bookings-log__empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--admin-text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+}
+
+.bookings-log-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.bookings-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.bookings-log-table th,
+.bookings-log-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.bookings-log-table th {
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  background: rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+.bookings-log-table td {
+  color: var(--admin-text);
+}
+
+.bookings-log-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.bookings-log-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.bookings-log-table .booking-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bookings-log-screen .booking-status--confirmed {
+  background: rgba(52, 199, 89, 0.2);
+  color: var(--admin-success);
+}
+
+.bookings-log-screen .booking-status--pending {
+  background: rgba(255, 204, 0, 0.2);
+  color: var(--admin-warning);
+}
+
+.bookings-log-screen .booking-status--cancelled {
+  background: rgba(255, 59, 48, 0.2);
+  color: var(--admin-danger);
+}
+
+/* Колонка «Действия»: иконки-кнопки — компактно и наглядно */
+.bookings-log-table__actions {
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.bookings-log-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.bookings-log-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--admin-radius);
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s, background 0.2s, border-color 0.2s;
+  color: inherit;
+}
+
+.bookings-log-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.bookings-log-action-btn .bookings-log-action-dots {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Подтвердить — галочка, зелёный */
+.bookings-log-action-btn--success {
+  background: var(--admin-success);
+  color: #0a0a0a;
+  border-color: rgba(52, 199, 89, 0.4);
+}
+
+.bookings-log-action-btn--success:hover:not(:disabled) {
+  background: #22c55e;
+  box-shadow: 0 2px 6px rgba(52, 199, 89, 0.25);
+}
+
+/* Отменить — крестик, красный */
+.bookings-log-action-btn--danger {
+  background: var(--admin-danger);
+  color: white;
+  border-color: rgba(255, 59, 48, 0.4);
+}
+
+.bookings-log-action-btn--danger:hover:not(:disabled) {
+  background: #dc2626;
+  box-shadow: 0 2px 6px rgba(248, 113, 113, 0.25);
+}
+
+/* Удалить — корзина, outline */
+.bookings-log-action-btn--ghost-danger {
+  background: transparent;
+  color: var(--admin-danger);
+  border-color: rgba(255, 59, 48, 0.4);
+}
+
+.bookings-log-action-btn--ghost-danger:hover:not(:disabled) {
+  background: rgba(255, 59, 48, 0.12);
+  border-color: rgba(255, 59, 48, 0.6);
+}
+
+.bookings-log-actions-empty {
+  color: var(--admin-text-secondary);
+  font-size: 14px;
+}
+
+/* Колонка «Доход»: значение + кнопка изменить */
+.bookings-log-table__income {
+  white-space: nowrap;
+}
+
+.bookings-log-income-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bookings-log-income-edit-btn {
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--admin-border);
+  border-radius: 6px;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.bookings-log-income-edit-btn:hover {
+  color: var(--admin-text);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.bookings-log-income-edit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.bookings-log-income-edit .bookings-log-income-input {
+  width: 90px;
+  font-size: 13px;
+  padding: 4px 8px;
+}

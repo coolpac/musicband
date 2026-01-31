@@ -1,0 +1,58 @@
+/* Blur placeholder до загрузки (ленивая загрузка) */
+.optimized-image {
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+
+.optimized-image picture {
+  display: block;
+  line-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.optimized-image img {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  object-position: center;
+  transition: opacity 0.2s ease-out;
+}
+
+/* Заполнение контейнера, когда у обёртки задана высота (.voting-song-cover, .format-hero и т.д.) */
+.optimized-image.voting-song-cover-image picture,
+.optimized-image.voting-song-cover-image img,
+.optimized-image.format-image picture,
+.optimized-image.format-image img,
+.optimized-image.format-detail-bg-image picture,
+.optimized-image.format-detail-bg-image img,
+.optimized-image.partner-tile__img picture,
+.optimized-image.partner-tile__img img {
+  height: 100%;
+}
+
+.optimized-image--loading img {
+  opacity: 0;
+}
+
+.optimized-image--loaded img {
+  opacity: 1;
+}
+
+/* Низкокачественный blur-placeholder (пока изображение не загружено) */
+.optimized-image__placeholder {
+  position: absolute;
+  inset: 0;
+  background: var(--optimized-image-placeholder-bg, #e8e8e8);
+  filter: blur(12px);
+  transform: scale(1.05);
+  pointer-events: none;
+}
+
+.optimized-image--loaded .optimized-image__placeholder {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+}

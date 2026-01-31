@@ -6,9 +6,10 @@
 
 .admin-topbar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  padding-bottom: 12px;
+  padding-bottom: 8px;
+  min-height: 100%;
 }
 
 .admin-topbar__left,
@@ -32,50 +33,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* Кнопка назад */
-.admin-topbar__back {
-  background: transparent;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  color: var(--white);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  border-radius: 8px;
-}
-
-.admin-topbar__back:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.admin-topbar__back:active {
-  transform: scale(0.95);
-}
-
-/* Кнопка меню */
-.admin-topbar__menu {
-  background: transparent;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  color: var(--white);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  border-radius: 8px;
-}
-
-.admin-topbar__menu:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.admin-topbar__menu:active {
-  transform: scale(0.95);
 }
 
 /* Аватар */

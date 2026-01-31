@@ -3,20 +3,28 @@ import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
+import {
+  getAdminFormats,
+  createAdminFormat,
+  updateAdminFormat,
+  deleteAdminFormat,
+  type AdminFormat,
+} from '../../services/adminFormatService';
+import { OptimizedImage } from '../../components/OptimizedImage';
+import { getOptimizedImageProps } from '../../types/image';
 import '../../styles/admin.css';
 import './FormatsManagementScreen.css';
 
-// Types
-interface Format {
-  id: string;
-  name: string;
+/** UI status: available = показывать в бронировании, coming-soon = скрыт */
+type FormatStatusUI = 'available' | 'coming-soon';
+
+interface Format extends Omit<AdminFormat, 'description'> {
   shortDescription: string;
+  description?: string | null;
   fullDescription?: string;
-  imageUrl?: string;
   suitableFor: string[];
   performers: { name: string; role: string }[];
-  status: 'available' | 'coming-soon';
-  order: number;
+  status: FormatStatusUI;
 }
 
 interface FormatInput {
@@ -26,8 +34,25 @@ interface FormatInput {
   imageUrl?: string;
   suitableFor: string[];
   performers: { name: string; role: string }[];
-  status: 'available' | 'coming-soon';
+  status: FormatStatusUI;
   order: number;
+}
+
+function fromApi(f: AdminFormat): Format {
+  return {
+    ...f,
+    shortDescription: f.shortDescription ?? '',
+    fullDescription: f.description ?? '',
+    suitableFor: Array.isArray(f.suitableFor) ? (f.suitableFor as string[]) : [],
+    performers: Array.isArray(f.performers)
+      ? (f.performers as { name: string; role: string }[])
+      : [],
+    status: f.status === 'hidden' ? 'coming-soon' : 'available',
+  };
+}
+
+function toApiStatus(ui: FormatStatusUI): 'available' | 'hidden' {
+  return ui === 'coming-soon' ? 'hidden' : 'available';
 }
 
 export default function FormatsManagementScreen() {
@@ -49,11 +74,6 @@ export default function FormatsManagementScreen() {
     order: 0,
   });
 
-  // Temp inputs for arrays
-  const [suitableInput, setSuitableInput] = useState('');
-  const [performerName, setPerformerName] = useState('');
-  const [performerRole, setPerformerRole] = useState('');
-
   useEffect(() => {
     loadFormats();
   }, []);
@@ -61,39 +81,12 @@ export default function FormatsManagementScreen() {
   const loadFormats = async () => {
     setIsLoading(true);
     try {
-      // Mock data
-      const mockFormats: Format[] = [
-        {
-          id: '1',
-          name: 'Дуэт',
-          shortDescription: 'Концерт в формате дуэта',
-          fullDescription: 'Живое исполнение песен в формате дуэта',
-          imageUrl: '',
-          suitableFor: ['Свадьбы', 'Корпоративы', 'Юбилеи'],
-          performers: [
-            { name: 'Гио Пика', role: 'Вокал' },
-            { name: 'DJ', role: 'Диджей' },
-          ],
-          status: 'available',
-          order: 1,
-        },
-        {
-          id: '2',
-          name: 'Соло',
-          shortDescription: 'Сольное выступление',
-          fullDescription: 'Сольное живое исполнение',
-          imageUrl: '',
-          suitableFor: ['Частные мероприятия', 'Клубы'],
-          performers: [{ name: 'Гио Пика', role: 'Вокал' }],
-          status: 'available',
-          order: 2,
-        },
-      ];
-
-      setFormats(mockFormats);
+      const list = await getAdminFormats();
+      setFormats(list.map(fromApi));
     } catch (error) {
-      console.error('Error loading formats:', error);
-      toast.error('Не удалось загрузить форматы');
+      console.warn('Backend unavailable, showing demo data:', error);
+      setFormats(DEMO_FORMATS);
+      toast('Бэкенд недоступен. Показаны демо-данные.', { icon: 'ℹ️' });
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +109,16 @@ export default function FormatsManagementScreen() {
 
   const handleEdit = (format: Format) => {
     setEditingFormat(format);
-    setFormData({ ...format });
+    setFormData({
+      name: format.name,
+      shortDescription: format.shortDescription,
+      fullDescription: format.fullDescription ?? format.description ?? '',
+      imageUrl: format.imageUrl ?? '',
+      suitableFor: format.suitableFor,
+      performers: format.performers,
+      status: format.status,
+      order: format.order,
+    });
     setShowModal(true);
   };
 
@@ -131,8 +133,7 @@ export default function FormatsManagementScreen() {
     if (!confirmed) return;
 
     try {
-      // API call
-      console.log('Deleting format:', id);
+      await deleteAdminFormat(id);
       toast.success('Формат удален');
       await loadFormats();
     } catch (error) {
@@ -151,11 +152,22 @@ export default function FormatsManagementScreen() {
 
     setIsSaving(true);
     try {
+      const payload = {
+        name: formData.name,
+        description: formData.fullDescription || undefined,
+        shortDescription: formData.shortDescription,
+        imageUrl: formData.imageUrl || undefined,
+        suitableFor: formData.suitableFor,
+        performers: formData.performers,
+        status: toApiStatus(formData.status),
+        order: formData.order,
+      };
+
       if (editingFormat) {
-        console.log('Updating format:', editingFormat.id, formData);
+        await updateAdminFormat(editingFormat.id, payload);
         toast.success('Формат обновлен');
       } else {
-        console.log('Creating format:', formData);
+        await createAdminFormat(payload);
         toast.success('Формат добавлен');
       }
 
@@ -171,45 +183,6 @@ export default function FormatsManagementScreen() {
 
   const handleImageUpload = (url: string) => {
     setFormData({ ...formData, imageUrl: url });
-  };
-
-  const handleAddSuitable = () => {
-    if (!suitableInput.trim()) return;
-    setFormData({
-      ...formData,
-      suitableFor: [...formData.suitableFor, suitableInput.trim()],
-    });
-    setSuitableInput('');
-  };
-
-  const handleRemoveSuitable = (index: number) => {
-    setFormData({
-      ...formData,
-      suitableFor: formData.suitableFor.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleAddPerformer = () => {
-    if (!performerName.trim() || !performerRole.trim()) {
-      toast.error('Заполните имя и роль');
-      return;
-    }
-    setFormData({
-      ...formData,
-      performers: [
-        ...formData.performers,
-        { name: performerName.trim(), role: performerRole.trim() },
-      ],
-    });
-    setPerformerName('');
-    setPerformerRole('');
-  };
-
-  const handleRemovePerformer = (index: number) => {
-    setFormData({
-      ...formData,
-      performers: formData.performers.filter((_, i) => i !== index),
-    });
   };
 
   if (isLoading) {
@@ -238,11 +211,19 @@ export default function FormatsManagementScreen() {
           </div>
         ) : (
           <div className="formats-grid">
-            {formats.map((format) => (
+            {formats.map((format) => {
+              const imgProps = getOptimizedImageProps(format.imageUrl);
+              return (
               <div key={format.id} className="format-card">
-                {format.imageUrl ? (
+                {imgProps ? (
                   <div className="format-card__image">
-                    <img src={format.imageUrl} alt={format.name} />
+                    <OptimizedImage
+                      {...imgProps}
+                      alt={format.name}
+                      loading="lazy"
+                      sizes="(max-width: 440px) 100vw, 280px"
+                      objectFit="cover"
+                    />
                   </div>
                 ) : (
                   <div className="format-card__placeholder">
@@ -263,8 +244,9 @@ export default function FormatsManagementScreen() {
                     <h3 className="format-card__title">{format.name}</h3>
                     <span
                       className={`format-badge format-badge--${format.status}`}
+                      title={format.status === 'available' ? 'Показывается в бронировании' : 'Скрыт из бронирования'}
                     >
-                      {format.status === 'available' ? 'Доступен' : 'Скоро'}
+                      {format.status === 'available' ? 'В бронировании' : 'Скрыт'}
                     </span>
                   </div>
 
@@ -303,7 +285,8 @@ export default function FormatsManagementScreen() {
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
 
@@ -367,111 +350,35 @@ export default function FormatsManagementScreen() {
               onUpload={handleImageUpload}
               accept="image/*"
               maxSize={5}
+              preset="format"
             />
           </div>
 
           <div className="admin-form-group">
-            <label className="admin-form-label">Подходит для</label>
-            <div className="array-input">
-              <input
-                type="text"
-                className="admin-form-input"
-                value={suitableInput}
-                onChange={(e) => setSuitableInput(e.target.value)}
-                placeholder="Например: Свадьбы"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddSuitable();
+            <div className="admin-form-toggle-row">
+              <label className="admin-form-label admin-form-toggle-label">
+                Показывать в бронировании
+              </label>
+              <label className="admin-toggle">
+                <input
+                  type="checkbox"
+                  checked={formData.status === 'available'}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      status: (e.target.checked ? 'available' : 'coming-soon') as FormatStatusUI,
+                    })
                   }
-                }}
-              />
-              <button
-                type="button"
-                className="admin-btn"
-                onClick={handleAddSuitable}
-              >
-                Добавить
-              </button>
+                  className="admin-toggle__input"
+                />
+                <span className="admin-toggle__slider" />
+              </label>
             </div>
-            {formData.suitableFor.length > 0 && (
-              <div className="array-list">
-                {formData.suitableFor.map((item, index) => (
-                  <div key={index} className="array-item">
-                    <span>{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSuitable(index)}
-                      className="array-item__remove"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="admin-form-group">
-            <label className="admin-form-label">Исполнители</label>
-            <div className="performer-input">
-              <input
-                type="text"
-                className="admin-form-input"
-                value={performerName}
-                onChange={(e) => setPerformerName(e.target.value)}
-                placeholder="Имя исполнителя"
-              />
-              <input
-                type="text"
-                className="admin-form-input"
-                value={performerRole}
-                onChange={(e) => setPerformerRole(e.target.value)}
-                placeholder="Роль"
-              />
-              <button
-                type="button"
-                className="admin-btn"
-                onClick={handleAddPerformer}
-              >
-                Добавить
-              </button>
-            </div>
-            {formData.performers.length > 0 && (
-              <div className="array-list">
-                {formData.performers.map((performer, index) => (
-                  <div key={index} className="array-item">
-                    <span>
-                      {performer.name} — {performer.role}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePerformer(index)}
-                      className="array-item__remove"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="admin-form-group">
-            <label className="admin-form-label">Статус</label>
-            <select
-              className="admin-form-input admin-form-select"
-              value={formData.status}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  status: e.target.value as 'available' | 'coming-soon',
-                })
-              }
-            >
-              <option value="available">Доступен</option>
-              <option value="coming-soon">Скоро</option>
-            </select>
+            <span className="admin-form-hint">
+              {formData.status === 'available'
+                ? 'Формат доступен для выбора при заявке'
+                : 'Формат скрыт из выбора в бронировании'}
+            </span>
           </div>
 
           <div className="admin-form-actions">

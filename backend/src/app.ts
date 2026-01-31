@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import { errorHandler } from './presentation/middleware/errorHandler';
 import { logger } from './shared/utils/logger';
 import { connectDatabase, disconnectDatabase } from './config/database';
-import { connectRedis, disconnectRedis } from './config/redis';
+import { connectRedis, disconnectRedis, redis } from './config/redis';
 import authRoutes from './presentation/routes/auth.routes';
 import songsRoutes from './presentation/routes/songs.routes';
 import bookingsRoutes from './presentation/routes/bookings.routes';
@@ -27,6 +27,7 @@ import reviewsRoutes from './presentation/routes/reviews.routes';
 import agentRoutes from './presentation/routes/agent.routes';
 import uploadRoutes from './presentation/routes/upload.routes';
 import publicVoteRoutes from './presentation/routes/public/vote.routes';
+import healthRoutes from './presentation/routes/health.routes';
 import { SocketServer } from './presentation/socket/socketServer';
 import { VoteService } from './domain/services/VoteService';
 import { SongService } from './domain/services/SongService';
@@ -69,13 +70,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const uploadDir = process.env.UPLOAD_DIR || 'uploads';
 app.use('/uploads', express.static(uploadDir));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-  });
-});
+// Health endpoints (no rate limit — for monitoring/K8s probes)
+app.use('/health', healthRoutes);
 
 // API routes
 app.get('/api', (req, res) => {
@@ -133,7 +129,8 @@ async function startServer() {
       process.env.JWT_SECRET || '',
       process.env.JWT_EXPIRES_IN || '7d',
       process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
-      process.env.TELEGRAM_USER_BOT_TOKEN || undefined
+      process.env.TELEGRAM_USER_BOT_TOKEN || undefined,
+      redis
     );
 
     const songService = new SongService(songRepository);

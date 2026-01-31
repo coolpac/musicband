@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
+import { OptimizedImage } from '../../components/OptimizedImage';
+import { getOptimizedImageProps } from '../../types/image';
 import '../../styles/admin.css';
 import './PartnersManagementScreen.css';
 
@@ -155,11 +157,19 @@ export default function PartnersManagementScreen() {
           </div>
         ) : (
           <div className="partners-grid">
-            {partners.map((partner) => (
+            {partners.map((partner) => {
+              const logoProps = getOptimizedImageProps(partner.logoUrl);
+              return (
               <div key={partner.id} className="partner-card">
-                {partner.logoUrl ? (
+                {logoProps ? (
                   <div className="partner-card__logo">
-                    <img src={partner.logoUrl} alt={partner.name} />
+                    <OptimizedImage
+                      {...logoProps}
+                      alt={partner.name}
+                      loading="lazy"
+                      sizes="(max-width: 440px) 100vw, 160px"
+                      objectFit="contain"
+                    />
                   </div>
                 ) : (
                   <div className="partner-card__placeholder">🤝</div>
@@ -194,7 +204,8 @@ export default function PartnersManagementScreen() {
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
 
@@ -229,6 +240,7 @@ export default function PartnersManagementScreen() {
               onUpload={handleImageUpload}
               accept="image/*"
               maxSize={3}
+              preset="logo"
             />
           </div>
 

@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import '../../styles/admin.css';
 
 interface ModalProps {
@@ -18,7 +19,6 @@ export default function Modal({
 }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
-      // Блокируем прокрутку body при открытом модальном окне
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -48,7 +48,7 @@ export default function Modal({
     }
   };
 
-  return (
+  const modal = (
     <div className="admin-modal" onClick={handleBackdropClick}>
       <div className={`admin-modal__content admin-modal__content--${size}`}>
         <div className="admin-modal__header">
@@ -66,4 +66,6 @@ export default function Modal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

@@ -7,7 +7,16 @@
       "Bash(npx prisma migrate dev:*)",
       "Bash(npm run prisma:migrate:*)",
       "Bash(ls:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git stash pop:*)",
+      "Bash(git stash show:*)",
+      "Bash(git checkout:*)",
+      "Bash(python3:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite build)",
+      "Bash(find:*)",
+      "Bash(du:*)",
+      "Bash(xargs du:*)"
     ]
   }
 }

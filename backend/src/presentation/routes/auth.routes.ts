@@ -5,18 +5,20 @@ import { TelegramAuthSchema, AdminAuthSchema } from '../../application/dto/auth.
 import { authenticate } from '../middleware/auth';
 import { AuthService } from '../../domain/services/AuthService';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/UserRepository';
-import { authRateLimiter, expressRateLimiters } from '../middleware/rateLimit';
+import { redis } from '../../config/redis';
+import { authRateLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
-// Создаем зависимости
+// Создаем зависимости (redis для token blacklist при logout)
 const userRepository = new PrismaUserRepository();
 const authService = new AuthService(
   userRepository,
   process.env.JWT_SECRET || '',
   process.env.JWT_EXPIRES_IN || '7d',
   process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
-  process.env.TELEGRAM_USER_BOT_TOKEN || undefined
+  process.env.TELEGRAM_USER_BOT_TOKEN || undefined,
+  redis
 );
 const authController = new AuthController(authService);
 

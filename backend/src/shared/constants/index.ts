@@ -26,13 +26,20 @@ export const IMAGE_SIZES = {
 
 // Лимиты для обработки изображений
 export const IMAGE_LIMITS = {
-  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
+  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
   MAX_WIDTH: 4000,
   MAX_HEIGHT: 4000,
-  OPTIMIZED_WIDTH: 1200,
-  OPTIMIZED_HEIGHT: 1200,
-  THUMBNAIL_WIDTH: 300,
-  THUMBNAIL_HEIGHT: 300,
+  /** Responsive widths: small, medium, large */
+  RESPONSIVE_WIDTHS: [480, 960, 1920] as const,
+  THUMBNAIL_WIDTH: 200,
+  THUMBNAIL_HEIGHT: 200,
+  /** Default WebP quality for responsive variants */
+  WEBP_QUALITY: 80,
+  /** Default AVIF quality (30–50% smaller than WebP at same perceived quality) */
+  AVIF_QUALITY: 65,
+  // Legacy (for backward compat)
+  OPTIMIZED_WIDTH: 960,
+  OPTIMIZED_HEIGHT: 960,
 } as const;
 
 // TTL для кеша (в секундах)
@@ -40,6 +47,7 @@ export const CACHE_TTL = {
   ACTIVE_SONGS: 5 * 60, // 5 минут
   VOTE_RESULTS: 2, // 2 секунды
   BLOCKED_DATES: 60 * 60, // 1 час
+  AVAILABLE_DATES: 5 * 60, // 5 минут — результат getAvailableDates
   AGENT_STATS: 5 * 60, // 5 минут
 } as const;
 

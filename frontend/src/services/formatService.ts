@@ -7,17 +7,24 @@ import { Format } from '../types/format';
  */
 export async function getFormats(): Promise<Format[]> {
   if (isMockMode()) {
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 300));
     return mockFormats;
   }
 
-  try {
-    return await apiGet<Format[]>('/api/formats');
-  } catch (error) {
-    console.warn('Failed to fetch formats from API, falling back to mock data', error);
-    return mockFormats;
+  return await apiGet<Format[]>('/api/formats');
+}
+
+/**
+ * Get formats available for booking (status = 'available').
+ * Used in the booking request form for format selection.
+ */
+export async function getFormatsForBooking(): Promise<Format[]> {
+  if (isMockMode()) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    return mockFormats.filter((f) => f.status === 'available');
   }
+
+  return await apiGet<Format[]>('/api/formats/for-booking');
 }
 
 /**
@@ -30,10 +37,5 @@ export async function getFormatById(id: string): Promise<Format | undefined> {
     return mockFormats.find((f) => f.id === id);
   }
 
-  try {
-    return await apiGet<Format>(`/api/formats/${id}`);
-  } catch (error) {
-    console.warn(`Failed to fetch format ${id} from API, falling back to mock data`, error);
-    return mockFormats.find((f) => f.id === id);
-  }
+  return await apiGet<Format>(`/api/formats/${id}`);
 }

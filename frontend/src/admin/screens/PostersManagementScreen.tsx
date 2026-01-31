@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
+import { OptimizedImage } from '../../components/OptimizedImage';
+import { getOptimizedImageProps } from '../../types/image';
 import '../../styles/admin.css';
 import './PostersManagementScreen.css';
 
@@ -160,11 +162,19 @@ export default function PostersManagementScreen() {
           </div>
         ) : (
           <div className="posters-list">
-            {posters.map((poster) => (
+            {posters.map((poster) => {
+              const imgProps = getOptimizedImageProps(poster.imageUrl);
+              return (
               <div key={poster.id} className="poster-item">
-                {poster.imageUrl ? (
+                {imgProps ? (
                   <div className="poster-item__image">
-                    <img src={poster.imageUrl} alt={poster.title} />
+                    <OptimizedImage
+                      {...imgProps}
+                      alt={poster.title}
+                      loading="lazy"
+                      sizes="(max-width: 440px) 100vw, 200px"
+                      objectFit="cover"
+                    />
                   </div>
                 ) : (
                   <div className="poster-item__placeholder">📋</div>
@@ -202,7 +212,8 @@ export default function PostersManagementScreen() {
                   </button>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
 
@@ -248,6 +259,7 @@ export default function PostersManagementScreen() {
               onUpload={handleImageUpload}
               accept="image/*"
               maxSize={5}
+              preset="poster"
             />
           </div>
 

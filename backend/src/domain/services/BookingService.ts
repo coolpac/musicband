@@ -34,6 +34,10 @@ export class BookingService {
     // Создаем бронирование
     const booking = await this.bookingRepository.create(data);
 
+    // Инвалидация кеша доступных дат (при создании бронирования)
+    const bookingMonth = `${data.bookingDate.getFullYear()}-${String(data.bookingDate.getMonth() + 1).padStart(2, '0')}`;
+    await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(bookingMonth));
+
     logger.info('Booking created', {
       bookingId: booking.id,
       userId: data.userId,
@@ -44,7 +48,8 @@ export class BookingService {
   }
 
   /**
-   * Получение доступных дат для бронирования (с кешированием)
+   * Получение доступных дат для бронирования (с кешированием в Redis, TTL 5 мин).
+   * formats не загружаются — в ответе только dates и blockedDates.
    */
   async getAvailableDates(formatId?: string, month?: string): Promise<{
     dates: string[];
@@ -53,54 +58,64 @@ export class BookingService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Определяем диапазон дат (весь месяц или следующий месяц)
+    // Валидация month: только YYYY-MM, иначе ValidationError
+    if (month) {
+      const match = month.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
+      if (!match) {
+        throw new ValidationError('Invalid month format. Expected: YYYY-MM');
+      }
+    }
+
+    const cacheMonth =
+      month ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const cacheKey = CACHE_KEYS.AVAILABLE_DATES(cacheMonth);
+
+    return CacheService.getOrSet(
+      cacheKey,
+      () => this.computeAvailableDates(cacheMonth, today),
+      CACHE_TTL.AVAILABLE_DATES
+    );
+  }
+
+  /**
+   * Внутренний расчёт доступных дат (без кеша).
+   * Заблокированные даты — через Set для O(1) lookup вместо O(n) includes.
+   */
+  private async computeAvailableDates(
+    cacheMonth: string,
+    today: Date
+  ): Promise<{ dates: string[]; blockedDates: string[] }> {
+    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
     let startDate: Date;
     let endDate: Date;
-    let cacheMonth: string | undefined;
 
-    if (month) {
-      // Формат: YYYY-MM
-      const [year, monthNum] = month.split('-').map(Number);
+    if (cacheMonth) {
+      const [year, monthNum] = cacheMonth.split('-').map(Number);
       startDate = new Date(year, monthNum - 1, 1);
-      endDate = new Date(year, monthNum, 0); // Последний день месяца
-      cacheMonth = month;
+      endDate = new Date(year, monthNum, 0);
     } else {
-      // Текущий месяц
       startDate = new Date(today.getFullYear(), today.getMonth(), 1);
       endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      cacheMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
     }
 
-    // Пытаемся получить заблокированные даты из кеша
-    const cacheKey = CACHE_KEYS.BLOCKED_DATES(cacheMonth);
-    const cachedBlockedDates = await CacheService.get<string[]>(cacheKey);
+    // Загружаем заблокированные даты один раз из БД
+    const blockedDates = await this.blockedDateRepository.getBlockedDatesInRange(startDate, endDate);
+    const blockedDatesStr = blockedDates.map((d) => formatDate(d));
+    const blockedSet = new Set(blockedDatesStr);
 
-    let blockedDatesStr: string[];
-    if (cachedBlockedDates) {
-      blockedDatesStr = cachedBlockedDates;
-    } else {
-      // Получаем заблокированные даты из БД
-      const blockedDates = await this.blockedDateRepository.getBlockedDatesInRange(startDate, endDate);
-      blockedDatesStr = blockedDates.map((d) => d.toISOString().split('T')[0]);
-      // Кешируем на час
-      await CacheService.set(cacheKey, blockedDatesStr, CACHE_TTL.BLOCKED_DATES);
-    }
-
-    // Генерируем все даты месяца
+    // Все даты месяца (не прошедшие)
     const allDates: string[] = [];
     const current = new Date(startDate);
-
     while (current <= endDate) {
-      // Пропускаем прошедшие даты
       if (current >= today) {
-        const dateStr = current.toISOString().split('T')[0];
-        allDates.push(dateStr);
+        allDates.push(formatDate(current));
       }
       current.setDate(current.getDate() + 1);
     }
 
-    // Фильтруем заблокированные
-    const availableDates = allDates.filter((date) => !blockedDatesStr.includes(date));
+    // O(1) проверка на блокировку вместо O(n) includes
+    const availableDates = allDates.filter((dateStr) => !blockedSet.has(dateStr));
 
     return {
       dates: availableDates,
@@ -144,6 +159,21 @@ export class BookingService {
 
     await this.getBookingById(id);
     return this.bookingRepository.updateIncome(id, income);
+  }
+
+  /**
+   * Удаление заявки (например, спам)
+   */
+  async deleteBooking(id: string): Promise<void> {
+    const booking = await this.getBookingById(id);
+    await this.bookingRepository.delete(id);
+
+    // Инвалидация кеша доступных дат
+    const bookingDate = booking.bookingDate instanceof Date ? booking.bookingDate : new Date(booking.bookingDate);
+    const month = `${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, '0')}`;
+    await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(month));
+
+    logger.info('Booking deleted by admin', { bookingId: id });
   }
 
   /**
@@ -201,12 +231,41 @@ export class BookingService {
       reason,
     });
 
-    // Инвалидируем кеш заблокированных дат
+    // Инвалидация кешей: заблокированные даты и доступные даты
     const month = `${blockedDate.getFullYear()}-${String(blockedDate.getMonth() + 1).padStart(2, '0')}`;
     await CacheService.invalidate(CACHE_KEYS.BLOCKED_DATES(month));
-    await CacheService.invalidate(CACHE_KEYS.BLOCKED_DATES()); // Общий кеш
+    await CacheService.invalidate(CACHE_KEYS.BLOCKED_DATES());
+    await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(month));
 
     return created;
+  }
+
+  /**
+   * Список заблокированных дат за месяц (для админки)
+   */
+  async getBlockedDates(month?: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let startDate: Date;
+    let endDate: Date;
+
+    if (month) {
+      const match = month.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
+      if (!match) {
+        throw new ValidationError('Invalid month format. Expected: YYYY-MM');
+      }
+      const [, yearStr, monthStr] = match;
+      const year = Number(yearStr);
+      const monthNum = Number(monthStr);
+      startDate = new Date(year, monthNum - 1, 1);
+      endDate = new Date(year, monthNum, 0);
+    } else {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    }
+
+    return this.blockedDateRepository.findInRange(startDate, endDate);
   }
 
   /**
@@ -220,14 +279,16 @@ export class BookingService {
 
     await this.blockedDateRepository.delete(id);
 
-    // Инвалидируем кеш заблокированных дат
+    // Инвалидация кешей: заблокированные даты и доступные даты
     const month = `${blocked.blockedDate.getFullYear()}-${String(blocked.blockedDate.getMonth() + 1).padStart(2, '0')}`;
     await CacheService.invalidate(CACHE_KEYS.BLOCKED_DATES(month));
-    await CacheService.invalidate(CACHE_KEYS.BLOCKED_DATES()); // Общий кеш
+    await CacheService.invalidate(CACHE_KEYS.BLOCKED_DATES());
+    await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(month));
   }
 
   /**
-   * Получение календаря бронирований (для админа)
+   * Получение календаря бронирований (для админа).
+   * formats загружаются один раз вне цикла по датам.
    */
   async getCalendar(month?: string) {
     const today = new Date();
@@ -237,7 +298,13 @@ export class BookingService {
     let endDate: Date;
 
     if (month) {
-      const [year, monthNum] = month.split('-').map(Number);
+      const match = month.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
+      if (!match) {
+        throw new ValidationError('Invalid month format. Expected: YYYY-MM');
+      }
+      const [, yearStr, monthStr] = match;
+      const year = Number(yearStr);
+      const monthNum = Number(monthStr);
       startDate = new Date(year, monthNum - 1, 1);
       endDate = new Date(year, monthNum, 0);
     } else {

@@ -79,6 +79,11 @@ export class SocketServer {
         // Верифицируем токен
         const payload = this.authService.verifyToken(token);
 
+        // Проверка blacklist (отзыв токена)
+        if (await this.authService.isRevoked(payload.jti)) {
+          return next(new UnauthorizedError('Token has been revoked'));
+        }
+
         // Сохраняем данные пользователя в socket
         socket.userId = payload.userId;
         socket.userRole = payload.role;

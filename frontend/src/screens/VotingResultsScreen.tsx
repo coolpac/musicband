@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Song } from '../types/vote';
 import { getSongs } from '../services/songService';
 import { getVoteResults, VoteResult } from '../services/voteService';
+import NetworkError from '../components/NetworkError';
 import votingBg from '../assets/figma/voting-bg-only.svg';
+import { OptimizedImage } from '../components/OptimizedImage';
+import { getOptimizedImageProps } from '../types/image';
 import '../styles/voting.css';
 
 type VotingResultsScreenProps = {
@@ -46,6 +49,27 @@ export default function VotingResultsScreen({ onBack, onSongClick }: VotingResul
     return bPercent - aPercent;
   });
 
+  if (error) {
+    return (
+      <main className="screen screen--voting-results">
+        {onBack && (
+          <button className="voting-back-btn" onClick={onBack} type="button">
+            Назад
+          </button>
+        )}
+        <div className="voting-hero">
+          <img alt="" className="voting-bg-image" src={votingBg} />
+        </div>
+        <div className="voting-container">
+          <NetworkError
+            message="Не удалось загрузить результаты голосования."
+            onRetry={loadData}
+          />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="screen screen--voting-results">
       {onBack && (
@@ -64,6 +88,7 @@ export default function VotingResultsScreen({ onBack, onSongClick }: VotingResul
           <div className="voting-results-list">
           {sortedSongs.map((song, index) => {
             const percentage = getSongPercentage(song.id);
+            const coverProps = getOptimizedImageProps(song.coverUrl);
             return (
               <button
                 key={song.id}
@@ -75,8 +100,15 @@ export default function VotingResultsScreen({ onBack, onSongClick }: VotingResul
                 <div className="voting-result-progress" style={{ width: `${percentage}%` }}></div>
                 <div className="voting-result-content">
                   <div className="voting-song-cover">
-                    {song.coverUrl ? (
-                      <img alt={song.title} className="voting-song-cover-image" src={song.coverUrl} />
+                    {coverProps ? (
+                      <OptimizedImage
+                        {...coverProps}
+                        alt={song.title}
+                        className="voting-song-cover-image"
+                        loading="lazy"
+                        sizes="(max-width: 440px) 100vw, 200px"
+                        objectFit="cover"
+                      />
                     ) : (
                       <div className="voting-song-cover-placeholder"></div>
                     )}

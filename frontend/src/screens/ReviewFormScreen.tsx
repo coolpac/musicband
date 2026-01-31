@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import reviewFormBg from '../assets/figma/review-form-bg.png';
+import reviewFormBg from '../assets/figma/review-form-bg.webp';
 import '../styles/review.css';
 
 type ReviewFormScreenProps = {

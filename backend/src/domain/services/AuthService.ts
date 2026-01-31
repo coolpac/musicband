@@ -1,15 +1,20 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import type Redis from 'ioredis';
 import { IUserRepository, CreateUserData } from '../../infrastructure/database/repositories/UserRepository';
-import { validateInitData, TelegramUser } from '../../shared/utils/telegram';
-import { UnauthorizedError, ValidationError } from '../../shared/errors';
+import { validateInitData } from '../../shared/utils/telegram';
+import { UnauthorizedError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
 import { USER_ROLES } from '../../shared/constants';
+
+const BLACKLIST_PREFIX = 'token_blacklist:';
 
 export interface JWTPayload {
   userId: string;
   telegramId: string;
   role: string;
+  jti?: string;
   iat?: number;
   exp?: number;
 }
@@ -33,7 +38,8 @@ export class AuthService {
     private jwtSecret: string,
     private jwtExpiresIn: string,
     private adminBotToken: string,
-    private userBotToken?: string // Токен User Bot для валидации initData от пользователей
+    private userBotToken?: string, // Токен User Bot для валидации initData от пользователей
+    private redis?: Redis
   ) {}
 
   /**
@@ -210,10 +216,38 @@ export class AuthService {
   }
 
   /**
-   * Генерация JWT токена
+   * Проверка, отозван ли токен (jti в blacklist)
    */
-  private generateToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-    return jwt.sign(payload, this.jwtSecret, {
+  async isRevoked(jti: string | undefined): Promise<boolean> {
+    if (!jti || !this.redis) return false;
+    const key = BLACKLIST_PREFIX + jti;
+    const exists = await this.redis.get(key);
+    return exists === '1';
+  }
+
+  /**
+   * Отзыв токена: добавляет jti в Redis blacklist с TTL = оставшееся время жизни токена
+   */
+  async revokeToken(token: string): Promise<void> {
+    if (!this.redis) return;
+    try {
+      const decoded = jwt.decode(token) as JWTPayload & { exp?: number } | null;
+      if (!decoded?.jti || typeof decoded.exp !== 'number') return;
+      const ttlSeconds = Math.max(0, Math.floor(decoded.exp - Date.now() / 1000));
+      if (ttlSeconds <= 0) return;
+      const key = BLACKLIST_PREFIX + decoded.jti;
+      await this.redis.setex(key, ttlSeconds, '1');
+    } catch {
+      // Не логируем детали — токен может быть невалидным
+    }
+  }
+
+  /**
+   * Генерация JWT токена с jti (UUID) для возможности отзыва
+   */
+  private generateToken(payload: Omit<JWTPayload, 'iat' | 'exp' | 'jti'>): string {
+    const withJti = { ...payload, jti: crypto.randomUUID() };
+    return jwt.sign(withJti, this.jwtSecret, {
       expiresIn: this.jwtExpiresIn,
     });
   }

@@ -1,4 +1,4 @@
-import reviewSuccessImage from '../assets/figma/review-success-image.png';
+import reviewSuccessImage from '../assets/figma/review-success-image.webp';
 import '../styles/review.css';
 
 type ReviewSuccessScreenProps = {

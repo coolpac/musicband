@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Song } from '../types/vote';
 import { getSongs } from '../services/songService';
+import NetworkError from '../components/NetworkError';
 import votingBg from '../assets/figma/voting-bg-only.svg';
 import LyricsOverlay from '../components/LyricsOverlay';
+import { OptimizedImage } from '../components/OptimizedImage';
+import { getOptimizedImageProps } from '../types/image';
 import '../styles/voting.css';
 import '../styles/lyrics.css';
 
@@ -16,22 +19,24 @@ export default function WinningSongScreen({ onBack, onViewLyrics, songId }: Winn
   const [winningSong, setWinningSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const loadSong = useCallback(async () => {
+    setError(null);
+    try {
+      const songs = await getSongs();
+      const song = songId
+        ? songs.find((s) => s.id === songId) || songs[0]
+        : songs[0];
+      setWinningSong(song || null);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+    }
+  }, [songId]);
 
   useEffect(() => {
-    const loadSong = async () => {
-      try {
-        const songs = await getSongs();
-        const song = songId
-          ? songs.find((s) => s.id === songId) || songs[0]
-          : songs[0];
-        setWinningSong(song || null);
-      } catch (error) {
-        console.error('Failed to load winning song:', error);
-      }
-    };
-
     loadSong();
-  }, [songId]);
+  }, [loadSong]);
 
   const handlePlayPause = () => {
     setIsPlaying((prev) => !prev);
@@ -58,17 +63,32 @@ export default function WinningSongScreen({ onBack, onViewLyrics, songId }: Winn
       <div className="voting-container">
         <h1 className="winning-song-title">Выбранная композиция</h1>
 
-        {!winningSong ? (
+        {error ? (
+          <NetworkError
+            message="Не удалось загрузить композицию."
+            onRetry={loadSong}
+          />
+        ) : !winningSong ? (
           <div className="voting-loading">Загрузка...</div>
         ) : (
           <>
         <div className="winning-song-cover-wrapper">
           <div className="winning-song-cover">
-            {winningSong.coverUrl ? (
-              <img alt={winningSong.title} className="winning-song-cover-image" src={winningSong.coverUrl} />
+            {(() => {
+              const coverProps = getOptimizedImageProps(winningSong.coverUrl);
+              return coverProps ? (
+              <OptimizedImage
+                {...coverProps}
+                alt={winningSong.title}
+                className="winning-song-cover-image"
+                loading="eager"
+                sizes="(max-width: 440px) 100vw, 320px"
+                objectFit="cover"
+              />
             ) : (
               <div className="winning-song-cover-placeholder"></div>
-            )}
+            );
+            })()}
           </div>
         </div>
 

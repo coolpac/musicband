@@ -1,12 +1,1 @@
-<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 69.5146 29.2233" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="Frame 101">
-<rect width="69.5146" height="29.2233" rx="14.6117" fill="var(--fill-0, #E0E0E0)" fill-opacity="0.17"/>
-<rect x="0.5" y="0.5" width="68.5146" height="28.2233" rx="14.1117" stroke="var(--stroke-0, white)" stroke-opacity="0.1"/>
-<path id="Vector 2" d="M15 11.1408L21.9417 18.0825L28.8835 11.1408" stroke="var(--stroke-0, white)" stroke-width="2.13592" stroke-linecap="round"/>
-<g id="Frame 100">
-<circle id="Ellipse 2" cx="52.3786" cy="7.13592" r="2.13592" fill="var(--fill-0, white)"/>
-<circle id="Ellipse 3" cx="52.3786" cy="14.6117" r="2.13592" fill="var(--fill-0, white)"/>
-<circle id="Ellipse 4" cx="52.3786" cy="22.0874" r="2.13592" fill="var(--fill-0, white)"/>
-</g>
-</g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" overflow="visible" preserveAspectRatio="none" style="display:block" viewBox="0 0 69.515 29.223"><rect width="69.515" height="29.223" fill="var(--fill-0, #e0e0e0)" fill-opacity=".17" rx="14.612"/><rect width="68.515" height="28.223" x=".5" y=".5" stroke="var(--stroke-0, white)" stroke-opacity=".1" rx="14.112"/><path stroke="var(--stroke-0, white)" stroke-linecap="round" stroke-width="2.136" d="m15 11.14 6.942 6.942 6.942-6.941"/><g fill="var(--fill-0, white)"><circle cx="52.379" cy="7.136" r="2.136"/><circle cx="52.379" cy="14.612" r="2.136"/><circle cx="52.379" cy="22.087" r="2.136"/></g></svg>

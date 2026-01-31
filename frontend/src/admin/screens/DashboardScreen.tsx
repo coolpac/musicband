@@ -1,5 +1,46 @@
 import { useEffect, useState } from 'react';
+import { getAdminStats } from '../../services/adminService';
+import AdminHeader from '../components/AdminHeader';
 import '../../styles/admin.css';
+
+/* Оптимизированные SVG-иконки (stroke, 24×24) */
+const IconBarChart = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M3 3v18h18" />
+    <path d="M7 16v-5" />
+    <path d="M12 16v-9" />
+    <path d="M17 16v-2" />
+  </svg>
+);
+const IconCheck = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M5 12l5 5L20 7" />
+  </svg>
+);
+const IconClock = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 6v6l4 2" />
+  </svg>
+);
+const IconX = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M18 6L6 18" />
+    <path d="M6 6l12 12" />
+  </svg>
+);
+const IconUsers = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+  </svg>
+);
+const IconStar = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+);
 
 type DashboardStats = {
   totalBookings: number;
@@ -11,7 +52,13 @@ type DashboardStats = {
   pendingConfirmation: number;
 };
 
-export default function DashboardScreen() {
+type DashboardScreenProps = {
+  onGoToBookings?: () => void;
+  onGoToAgents?: () => void;
+  onGoToReviews?: () => void;
+};
+
+export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToReviews }: DashboardScreenProps) {
   const [stats, setStats] = useState<DashboardStats>({
     totalBookings: 28,
     confirmedBookings: 3,
@@ -22,74 +69,75 @@ export default function DashboardScreen() {
     pendingConfirmation: 24,
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Load real stats from API
-    // const loadStats = async () => {
-    //   const data = await getAdminStats();
-    //   setStats(data);
-    // };
-    // loadStats();
+    let cancelled = false;
+    const loadStats = async () => {
+      try {
+        const data = await getAdminStats();
+        if (!cancelled) setStats(data);
+      } catch (e) {
+        console.warn('Dashboard: failed to load stats', e);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    loadStats();
+    return () => { cancelled = true; };
   }, []);
+
+  if (loading) {
+    return (
+      <div className="admin-screen">
+        <AdminHeader showBack onBack={() => window.history.back()} />
+        <main className="admin-content">
+          <h1 className="admin-title">Админ-панель</h1>
+          <div className="admin-loading">Загрузка...</div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-screen">
-      <header className="admin-header">
-        <div className="admin-header__left">
-          <button className="admin-header__back" type="button">
-            Назад
-          </button>
-        </div>
-        <div className="admin-header__logo">
-          <svg width="60" height="24" viewBox="0 0 60 24" fill="white">
-            <text x="0" y="18" fontFamily="Arial, sans-serif" fontSize="16" fontWeight="bold">
-              ГРУП
-            </text>
-          </svg>
-        </div>
-        <div className="admin-header__right">
-          <button className="admin-header__menu" type="button" aria-label="Меню">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="5" r="1.5" fill="white" />
-              <circle cx="12" cy="12" r="1.5" fill="white" />
-              <circle cx="12" cy="19" r="1.5" fill="white" />
-            </svg>
-          </button>
-          <div className="admin-header__avatar">
-            <span>В</span>
-          </div>
-        </div>
-      </header>
-
+      <AdminHeader showBack onBack={() => window.history.back()} />
       <main className="admin-content">
         <h1 className="admin-title">Админ-панель</h1>
 
         <div className="admin-grid">
-          {/* Total Bookings Card */}
-          <div className="admin-card">
-            <div className="admin-card__icon">📊</div>
+          {/* Total Bookings Card — по нажатию переход к заявкам */}
+          <button
+            type="button"
+            className="admin-card admin-card--clickable"
+            onClick={onGoToBookings}
+            aria-label="Перейти к заявкам"
+          >
+            <div className="admin-card__icon"><IconBarChart /></div>
             <div className="admin-card__number">{stats.totalBookings}</div>
             <div className="admin-card__label">Всего заявок</div>
-          </div>
+            {onGoToBookings && (
+              <span className="admin-card__action">Перейти к заявкам →</span>
+            )}
+          </button>
 
           {/* Confirmed Bookings Card */}
           <div className="admin-card admin-card--success">
-            <div className="admin-card__icon">✓</div>
+            <div className="admin-card__icon"><IconCheck /></div>
             <div className="admin-card__number">{stats.confirmedBookings}</div>
             <div className="admin-card__label">Подтверждено</div>
           </div>
 
           {/* Pending Bookings Card */}
           <div className="admin-card admin-card--warning">
-            <div className="admin-card__icon">⏱</div>
+            <div className="admin-card__icon"><IconClock /></div>
             <div className="admin-card__number">{stats.pendingBookings}</div>
             <div className="admin-card__label">В ожидании</div>
           </div>
 
           {/* Cancelled Bookings Card */}
           <div className="admin-card admin-card--danger">
-            <div className="admin-card__icon">✕</div>
+            <div className="admin-card__icon"><IconX /></div>
             <div className="admin-card__number">{stats.cancelledBookings}</div>
             <div className="admin-card__label">Отменено</div>
           </div>
@@ -121,6 +169,37 @@ export default function DashboardScreen() {
             </div>
           </div>
         </div>
+
+        {/* Quick access: Агенты и Отзывы */}
+        <section className="dashboard-quick" aria-label="Управление">
+          <h2 className="dashboard-quick__title">Управление</h2>
+          <div className="admin-grid admin-grid--quick">
+            {onGoToAgents && (
+              <button
+                type="button"
+                className="admin-card admin-card--clickable admin-card--quick"
+                onClick={onGoToAgents}
+                aria-label="Перейти к агентам"
+              >
+                <div className="admin-card__icon admin-card__icon--muted"><IconUsers /></div>
+                <div className="admin-card__label">Агенты</div>
+                <span className="admin-card__action">Рефералы и партнёры →</span>
+              </button>
+            )}
+            {onGoToReviews && (
+              <button
+                type="button"
+                className="admin-card admin-card--clickable admin-card--quick"
+                onClick={onGoToReviews}
+                aria-label="Перейти к отзывам"
+              >
+                <div className="admin-card__icon admin-card__icon--muted"><IconStar /></div>
+                <div className="admin-card__label">Отзывы</div>
+                <span className="admin-card__action">Модерация отзывов →</span>
+              </button>
+            )}
+          </div>
+        </section>
       </main>
     </div>
   );

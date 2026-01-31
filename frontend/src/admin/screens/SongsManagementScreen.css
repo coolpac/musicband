@@ -36,7 +36,7 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-/* Drag Handle */
+/* Drag Handle — нейтральный, без яркого акцента */
 .song-item__drag-handle {
   display: flex;
   align-items: center;
@@ -48,7 +48,7 @@
 }
 
 .song-item__drag-handle:hover {
-  color: var(--accent);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .song-item__drag-handle:active {
@@ -144,8 +144,8 @@
 }
 
 .song-toggle-checkbox:checked + .song-toggle-slider {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--admin-success);
+  border-color: var(--admin-success);
 }
 
 .song-toggle-checkbox:checked + .song-toggle-slider:before {
@@ -157,7 +157,7 @@
 }
 
 .song-toggle-checkbox:checked + .song-toggle-slider:hover {
-  background: var(--accent-dark);
+  background: rgba(52, 199, 89, 0.85);
 }
 
 /* Actions */
@@ -190,21 +190,25 @@
 }
 
 .song-item__action--edit {
-  color: var(--admin-warning);
-  border-color: var(--admin-warning);
+  color: var(--admin-text-secondary);
+  border-color: var(--admin-border);
 }
 
 .song-item__action--edit:hover {
-  background: rgba(251, 191, 36, 0.1);
+  color: var(--admin-text);
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .song-item__action--delete {
-  color: var(--admin-danger);
-  border-color: var(--admin-danger);
+  color: var(--admin-text-secondary);
+  border-color: var(--admin-border);
 }
 
 .song-item__action--delete:hover {
-  background: rgba(248, 113, 113, 0.1);
+  color: var(--admin-danger);
+  border-color: rgba(255, 59, 48, 0.5);
+  background: rgba(255, 59, 48, 0.08);
 }
 
 /* Form Modal */
@@ -238,7 +242,7 @@
   width: 20px;
   height: 20px;
   cursor: pointer;
-  accent-color: var(--accent);
+  accent-color: var(--admin-success);
 }
 
 .song-form-toggle-label span {

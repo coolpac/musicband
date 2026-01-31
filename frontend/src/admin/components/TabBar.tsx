@@ -1,7 +1,7 @@
 import { HomeIcon, BarChartIcon, MusicIcon, CalendarIcon, ImageIcon } from '../assets/icons';
 import '../../styles/admin-tabbar.css';
 
-export type AdminTab = 'dashboard' | 'voting' | 'songs' | 'bookings' | 'content';
+export type AdminTab = 'dashboard' | 'voting' | 'songs' | 'bookings' | 'content' | 'agents' | 'reviews';
 
 type TabBarProps = {
   activeTab: AdminTab;

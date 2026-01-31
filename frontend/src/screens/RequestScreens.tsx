@@ -1,12 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import '../styles/date.css';
+import '../styles/request.css';
 import { getAvailableDates } from '../services/bookingService';
-import navBg from '../assets/figma/downloaded/nav-bg.png';
+import { getFormatsForBooking } from '../services/formatService';
+import type { Format } from '../types/format';
+import NetworkError from '../components/NetworkError';
+import navBg from '../assets/figma/downloaded/nav-bg.webp';
 import navTitle from '../assets/figma/downloaded/nav-title.svg';
 import selectChevron from '../assets/figma/downloaded/select-chevron.svg';
 import monthPrev from '../assets/figma/downloaded/month-prev.svg';
 import monthNext from '../assets/figma/downloaded/month-next.svg';
 import requestLogo from '../assets/figma/downloaded/request-logo.svg';
-import requestAnna from '../assets/figma/downloaded/request-anna.png';
+import requestAnna from '../assets/figma/downloaded/request-anna.webp';
 
 const months = [
   'Январь',
@@ -23,7 +28,6 @@ const months = [
   'Декабрь',
 ];
 
-const formatOptions = ['MAIN SHOW', 'Дуэт', 'Welcome', 'Welcome 2.0', 'Виолончель'];
 const contactOptions = ['Организатор', 'Агентство', 'Физлицо'];
 const sourceOptions = [
   'Социальные сети',
@@ -133,20 +137,57 @@ export function NavigationScreen() {
   );
 }
 
+export type BookingDraft = {
+  formatId: string;
+  bookingDate: string;
+};
+
 type RequestCalendarScreenProps = {
-  onContinue?: () => void;
+  onContinue?: (draft: BookingDraft) => void;
 };
 
 export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps) {
+  const [formats, setFormats] = useState<Format[]>([]);
+  const [formatsLoading, setFormatsLoading] = useState(true);
+  const [formatsError, setFormatsError] = useState<Error | null>(null);
   const [formatOpen, setFormatOpen] = useState(false);
-  const [formatValue, setFormatValue] = useState('');
-  const [monthIndex, setMonthIndex] = useState(11);
-  const [year, setYear] = useState(2024);
-  const [selectedDay, setSelectedDay] = useState(11);
+  const [selectedFormatId, setSelectedFormatId] = useState<string>('');
+  const [monthIndex, setMonthIndex] = useState(new Date().getMonth());
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [selectedDay, setSelectedDay] = useState(1);
   const [availableDates, setAvailableDates] = useState<number[]>([]);
+  const [datesError, setDatesError] = useState<Error | null>(null);
+
+  const loadFormats = useCallback(async () => {
+    setFormatsError(null);
+    setFormatsLoading(true);
+    try {
+      const list = await getFormatsForBooking();
+      setFormats(list);
+      if (list.length > 0) {
+        setSelectedFormatId((prev) => prev || list[0].id);
+      }
+    } catch (e) {
+      setFormatsError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      setFormatsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFormats();
+  }, [loadFormats]);
+
+  const selectedFormat = useMemo(
+    () => formats.find((f) => f.id === selectedFormatId),
+    [formats, selectedFormatId]
+  );
+  const formatOptions = useMemo(() => formats.map((f) => f.name), [formats]);
+  const formatDisplayValue = selectedFormat?.name ?? '';
 
   const handleFormatSelect = (option: string) => {
-    setFormatValue(option);
+    const format = formats.find((f) => f.name === option);
+    if (format) setSelectedFormatId(format.id);
     setFormatOpen(false);
   };
 
@@ -160,19 +201,20 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
     [daysInMonth],
   );
 
-  useEffect(() => {
-    const loadAvailableDates = async () => {
-      try {
-        const monthStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
-        const dates = await getAvailableDates(monthStr);
-        setAvailableDates(dates);
-      } catch (error) {
-        console.error('Failed to load available dates:', error);
-      }
-    };
-
-    loadAvailableDates();
+  const loadAvailableDates = useCallback(async () => {
+    setDatesError(null);
+    try {
+      const monthStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+      const dates = await getAvailableDates(monthStr);
+      setAvailableDates(dates);
+    } catch (e) {
+      setDatesError(e instanceof Error ? e : new Error(String(e)));
+    }
   }, [monthIndex, year]);
+
+  useEffect(() => {
+    loadAvailableDates();
+  }, [loadAvailableDates]);
 
   const disabledDays = useMemo(() => {
     if (availableDates.length === 0) {
@@ -211,10 +253,38 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
     });
   };
 
+  const handleContinue = () => {
+    if (!onContinue || !selectedFormatId) return;
+    const bookingDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
+    onContinue({ formatId: selectedFormatId, bookingDate });
+  };
+
+  const canContinue = Boolean(selectedFormatId && selectedDay);
+
+  if (formatsError) {
+    return (
+      <main className="request-screen request-screen--calendar">
+        <div className="request-body request-body--gradient request-body--calendar">
+          <img alt="Лого" className="request-logo" src={requestLogo} />
+          <NetworkError
+            message="Не удалось загрузить форматы и календарь."
+            onRetry={loadFormats}
+          />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="request-screen request-screen--calendar">
       <div className="request-body request-body--gradient request-body--calendar">
         <img alt="Лого" className="request-logo" src={requestLogo} />
+        {datesError ? (
+          <NetworkError
+            message="Не удалось загрузить доступные даты."
+            onRetry={loadAvailableDates}
+          />
+        ) : (
         <div className="request-calendar-block">
           <div className="request-calendar-head">
             <button
@@ -252,20 +322,33 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
             ))}
           </div>
         </div>
+        )}
         <RequestSelect
           className="request-select--calendar"
           isOpen={formatOpen}
           onToggle={() => setFormatOpen((prev) => !prev)}
           onSelect={handleFormatSelect}
           options={formatOptions}
-          placeholder="Выберите формат"
+          placeholder={
+            formatsLoading
+              ? 'Загрузка...'
+              : formats.length === 0
+                ? 'Нет доступных форматов'
+                : 'Выберите формат'
+          }
           size="format"
-          value={formatValue}
+          value={formatDisplayValue}
         />
+        {!formatsLoading && formats.length === 0 && (
+          <p className="request-form-hint" style={{ marginTop: 8, fontSize: 14, color: 'var(--text-muted, #666)' }}>
+            Добавьте форматы в админке и включите их для бронирования.
+          </p>
+        )}
         <button
           className="request-primary request-primary--calendar"
           type="button"
-          onClick={onContinue}
+          onClick={handleContinue}
+          disabled={!canContinue || formatsLoading}
         >
           Продолжить
         </button>
@@ -275,25 +358,65 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
 }
 
 type RequestFormScreenProps = {
+  bookingDraft: BookingDraft | null;
   onSubmit?: () => void;
+  onSubmitError?: (message: string) => void;
 };
 
-export function RequestFormScreen({ onSubmit }: RequestFormScreenProps) {
+export function RequestFormScreen({ bookingDraft, onSubmit, onSubmitError }: RequestFormScreenProps) {
   const [fullName, setFullName] = useState('');
   const [contactType, setContactType] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [city, setCity] = useState('');
   const [source, setSource] = useState('');
   const [openSelect, setOpenSelect] = useState<'contact' | 'source' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const toggleSelect = (target: 'contact' | 'source') => {
     setOpenSelect((prev) => (prev === target ? null : target));
   };
 
+  const handleSubmit = async () => {
+    if (!bookingDraft) {
+      onSubmitError?.('Не выбраны дата и формат. Вернитесь на предыдущий шаг.');
+      return;
+    }
+    if (!fullName.trim()) {
+      onSubmitError?.('Введите ФИО');
+      return;
+    }
+    if (!phoneNumber.trim()) {
+      onSubmitError?.('Введите номер телефона');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const { createBooking } = await import('../services/bookingService');
+      await createBooking({
+        formatId: bookingDraft.formatId,
+        bookingDate: bookingDraft.bookingDate,
+        fullName: fullName.trim(),
+        contactType: contactType || undefined,
+        contactValue: phoneNumber.trim(),
+        city: city.trim() || undefined,
+        source: source || undefined,
+      });
+      onSubmit?.();
+    } catch (e) {
+      console.error('Booking submit failed', e);
+      onSubmitError?.(
+        e instanceof Error ? e.message : 'Не удалось отправить заявку. Попробуйте позже.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <main className="request-screen request-screen--form">
-      <div className="request-body request-body--pattern">
+      <div className="request-body request-body--pattern request-body--form">
         <img alt="Лого" className="request-logo" src={requestLogo} />
+        <div className="request-body__scroll">
         <div className="request-form-card">
           <h1>Форма для заявки</h1>
           <div className="request-fields">
@@ -368,10 +491,12 @@ export function RequestFormScreen({ onSubmit }: RequestFormScreenProps) {
         <button
           className="request-primary request-primary--floating"
           type="button"
-          onClick={onSubmit}
+          onClick={handleSubmit}
+          disabled={isSubmitting}
         >
-          Отправить
+          {isSubmitting ? 'Отправка...' : 'Отправить'}
         </button>
+        </div>
       </div>
     </main>
   );
@@ -386,15 +511,15 @@ export function RequestSuccessScreen({ onBackHome }: RequestSuccessScreenProps) 
     <main className="request-screen request-screen--success">
       <div className="request-body request-body--pattern request-success-body">
         <img alt="ВГУП" className="request-logo" src={requestLogo} />
-        <div className="request-success-photo">
+        <div className="request-success-photo request-success-in">
           <img alt="Анна" src={requestAnna} />
         </div>
-        <div className="request-success-card">
+        <div className="request-success-card request-success-in">
           <h2>Заявка принята!</h2>
           <p>С вами свяжется руководитель</p>
           <p>группы Анна Кобякова</p>
         </div>
-        <button className="request-primary request-success-button" type="button" onClick={onBackHome}>
+        <button className="request-primary request-success-button request-success-in" type="button" onClick={onBackHome}>
           Вернуться на главную
         </button>
       </div>

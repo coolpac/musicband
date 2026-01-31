@@ -1,4 +1,4 @@
-import navBg from '../assets/figma/downloaded/nav-bg.png';
+import navBg from '../assets/figma/downloaded/nav-bg.webp';
 import navTitle from '../assets/figma/downloaded/nav-title.svg';
 
 type MenuTarget = 'home' | 'formats' | 'live' | 'partners' | 'socials';
