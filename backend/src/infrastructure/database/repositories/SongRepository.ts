@@ -4,9 +4,11 @@ import { prisma } from '../../../config/database';
 export interface ISongRepository {
   findAll(options?: FindSongsOptions): Promise<Song[]>;
   findById(id: string): Promise<Song | null>;
+  findByIds(ids: string[]): Promise<Song[]>;
   findActive(): Promise<Song[]>;
   create(data: CreateSongData): Promise<Song>;
   update(id: string, data: UpdateSongData): Promise<Song>;
+  updateMany(ids: string[], data: UpdateSongData): Promise<void>;
   delete(id: string): Promise<void>;
   toggleActive(id: string): Promise<Song>;
 }
@@ -60,6 +62,18 @@ export class PrismaSongRepository implements ISongRepository {
     });
   }
 
+  async findByIds(ids: string[]): Promise<Song[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return this.client.song.findMany({
+      where: {
+        id: { in: ids },
+      },
+    });
+  }
+
   async findActive(): Promise<Song[]> {
     return this.client.song.findMany({
       where: { isActive: true },
@@ -83,6 +97,30 @@ export class PrismaSongRepository implements ISongRepository {
   async update(id: string, data: UpdateSongData): Promise<Song> {
     return this.client.song.update({
       where: { id },
+      data: {
+        title: data.title,
+        artist: data.artist,
+        coverUrl: data.coverUrl,
+        lyrics: data.lyrics,
+        isActive: data.isActive,
+        orderIndex: data.orderIndex,
+      },
+    });
+  }
+
+  /**
+   * Batch update множества песен одним запросом
+   * Используется для оптимизации N+1 проблем
+   */
+  async updateMany(ids: string[], data: UpdateSongData): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+
+    await this.client.song.updateMany({
+      where: {
+        id: { in: ids },
+      },
       data: {
         title: data.title,
         artist: data.artist,

@@ -6,6 +6,7 @@ import { logger } from '../../shared/utils/logger';
 import { redis } from '../../config/redis';
 import { CacheService, CACHE_KEYS } from '../../shared/utils/cache';
 import { CACHE_TTL } from '../../shared/constants';
+import { prisma } from '../../config/database';
 
 export class VoteService {
   constructor(
@@ -105,24 +106,29 @@ export class VoteService {
     const results = await this.voteRepository.getResults(session.id);
     const totalVotes = results.reduce((sum, r) => sum + r.votes, 0);
 
-    // Получаем информацию о песнях
-    const songsWithDetails = await Promise.all(
-      results.map(async (result) => {
-        const song = await this.songRepository.findById(result.songId);
-        return {
-          song: song
-            ? {
-                id: song.id,
-                title: song.title,
-                artist: song.artist,
-                coverUrl: song.coverUrl,
-              }
-            : null,
-          votes: result.votes,
-          percentage: result.percentage,
-        };
-      })
-    );
+    // Получаем информацию о песнях (оптимизированно - один запрос вместо N)
+    const songIds = results.map((r) => r.songId);
+    const songs = await this.songRepository.findByIds(songIds);
+
+    // Создаем Map для быстрого доступа
+    const songsMap = new Map(songs.map((s) => [s.id, s]));
+
+    // Собираем результаты с деталями песен
+    const songsWithDetails = results.map((result) => {
+      const song = songsMap.get(result.songId);
+      return {
+        song: song
+          ? {
+              id: song.id,
+              title: song.title,
+              artist: song.artist,
+              coverUrl: song.coverUrl,
+            }
+          : null,
+        votes: result.votes,
+        percentage: result.percentage,
+      };
+    });
 
     const response = {
       sessionId: session.id,
@@ -182,16 +188,18 @@ export class VoteService {
   /**
    * Запуск новой сессии голосования
    * Активирует только те песни, которые админ включил в сессию
+   *
+   * ВАЖНО: Использует DATABASE TRANSACTION для атомарности операций
+   * Если любая операция упадет - все изменения откатятся автоматически
    */
   async startSession(songIds: string[]): Promise<ReturnType<IVoteRepository['createSession']>> {
     if (songIds.length === 0) {
       throw new ValidationError('At least one song is required');
     }
 
-    // Проверяем, что все песни существуют
-    const songs = await Promise.all(songIds.map((id) => this.songRepository.findById(id)));
-    const missingSongs = songs.filter((s) => !s);
-    if (missingSongs.length > 0) {
+    // Проверяем, что все песни существуют (BATCH запрос вместо N+1)
+    const songs = await this.songRepository.findByIds(songIds);
+    if (songs.length !== songIds.length) {
       throw new NotFoundError('Some songs not found');
     }
 
@@ -201,22 +209,36 @@ export class VoteService {
       throw new ValidationError('There is already an active voting session. End it first.');
     }
 
-    // Деактивируем все старые активные песни (от предыдущих сессий)
-    const oldActiveSongs = await this.songRepository.findActive();
-    await Promise.all(
-      oldActiveSongs.map((song) => this.songRepository.update(song.id, { isActive: false }))
-    );
+    // TRANSACTION: Все операции выполняются атомарно
+    // Либо ВСЕ успешно, либо ВСЁ откатывается
+    const session = await prisma.$transaction(async (tx) => {
+      // 1. Деактивируем старые активные песни
+      await tx.song.updateMany({
+        where: { isActive: true },
+        data: { isActive: false },
+      });
 
-    // Создаем сессию
-    const session = await this.voteRepository.createSession();
+      // 2. Создаем новую сессию голосования
+      const newSession = await tx.voteSession.create({
+        data: {
+          isActive: true,
+          totalVoters: 0,
+        },
+      });
 
-    // Активируем только те песни, которые админ включил в сессию
-    await Promise.all(songIds.map((id) => this.songRepository.update(id, { isActive: true })));
+      // 3. Активируем выбранные админом песни
+      await tx.song.updateMany({
+        where: { id: { in: songIds } },
+        data: { isActive: true },
+      });
 
-    logger.info('Voting session started', {
-      sessionId: session.id,
-      songIds,
-      songsCount: songIds.length,
+      logger.info('Voting session started (transaction committed)', {
+        sessionId: newSession.id,
+        songIds,
+        songsCount: songIds.length,
+      });
+
+      return newSession;
     });
 
     return session;
@@ -224,6 +246,9 @@ export class VoteService {
 
   /**
    * Завершение сессии голосования
+   *
+   * ВАЖНО: Использует DATABASE TRANSACTION
+   * Порядок операций критичен - сначала получаем результаты, потом удаляем данные
    */
   async endSession(sessionId: string) {
     const session = await this.voteRepository.findSessionById(sessionId);
@@ -235,23 +260,48 @@ export class VoteService {
       throw new ValidationError('Session is already ended');
     }
 
-    // Получаем финальные результаты
+    // Получаем финальные результаты ДО удаления
     const results = await this.voteRepository.getResults(sessionId);
 
-    // Завершаем сессию
-    const endedSession = await this.voteRepository.endSession(sessionId);
-
-    // Деактивируем все песни
+    // Получаем список песен для деактивации
     const votes = await this.voteRepository.findBySession(sessionId);
     const songIds = [...new Set(votes.map((v) => v.songId))];
-    await Promise.all(songIds.map((id) => this.songRepository.update(id, { isActive: false })));
 
-    // Удаляем голоса (согласно архитектуре)
-    await this.voteRepository.deleteBySession(sessionId);
+    // TRANSACTION: Завершаем сессию + деактивируем песни + удаляем голоса атомарно
+    const endedSession = await prisma.$transaction(async (tx) => {
+      // 1. Завершаем сессию (устанавливаем isActive = false)
+      const updated = await tx.voteSession.update({
+        where: { id: sessionId },
+        data: {
+          isActive: false,
+          endedAt: new Date(),
+          totalVoters: votes.length, // Сохраняем финальное кол-во голосов
+        },
+      });
 
-    // Очищаем Redis кеш
-    await redis.del(`votes:session:${sessionId}:song:*`);
-    await redis.del(`votes:session:${sessionId}:voters`);
+      // 2. Деактивируем все песни из сессии
+      if (songIds.length > 0) {
+        await tx.song.updateMany({
+          where: { id: { in: songIds } },
+          data: { isActive: false },
+        });
+      }
+
+      // 3. Удаляем голоса (по архитектуре - они временные)
+      await tx.vote.deleteMany({
+        where: { sessionId },
+      });
+
+      return updated;
+    });
+
+    // Очищаем Redis кеш (вне транзакции - не критично если упадет)
+    try {
+      await CacheService.delPattern(`votes:session:${sessionId}:*`);
+      logger.debug('Vote session cache cleared', { sessionId });
+    } catch (error) {
+      logger.warn('Failed to clear vote session cache', { sessionId, error });
+    }
 
     logger.info('Voting session ended', {
       sessionId,

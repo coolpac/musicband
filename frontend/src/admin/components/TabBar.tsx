@@ -1,7 +1,7 @@
-import { HomeIcon, MusicIcon, CalendarIcon, ImageIcon, SettingsIcon } from '../assets/icons';
+import { HomeIcon, BarChartIcon, MusicIcon, CalendarIcon, ImageIcon } from '../assets/icons';
 import '../../styles/admin-tabbar.css';
 
-export type AdminTab = 'dashboard' | 'voting' | 'bookings' | 'content' | 'settings';
+export type AdminTab = 'dashboard' | 'voting' | 'songs' | 'bookings' | 'content';
 
 type TabBarProps = {
   activeTab: AdminTab;
@@ -11,10 +11,10 @@ type TabBarProps = {
 export default function TabBar({ activeTab, onTabChange }: TabBarProps) {
   const tabs: Array<{ id: AdminTab; icon: typeof HomeIcon; label: string }> = [
     { id: 'dashboard', icon: HomeIcon, label: 'Главная' },
-    { id: 'voting', icon: MusicIcon, label: 'Голосование' },
+    { id: 'voting', icon: BarChartIcon, label: 'Голосование' },
+    { id: 'songs', icon: MusicIcon, label: 'Песни' },
     { id: 'bookings', icon: CalendarIcon, label: 'Брони' },
     { id: 'content', icon: ImageIcon, label: 'Контент' },
-    { id: 'settings', icon: SettingsIcon, label: 'Настройки' },
   ];
 
   return (

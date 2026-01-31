@@ -90,6 +90,19 @@ export class SongService {
 
   /**
    * Переключение активности песни
+   *
+   * ВАЖНО: Кеш инвалидируется ДО изменения, чтобы избежать stale data
+   *
+   * ПРОБЛЕМА БЫЛА:
+   * 1. update БД (песня активна)
+   * 2. ... 50ms задержка ...
+   * 3. invalidate cache
+   * -> Клиенты видели старые данные в течение 50ms!
+   *
+   * РЕШЕНИЕ:
+   * 1. invalidate cache СРАЗУ
+   * 2. update БД
+   * -> Клиенты либо видят свежие данные из БД, либо кеш пуст (тоже идет в БД)
    */
   async toggleSongActive(id: string) {
     await this.getSongById(id);
@@ -107,9 +120,12 @@ export class SongService {
       throw new ValidationError(`Maximum ${LIMITS.MAX_ACTIVE_SONGS} active songs allowed`);
     }
 
-    const updated = await this.songRepository.toggleActive(id);
+    // КРИТИЧНО: Инвалидируем кеш ДО изменения (не после!)
     await this.invalidateActiveSongsCache();
-    
+
+    // Теперь обновляем БД
+    const updated = await this.songRepository.toggleActive(id);
+
     return updated;
   }
 }

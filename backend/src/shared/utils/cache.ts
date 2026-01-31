@@ -50,13 +50,35 @@ export class CacheService {
   }
 
   /**
-   * Удалить все ключи по паттерну
+   * Удалить все ключи по паттерну (используя SCAN вместо KEYS)
+   * SCAN не блокирует Redis и безопасен для production
    */
   static async delPattern(pattern: string): Promise<void> {
     try {
-      const keys = await redis.keys(pattern);
-      if (keys.length > 0) {
-        await redis.del(...keys);
+      let cursor = '0';
+      const keysToDelete: string[] = [];
+
+      do {
+        // SCAN возвращает [новый cursor, массив ключей]
+        const reply = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = reply[0];
+        const keys = reply[1];
+
+        if (keys.length > 0) {
+          keysToDelete.push(...keys);
+        }
+      } while (cursor !== '0');
+
+      // Удаляем все найденные ключи одним батчем
+      if (keysToDelete.length > 0) {
+        const pipeline = redis.pipeline();
+        keysToDelete.forEach((key) => pipeline.del(key));
+        await pipeline.exec();
+
+        logger.debug('Cache pattern deleted', {
+          pattern,
+          keysDeleted: keysToDelete.length
+        });
       }
     } catch (error) {
       logger.error('Cache delPattern error', { pattern, error });

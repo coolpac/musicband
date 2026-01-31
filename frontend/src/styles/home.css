@@ -400,8 +400,8 @@
 .why-mobile-ellipse {
   position: absolute;
   pointer-events: none;
-  width: 68px;
-  height: 140px;
+  width: min(68px, 18vw);
+  height: min(140px, 37vw);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -416,8 +416,8 @@
 }
 
 .why-mobile-ellipse-image {
-  width: 140px;
-  height: 68px;
+  width: min(140px, 37vw);
+  height: min(68px, 18vw);
   transform: rotate(-90deg);
 }
 
@@ -702,6 +702,270 @@
     display: block;
     margin: 0 calc(50% - 50vw);
   }
+}
+
+/*
+  TEMPORARY: стили редактора декора «Почему мы». Удалить вместе с WhyDecorEditor.tsx и импортом в HomeScreen.
+  Включение: ?decorEdit=1
+*/
+.why-decor-editor {
+  padding: 12px 0 24px;
+  max-width: 100%;
+  overflow-x: auto;
+  touch-action: auto;
+}
+.why-decor-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  color: var(--white);
+}
+.why-decor-editor__label {
+  font-size: 12px;
+  opacity: 0.9;
+}
+.why-decor-editor__tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.why-decor-editor__tab {
+  padding: 6px 10px;
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--white);
+  cursor: pointer;
+  font-size: 14px;
+}
+.why-decor-editor__tab.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.why-decor-editor__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.why-decor-editor__actions-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+  margin-right: 4px;
+}
+.why-decor-editor__btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: var(--white);
+  cursor: pointer;
+  font-size: 14px;
+}
+.why-decor-editor__btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+.why-decor-editor__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.why-decor-editor__btn--tool {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.5);
+}
+.why-decor-editor__btn--tool:hover:not(:disabled) {
+  background: rgba(255,255,255,0.25);
+}
+.why-decor-editor__btn--tool:disabled {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.3);
+}
+.why-decor-editor__btn--danger {
+  background: #c00;
+}
+.why-decor-editor__btn--danger:hover {
+  filter: brightness(1.15);
+}
+.why-decor-editor__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+.why-decor-editor__list-label {
+  font-size: 12px;
+  opacity: 0.9;
+}
+.why-decor-editor__list-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.why-decor-editor__list-btn {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: transparent;
+  color: var(--white);
+  cursor: pointer;
+  font-size: 12px;
+}
+.why-decor-editor__list-btn:hover,
+.why-decor-editor__list-btn.is-selected {
+  background: rgba(255,255,255,0.2);
+  border-color: var(--white);
+}
+.why-decor-editor__list-remove {
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,100,100,0.8);
+  background: rgba(200,0,0,0.3);
+  color: var(--white);
+  cursor: pointer;
+  font-size: 11px;
+}
+.why-decor-editor__list-remove:hover {
+  background: rgba(200,0,0,0.5);
+}
+.why-decor-editor__add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  width: 100%;
+}
+.why-decor-editor__add-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.75);
+  margin-right: 4px;
+  width: 100%;
+}
+.why-decor-editor__add-btn {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: transparent;
+  color: var(--white);
+  cursor: pointer;
+  font-size: 11px;
+}
+.why-decor-editor__add-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+.why-decor-editor__canvas-wrap {
+  max-width: 375px;
+  margin: 0 auto;
+  padding: 16px;
+  background: #2a2a2a;
+  border-radius: 12px;
+}
+.why-decor-editor__canvas-label {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 8px;
+}
+.why-decor-editor__canvas {
+  position: relative;
+  margin: 0 auto;
+  background: var(--accent);
+  border-radius: var(--radius-md);
+  overflow: visible;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.95);
+  flex-shrink: 0;
+  touch-action: none;
+}
+.why-decor-editor__shape {
+  position: absolute;
+  cursor: move;
+  pointer-events: auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.why-decor-editor__shape.is-selected {
+  outline: 2px solid var(--white);
+  outline-offset: 2px;
+}
+.why-decor-editor__shape img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.why-decor-editor__shape--ellipse-v {
+  width: 68px;
+  height: 140px;
+}
+.why-decor-editor__shape--ellipse-v .why-decor-editor__ellipse-img {
+  width: 140px;
+  height: 68px;
+  transform: rotate(-90deg);
+}
+.why-decor-editor__shape-actions {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  gap: 4px;
+  z-index: 3;
+}
+.why-decor-editor__shape-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: #333;
+  color: var(--white);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.why-decor-editor__shape-btn:hover {
+  background: #555;
+}
+.why-decor-editor__shape-btn--remove {
+  background: #622;
+}
+.why-decor-editor__shape-btn--remove:hover {
+  background: #833;
+}
+.why-decor-editor__resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 4px 0 0 0;
+  cursor: nwse-resize;
+}
+.why-decor-editor__hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--white);
+  opacity: 0.85;
+}
+.why-decor-editor__hint code {
+  background: rgba(0,0,0,0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
 }
 
 .formats .card-body {

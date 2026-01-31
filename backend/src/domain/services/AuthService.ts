@@ -160,13 +160,20 @@ export class AuthService {
       throw new UnauthorizedError('Access denied');
     }
 
-    // TODO: Добавить проверку пароля когда добавим поле password_hash в User
-    // Пока что для MVP можно использовать простую проверку через env переменную
-    // или создать отдельную таблицу для админских паролей
+    // Проверка пароля с использованием bcrypt
+    // Пароль должен быть захеширован и сохранен в переменной окружения ADMIN_PASSWORD_HASH
+    const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
 
-    // Временная проверка (для MVP)
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    if (!adminPassword || password !== adminPassword) {
+    if (!adminPasswordHash) {
+      logger.error('ADMIN_PASSWORD_HASH is not set in environment variables');
+      throw new UnauthorizedError('Invalid credentials');
+    }
+
+    // Сравниваем с хешем используя bcrypt
+    const isPasswordValid = await bcrypt.compare(password, adminPasswordHash);
+
+    if (!isPasswordValid) {
+      logger.warn('Failed admin login attempt', { telegramId });
       throw new UnauthorizedError('Invalid credentials');
     }
 

@@ -133,6 +133,35 @@ export class BotManager {
       logger.error('Failed to send booking confirmation', { error, bookingId: bookingData.bookingId });
     }
   }
+
+  /**
+   * Graceful shutdown - останавливает всех ботов
+   * Вызывается только при завершении работы сервера (SIGTERM/SIGINT)
+   */
+  async stop(): Promise<void> {
+    logger.info('Stopping Telegram bots...');
+
+    const stopPromises: Promise<void>[] = [];
+
+    if (this.userBot) {
+      stopPromises.push(
+        this.userBot.stop().catch((error) => {
+          logger.error('Error stopping User Bot', { error });
+        })
+      );
+    }
+
+    if (this.adminBot) {
+      stopPromises.push(
+        this.adminBot.stop().catch((error) => {
+          logger.error('Error stopping Admin Bot', { error });
+        })
+      );
+    }
+
+    await Promise.all(stopPromises);
+    logger.info('All Telegram bots stopped');
+  }
 }
 
 // Глобальный экземпляр для доступа из других модулей

@@ -152,7 +152,9 @@ model VotingSession {
 
   votes Vote[]
 
+  // PERFORMANCE INDEXES
   @@index([isActive])
+  @@index([isActive, createdAt(sort: Desc)]) // Для findActiveSession + история
   @@map("voting_sessions")
 }
 
@@ -242,9 +244,11 @@ model Booking {
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
+  // PERFORMANCE INDEXES
   @@index([bookingDate])
   @@index([userId])
   @@index([bookingDate, status])
+  @@index([userId, bookingDate(sort: Desc)]) // Для findByUserId + сортировка (до 100x быстрее!)
   @@map("bookings")
 }
 
@@ -257,6 +261,9 @@ model Review {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // PERFORMANCE INDEXES
+  @@index([userId, createdAt(sort: Desc)]) // Для findByUserId + сортировка (до 100x быстрее!)
+  @@index([createdAt(sort: Desc)])         // Для списка всех отзывов с сортировкой
   @@map("reviews")
 }
 

@@ -6,8 +6,8 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { errorHandler } from './presentation/middleware/errorHandler';
 import { logger } from './shared/utils/logger';
-import { connectDatabase } from './config/database';
-import { connectRedis } from './config/redis';
+import { connectDatabase, disconnectDatabase } from './config/database';
+import { connectRedis, disconnectRedis } from './config/redis';
 import authRoutes from './presentation/routes/auth.routes';
 import songsRoutes from './presentation/routes/songs.routes';
 import bookingsRoutes from './presentation/routes/bookings.routes';
@@ -44,7 +44,7 @@ import {
   PrismaReferralEventRepository,
   PrismaAgentRepository,
 } from './infrastructure/database/repositories';
-import { BotManager, setBotManager } from './infrastructure/telegram/botManager';
+import { BotManager, setBotManager, getBotManager } from './infrastructure/telegram/botManager';
 
 // Загружаем переменные окружения
 dotenv.config();
@@ -182,5 +182,81 @@ async function startServer() {
 }
 
 startServer();
+
+/**
+ * Graceful Shutdown Handler
+ * Корректно завершает работу сервера при получении сигналов SIGTERM/SIGINT
+ */
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal: string): Promise<void> {
+  if (isShuttingDown) {
+    logger.warn(`${signal} received again, forcing shutdown...`);
+    process.exit(1);
+  }
+
+  isShuttingDown = true;
+  logger.info(`${signal} received, starting graceful shutdown...`);
+
+  // Таймаут на случай если shutdown затягивается
+  const shutdownTimeout = setTimeout(() => {
+    logger.error('Graceful shutdown timeout, forcing exit');
+    process.exit(1);
+  }, 30000); // 30 секунд
+
+  try {
+    // 1. Прекращаем принимать новые HTTP запросы
+    httpServer.close(() => {
+      logger.info('HTTP server closed, no longer accepting connections');
+    });
+
+    // 2. Закрываем Socket.IO соединения
+    const socketServer = (global as any).socketServer as SocketServer;
+    if (socketServer) {
+      const io = socketServer.getIO();
+      io.disconnectSockets(true);
+      logger.info('Socket.IO connections closed');
+    }
+
+    // 3. Останавливаем Telegram ботов
+    const botManager = getBotManager();
+    if (botManager) {
+      await botManager.stop();
+      logger.info('Telegram bots stopped');
+    }
+
+    // 4. Закрываем Redis соединение
+    await disconnectRedis();
+    logger.info('Redis connection closed');
+
+    // 5. Закрываем Prisma соединение
+    await disconnectDatabase();
+    logger.info('Database connection closed');
+
+    // Очищаем таймаут
+    clearTimeout(shutdownTimeout);
+
+    logger.info('Graceful shutdown completed successfully');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during graceful shutdown', { error });
+    clearTimeout(shutdownTimeout);
+    process.exit(1);
+  }
+}
+
+// Обработчики сигналов
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Обработчик необработанных ошибок
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', { promise, reason });
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', { error });
+  gracefulShutdown('UNCAUGHT_EXCEPTION');
+});
 
 export default app;

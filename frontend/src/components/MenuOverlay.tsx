@@ -24,9 +24,18 @@ type MenuOverlayProps = {
 
 export default function MenuOverlay({ isOpen, onClose, onNavigate }: MenuOverlayProps) {
   return (
-    <div className={`menu-overlay${isOpen ? ' is-open' : ''}`} aria-hidden={!isOpen}>
-      <button className="menu-overlay__backdrop" onClick={onClose} type="button" />
-      <div className="menu-overlay__panel" role="dialog" aria-label="Меню">
+    <div 
+      className={`menu-overlay${isOpen ? ' is-open' : ''}`} 
+      aria-hidden={!isOpen}
+    >
+      <button 
+        className="menu-overlay__backdrop" 
+        onClick={onClose} 
+        type="button" 
+        aria-label="Закрыть меню"
+        tabIndex={isOpen ? 0 : -1}
+      />
+      <div className="menu-overlay__panel" role="dialog" aria-modal={isOpen ? 'true' : 'false'} aria-label="Меню">
         <img alt="" className="menu-overlay__bg" src={navBg} />
         <img alt="Меню" className="menu-overlay__title" src={navTitle} />
         <div className="menu-overlay__links">
@@ -35,6 +44,7 @@ export default function MenuOverlay({ isOpen, onClose, onNavigate }: MenuOverlay
               key={item.target}
               onClick={() => onNavigate(item.target)}
               type="button"
+              tabIndex={isOpen ? 0 : -1}
             >
               {item.label}
             </button>

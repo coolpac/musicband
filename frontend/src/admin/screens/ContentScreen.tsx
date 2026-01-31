@@ -1,21 +1,18 @@
 import { useState } from 'react';
 import AdminHeader from '../components/AdminHeader';
-import SongsManagementScreen from './SongsManagementScreen';
 import FormatsManagementScreen from './FormatsManagementScreen';
 import PostersManagementScreen from './PostersManagementScreen';
 import PartnersManagementScreen from './PartnersManagementScreen';
 import '../../styles/admin.css';
 import './ContentScreen.css';
 
-type ContentTab = 'songs' | 'formats' | 'posters' | 'partners';
+type ContentTab = 'formats' | 'posters' | 'partners';
 
 export default function ContentScreen() {
-  const [activeTab, setActiveTab] = useState<ContentTab>('songs');
+  const [activeTab, setActiveTab] = useState<ContentTab>('formats');
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'songs':
-        return <SongsManagementScreen />;
       case 'formats':
         return <FormatsManagementScreen />;
       case 'posters':
@@ -32,12 +29,6 @@ export default function ContentScreen() {
       <AdminHeader />
 
       <div className="content-tabs">
-        <button
-          className={`content-tab ${activeTab === 'songs' ? 'content-tab--active' : ''}`}
-          onClick={() => setActiveTab('songs')}
-        >
-          🎵 Песни
-        </button>
         <button
           className={`content-tab ${activeTab === 'formats' ? 'content-tab--active' : ''}`}
           onClick={() => setActiveTab('formats')}

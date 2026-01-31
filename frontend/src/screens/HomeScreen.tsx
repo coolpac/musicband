@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import posterImage from '../assets/figma/poster.png';
 import promoImage from '../assets/figma/promo.png';
 import promoPlay from '../assets/figma/play-promo.svg';
@@ -18,6 +18,7 @@ import imgAward2024 from '../assets/figma/downloaded/award-2024.png';
 import imgLiveSound from '../assets/figma/downloaded/live-sound.png';
 import imgFlexibleTerms from '../assets/figma/downloaded/flexible-terms.png';
 import imgEllipse240 from '../assets/figma/downloaded/ellipse-240.svg';
+import imgWhyCircle from '../assets/figma/downloaded/why-circle.svg';
 import imgWhyVectorTop from '../assets/figma/downloaded/why-vector-top.svg';
 import imgWhyVectorBottom from '../assets/figma/downloaded/why-vector-bottom.svg';
 import imgWhyVectorWide from '../assets/figma/downloaded/why-vector-wide.svg';
@@ -33,9 +34,23 @@ const imgAward2025 = imgAward2025Local;
 
 import { getPosters, Poster } from '../services/posterService';
 import { getPartners, Partner } from '../services/partnerService';
+/* TEMPORARY: редактор декора — удалить вместе с WhyDecorEditor.tsx и стилями .why-decor-editor-* */
+import { WhyDecorEditor, objectToDecorItems, type WhyMobileDecorItem } from './WhyDecorEditor';
 
 const promoVideoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4';
 const liveVideoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+
+/**
+ * Размер фрейма мобильного слайда «Почему мы?» в Figma.
+ * Подставь Width и Height своего фрейма — от этого считаются позиции (x, y → left%, top%).
+ * Инструкция: frontend/docs/figma-why-decor.md
+ */
+const FIGMA_MOBILE_WHY_FRAME = { width: 375, height: 520 };
+
+/** Позиция и размер элемента из Figma (X, Y, Width, Height в пикселях относительно фрейма). */
+type FigmaRect = { x: number; y: number; w: number; h: number; opacity?: number; flipHorizontal?: boolean; flipVertical?: boolean; rotate?: number };
+/** Позиция эллипса (X, Y); размер берётся из CSS. */
+type FigmaEllipsePos = { x: number; y: number; opacity?: number; flipHorizontal?: boolean; flipVertical?: boolean; rotate?: number };
 
 const whyMobileSlides = [
   {
@@ -100,97 +115,132 @@ const whyMobileSlides = [
   },
 ];
 
-const whyMobileDecorPositions = [
-  // Slide 0: award-2025 (Figma 100:1769) - "как надо"
-  {
-    ellipse: { left: '75%', top: '12%', width: '50px', height: '50px', opacity: 1 },
-    vectorTop: { left: '5%', top: '5%', width: '120px', height: '100px', opacity: 0 },
-    vectorBottom: { left: '5%', top: '5%', width: '120px', height: '100px', opacity: 0 },
-    vectorWide: { left: '45%', top: '35%', width: '300px', height: '240px', opacity: 1 },
-    ellipseLeft: { left: '-8%', top: '78%', width: '68px', height: '140px', opacity: 1 },
-    ellipseRight: { left: '85%', top: '45%', opacity: 0 },
-  },
-  // Slide 1: award-2024 (Figma 100:1773)
-  {
-    ellipse: { left: '75%', top: '80%', width: '70px', height: '70px', opacity: 0.9 },
-    vectorTop: { left: '5%', top: '10%', width: '100px', height: '80px', opacity: 0 },
-    vectorBottom: { left: '10%', top: '20%', width: '100px', height: '80px', opacity: 0 },
-    vectorWide: { left: '25%', top: '10%', width: '300px', height: '220px', opacity: 1 },
-    ellipseLeft: { left: '5%', top: '45%', opacity: 1 },
-    ellipseRight: { left: '20%', top: '47%', opacity: 1 },
-  },
-  // Slide 2: live-sound (Figma 100:1775)
-  {
-    ellipse: { left: '45%', top: '5%', width: '50px', height: '50px', opacity: 1 },
-    vectorTop: { left: '-10%', top: '35%', width: '140px', height: '110px', opacity: 1 },
-    vectorBottom: { left: '-5%', top: '55%', width: '140px', height: '110px', opacity: 1 },
-    vectorWide: { left: '55%', top: '75%', width: '200px', height: '150px', opacity: 0.6 },
-    ellipseLeft: { left: '75%', top: '25%', opacity: 0 },
-    ellipseRight: { left: '85%', top: '30%', opacity: 0 },
-  },
-  // Slide 3: flexible-terms (Figma 100:1777)
-  {
-    ellipse: { left: '85%', top: '25%', width: '65px', height: '65px', opacity: 1 },
-    vectorTop: { left: '15%', top: '85%', width: '110px', height: '90px', opacity: 0.7 },
-    vectorBottom: { left: '25%', top: '75%', width: '110px', height: '90px', opacity: 0 },
-    vectorWide: { left: '-25%', top: '15%', width: '280px', height: '200px', opacity: 0.4 },
-    ellipseLeft: { left: '45%', top: '55%', opacity: 1 },
-    ellipseRight: { left: '60%', top: '57%', opacity: 1 },
-  },
-  // Slide 4: custom-format (Figma 100:1786)
-  {
-    ellipse: { left: '8%', top: '65%', width: '55px', height: '55px', opacity: 0.8 },
-    vectorTop: { left: '55%', top: '15%', width: '130px', height: '105px', opacity: 1 },
-    vectorBottom: { left: '50%', top: '30%', width: '130px', height: '105px', opacity: 1 },
-    vectorWide: { left: '35%', top: '85%', width: '220px', height: '160px', opacity: 0.9 },
-    ellipseLeft: { left: '8%', top: '20%', opacity: 0.6 },
-    ellipseRight: { left: '18%', top: '23%', opacity: 0.6 },
-  },
-  // Slide 5: unique-repertoire (Figma 100:1778)
-  {
-    ellipse: { left: '65%', top: '45%', width: '75px', height: '75px', opacity: 1 },
-    vectorTop: { left: '15%', top: '10%', width: '115px', height: '95px', opacity: 0.5 },
-    vectorBottom: { left: '20%', top: '20%', width: '115px', height: '95px', opacity: 0 },
-    vectorWide: { left: '55%', top: '10%', width: '260px', height: '190px', opacity: 1 },
-    ellipseLeft: { left: '85%', top: '85%', opacity: 1 },
-    ellipseRight: { left: '95%', top: '87%', opacity: 1 },
-  },
-  // Slide 6: format-repertoire
-  {
-    ellipse: { left: '35%', top: '90%', width: '60px', height: '60px', opacity: 1 },
-    vectorTop: { left: '75%', top: '35%', width: '125px', height: '100px', opacity: 1 },
-    vectorBottom: { left: '70%', top: '55%', width: '125px', height: '100px', opacity: 1 },
-    vectorWide: { left: '-20%', top: '25%', width: '240px', height: '170px', opacity: 0.3 },
-    ellipseLeft: { left: '15%', top: '15%', opacity: 0.8 },
-    ellipseRight: { left: '25%', top: '20%', opacity: 0 },
-  },
-  // Slide 7: interactive
-  {
-    ellipse: { left: '55%', top: '55%', width: '80px', height: '80px', opacity: 0.2 },
-    vectorTop: { left: '8%', top: '8%', width: '100px', height: '80px', opacity: 1 },
-    vectorBottom: { left: '85%', top: '85%', width: '100px', height: '80px', opacity: 1 },
-    vectorWide: { left: '30%', top: '30%', width: '200px', height: '150px', opacity: 1 },
-    ellipseLeft: { left: '8%', top: '85%', opacity: 1 },
-    ellipseRight: { left: '85%', top: '8%', opacity: 1 },
-  },
-  // Slide 8: scenario
-  {
-    ellipse: { left: '20%', top: '15%', width: '50px', height: '50px', opacity: 1 },
-    vectorTop: { left: '65%', top: '75%', width: '140px', height: '110px', opacity: 1 },
-    vectorBottom: { left: '15%', top: '45%', width: '140px', height: '110px', opacity: 0.4 },
-    vectorWide: { left: '45%', top: '45%', width: '300px', height: '220px', opacity: 0.7 },
-    ellipseLeft: { left: '90%', top: '20%', opacity: 1 },
-    ellipseRight: { left: '80%', top: '25%', opacity: 1 },
-  },
-  // Slide 9: uniqueness
-  {
-    ellipse: { left: '85%', top: '85%', width: '60px', height: '60px', opacity: 1 },
-    vectorTop: { left: '25%', top: '25%', width: '120px', height: '100px', opacity: 1 },
-    vectorBottom: { left: '35%', top: '15%', width: '120px', height: '100px', opacity: 1 },
-    vectorWide: { left: '-10%', top: '80%', width: '210px', height: '150px', opacity: 0.5 },
-    ellipseLeft: { left: '55%', top: '10%', opacity: 1 },
-    ellipseRight: { left: '65%', top: '13%', opacity: 1 },
-  },
+type WhyMobileDecorFigma = {
+  ellipse?: FigmaRect;
+  vectorTop?: FigmaRect;
+  vectorBottom?: FigmaRect;
+  vectorWide?: FigmaRect;
+  ellipseLeft?: FigmaEllipsePos;
+  ellipseRight?: FigmaEllipsePos;
+};
+
+/*
+  НАСТРОЙКА ДЕКОРА «ПОЧЕМУ МЫ» НА МОБИЛКЕ
+  -----------------------------------------
+  Один элемент массива = один слайд (индекс 0 = первый слайд, 1 = второй и т.д.).
+
+  В каждом слайде можно включить до 6 элементов. Ключ = какой элемент, значение = где стоит и виден ли:
+
+    ellipse       — чёрный круг
+    vectorTop     — верхняя волнистая дуга
+    vectorBottom  — нижняя волнистая дуга
+    vectorWide    — большой широкий blob
+    ellipseLeft   — вертикальный эллипс (часто слева)
+    ellipseRight  — вертикальный эллипс (часто справа)
+
+  Позиция и размер (в пикселях от левого верхнего угла слайда):
+    x, y — куда ставить (0,0 = верх-лево; ширина слайда = FIGMA_MOBILE_WHY_FRAME.width, высота = .height)
+    w, h — ширина и высота (для ellipseLeft/ellipseRight не задаёшь — размер в CSS)
+    opacity — от 0 (не видно) до 1 (полностью видно). Чтобы элемент не показывать — opacity: 0 или убери ключ.
+
+  Пример: круг по центру сверху при фрейме 375×600:
+    ellipse: { x: 163, y: 20, w: 50, h: 50, opacity: 1 }
+
+  Формат «массив элементов» (из редактора ?decorEdit=1): слайд = массив объектов
+  с полями type, id, x, y, w?, h?, opacity?, ... — можно несколько элементов одного type (например два ellipse).
+*/
+type WhyMobileDecorSlide = WhyMobileDecorFigma | WhyMobileDecorItem[];
+
+function normalizeDecorSlide(slide: WhyMobileDecorSlide | undefined): WhyMobileDecorItem[] {
+  if (slide == null) return [];
+  return Array.isArray(slide) ? slide : objectToDecorItems(slide);
+}
+
+function toDecorSlides(data: WhyMobileDecorSlide[]): WhyMobileDecorItem[][] {
+  return data.map((slide) => normalizeDecorSlide(slide));
+}
+
+const whyMobileDecorFromFigma: WhyMobileDecorSlide[] = [
+  [
+    { type: 'ellipse', id: 'ellipse', x: 309, y: 58, w: 59, h: 53, opacity: 1 },
+    { type: 'vectorTop', id: 'vectorTop', x: 19, y: 30, w: 120, h: 100, opacity: 0 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: 19, y: 30, w: 120, h: 100, opacity: 0 },
+    { type: 'vectorTop', id: 'vectorTop_1769726894240', x: 260, y: 175, w: 120, h: 100, opacity: 1, rotate: 90 },
+    { type: 'vectorTop', id: 'vectorTop_1769726961457', x: 170, y: 175, w: 120, h: 100, opacity: 1, rotate: 90 },
+    { type: 'vectorTop', id: 'vectorTop_1769726986391', x: 20, y: 440, w: 120, h: 100, opacity: 1 },
+  ],
+  [
+    { type: 'ellipse', id: 'ellipse', x: 281, y: 480, w: 75, h: 75, opacity: 0.9 },
+    { type: 'vectorTop', id: 'vectorTop', x: 19, y: 60, w: 100, h: 80, opacity: 0 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: 38, y: 120, w: 100, h: 80, opacity: 0 },
+    { type: 'vectorWide', id: 'vectorWide', x: 94, y: 60, w: 300, h: 220, opacity: 1 },
+    { type: 'ellipseLeft', id: 'ellipseLeft', x: 19, y: 270, opacity: 1 },
+    { type: 'ellipseRight', id: 'ellipseRight', x: 75, y: 282, opacity: 1 },
+  ],
+  [
+    { type: 'ellipse', id: 'ellipse', x: 169, y: -22, w: 55, h: 55, opacity: 1 },
+    { type: 'vectorTop', id: 'vectorTop', x: -38, y: 210, w: 140, h: 110, opacity: 1 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: -19, y: 330, w: 140, h: 110, opacity: 1 },
+    { type: 'vectorWide', id: 'vectorWide', x: 206, y: 450, w: 200, h: 150, opacity: 0.6 },
+    { type: 'ellipseLeft', id: 'ellipseLeft', x: 281, y: 98, opacity: 0 },
+    { type: 'ellipseRight', id: 'ellipseRight', x: 319, y: 128, opacity: 0 },
+  ],
+  [
+    { type: 'ellipse', id: 'ellipse', x: 319, y: 98, w: 65, h: 65, opacity: 1 },
+    { type: 'vectorTop', id: 'vectorTop', x: 56, y: 510, w: 110, h: 90, opacity: 0.7 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: 94, y: 450, w: 110, h: 90, opacity: 0 },
+    { type: 'vectorWide', id: 'vectorWide', x: -94, y: 90, w: 280, h: 200, opacity: 0.4 },
+    { type: 'ellipseLeft', id: 'ellipseLeft', x: 169, y: 278, opacity: 1 },
+    { type: 'ellipseRight', id: 'ellipseRight', x: 225, y: 290, opacity: 1 },
+  ],
+  [
+    { type: 'ellipse', id: 'ellipse', x: 30, y: 338, w: 60, h: 60, opacity: 0.8 },
+    { type: 'vectorTop', id: 'vectorTop', x: 206, y: 90, w: 130, h: 105, opacity: 1 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: 188, y: 180, w: 130, h: 105, opacity: 1 },
+    { type: 'vectorWide', id: 'vectorWide', x: 131, y: 510, w: 220, h: 160, opacity: 0.9 },
+    { type: 'ellipseLeft', id: 'ellipseLeft', x: 30, y: 68, opacity: 0.6 },
+    { type: 'ellipseRight', id: 'ellipseRight', x: 68, y: 86, opacity: 0.6 },
+  ],
+  [
+    { type: 'ellipse', id: 'ellipse', x: 244, y: 218, w: 80, h: 80, opacity: 1 },
+    { type: 'vectorTop', id: 'vectorTop', x: 56, y: 60, w: 115, h: 95, opacity: 0.5 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: 75, y: 120, w: 115, h: 95, opacity: 0 },
+    { type: 'vectorWide', id: 'vectorWide', x: 206, y: 60, w: 260, h: 190, opacity: 1 },
+    { type: 'ellipseLeft', id: 'ellipseLeft', x: 319, y: 458, opacity: 1 },
+    { type: 'ellipseRight', id: 'ellipseRight', x: 356, y: 470, opacity: 1 },
+  ],
+  [
+    { type: 'ellipse', id: 'ellipse', x: 131, y: 488, w: 65, h: 65, opacity: 1 },
+    { type: 'vectorTop', id: 'vectorTop', x: 281, y: 210, w: 125, h: 100, opacity: 1 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: 263, y: 330, w: 125, h: 100, opacity: 1 },
+    { type: 'vectorWide', id: 'vectorWide', x: -75, y: 150, w: 240, h: 170, opacity: 0.3 },
+    { type: 'ellipseLeft', id: 'ellipseLeft', x: 56, y: 38, opacity: 0.8 },
+    { type: 'ellipseRight', id: 'ellipseRight', x: 94, y: 68, opacity: 0 },
+  ],
+  [
+    { type: 'ellipse', id: 'ellipse', x: 206, y: 278, w: 85, h: 85, opacity: 0.2 },
+    { type: 'vectorTop', id: 'vectorTop', x: 30, y: 48, w: 100, h: 80, opacity: 1 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: 319, y: 510, w: 100, h: 80, opacity: 1 },
+    { type: 'vectorWide', id: 'vectorWide', x: 113, y: 180, w: 200, h: 150, opacity: 1 },
+    { type: 'ellipseLeft', id: 'ellipseLeft', x: 30, y: 458, opacity: 1 },
+    { type: 'ellipseRight', id: 'ellipseRight', x: 319, y: -4, opacity: 1 },
+  ],
+  [
+    { type: 'ellipse', id: 'ellipse', x: 75, y: 38, w: 55, h: 55, opacity: 1 },
+    { type: 'vectorTop', id: 'vectorTop', x: 244, y: 450, w: 140, h: 110, opacity: 1 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: 56, y: 270, w: 140, h: 110, opacity: 0.4 },
+    { type: 'vectorWide', id: 'vectorWide', x: 169, y: 270, w: 300, h: 220, opacity: 0.7 },
+    { type: 'ellipseLeft', id: 'ellipseLeft', x: 338, y: 68, opacity: 1 },
+    { type: 'ellipseRight', id: 'ellipseRight', x: 300, y: 98, opacity: 1 },
+  ],
+  [
+    { type: 'ellipse', id: 'ellipse', x: 319, y: 458, w: 65, h: 65, opacity: 1 },
+    { type: 'vectorTop', id: 'vectorTop', x: 94, y: 150, w: 120, h: 100, opacity: 1 },
+    { type: 'vectorBottom', id: 'vectorBottom', x: 131, y: 90, w: 120, h: 100, opacity: 1 },
+    { type: 'vectorWide', id: 'vectorWide', x: -38, y: 480, w: 210, h: 150, opacity: 0.5 },
+    { type: 'ellipseLeft', id: 'ellipseLeft', x: 206, y: 8, opacity: 1 },
+    { type: 'ellipseRight', id: 'ellipseRight', x: 244, y: 26, opacity: 1 },
+  ],
 ];
 
 const whyDesktopSlides = ['panel-2024', 'panel-flex', 'panel-interactive'];
@@ -214,6 +264,16 @@ export default function HomeScreen({ onMenuOpen }: HomeScreenProps) {
   const desktopSwipeStateRef = useRef({ startX: 0, startIndex: 0, active: false });
   const [activeWhyIndex, setActiveWhyIndex] = useState(0);
   const [activeWhyDesktopIndex, setActiveWhyDesktopIndex] = useState(0);
+  /* TEMPORARY: редактор декора — включение по ?decorEdit=1 */
+  const isDecorEdit = useMemo(
+    () => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('decorEdit') === '1',
+    []
+  );
+  const [editingDecor, setEditingDecor] = useState<WhyMobileDecorItem[][]>(() => toDecorSlides(whyMobileDecorFromFigma));
+  const [editorSlideIndex, setEditorSlideIndex] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 375
+  );
   const posterSliderRef = useRef<HTMLDivElement>(null);
   const posterRafRef = useRef<number | null>(null);
   const posterStepRef = useRef(0);
@@ -226,6 +286,12 @@ export default function HomeScreen({ onMenuOpen }: HomeScreenProps) {
   const [activePosterIndex, setActivePosterIndex] = useState(0);
   const [isPromoPlaying, setIsPromoPlaying] = useState(false);
   const [isLivePlaying, setIsLivePlaying] = useState(false);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const updateSlideStep = useCallback(() => {
     const slider = sliderRef.current;
@@ -740,6 +806,26 @@ export default function HomeScreen({ onMenuOpen }: HomeScreenProps) {
               Почему мы?
               <span className="why-question-mark">?</span>
             </h2>
+            {/* TEMPORARY: при ?decorEdit=1 показываем редактор декора вместо слайдера */}
+            {isDecorEdit ? (
+              <WhyDecorEditor
+                decor={editingDecor}
+                onDecorChange={setEditingDecor}
+                frame={FIGMA_MOBILE_WHY_FRAME}
+                slides={whyMobileSlides.map((s) => ({ id: s.id, alt: s.alt, text: s.text }))}
+                activeSlideIndex={editorSlideIndex}
+                onActiveSlideIndexChange={setEditorSlideIndex}
+                assets={{
+                  ellipse: imgWhyCircle,
+                  vectorTop: imgWhyVectorTop,
+                  vectorBottom: imgWhyVectorBottom,
+                  vectorWide: imgWhyVectorWide,
+                  ellipseLeft: imgEllipse242,
+                  ellipseRight: imgEllipse241,
+                }}
+              />
+            ) : (
+            <>
             <div
               className="why-slider"
               onPointerDown={handleWhyPointerDown}
@@ -749,7 +835,40 @@ export default function HomeScreen({ onMenuOpen }: HomeScreenProps) {
               ref={sliderRef}
             >
               {whyMobileSlides.map((slide, index) => {
-                const decorPos = whyMobileDecorPositions[index] ?? whyMobileDecorPositions[0];
+                const decorRaw = whyMobileDecorFromFigma[index] ?? whyMobileDecorFromFigma[0];
+                const items = normalizeDecorSlide(decorRaw);
+                const { width: fw, height: fh } = FIGMA_MOBILE_WHY_FRAME;
+                const scale = Math.min(1, viewportWidth / fw);
+                const scalePx = (px: number): string => `${Math.round(px * scale)}px`;
+                const buildTransform = (item: FigmaRect | FigmaEllipsePos) => {
+                  const parts: string[] = [];
+                  if (item.flipHorizontal) parts.push('scaleX(-1)');
+                  if (item.flipVertical) parts.push('scaleY(-1)');
+                  if (item.rotate != null && item.rotate !== 0) parts.push(`rotate(${item.rotate}deg)`);
+                  return parts.length > 0 ? parts.join(' ') : undefined;
+                };
+                const figmaToStyle = (r: FigmaRect) => ({
+                  left: `${(r.x / fw) * 100}%`,
+                  top: `${(r.y / fh) * 100}%`,
+                  width: scalePx(r.w),
+                  height: scalePx(r.h),
+                  opacity: r.opacity ?? 1,
+                  transform: buildTransform(r),
+                });
+                const figmaEllipseToStyle = (p: FigmaEllipsePos) => ({
+                  left: `${(p.x / fw) * 100}%`,
+                  top: `${(p.y / fh) * 100}%`,
+                  opacity: p.opacity ?? 1,
+                  transform: buildTransform(p),
+                });
+                const decorAssets: Record<WhyMobileDecorItem['type'], string> = {
+                  ellipse: imgWhyCircle,
+                  vectorTop: imgWhyVectorTop,
+                  vectorBottom: imgWhyVectorBottom,
+                  vectorWide: imgWhyVectorWide,
+                  ellipseLeft: imgEllipse242,
+                  ellipseRight: imgEllipse241,
+                };
                 return (
                   <article
                     className={`why-slide${activeWhyIndex === index ? ' is-active' : ''}`}
@@ -757,78 +876,34 @@ export default function HomeScreen({ onMenuOpen }: HomeScreenProps) {
                     key={slide.id}
                   >
                     <div className="why-mobile-decor" aria-hidden="true">
-                      <div
-                        className="why-mobile-shape-wrapper why-mobile-shape--ellipse"
-                        style={{
-                          left: decorPos.ellipse.left,
-                          top: decorPos.ellipse.top,
-                          width: decorPos.ellipse.width,
-                          height: decorPos.ellipse.height,
-                          opacity: decorPos.ellipse.opacity,
-                        }}
-                      >
-                        <img alt="" src={imgEllipse240} />
-                      </div>
-                      <div
-                        className="why-mobile-shape-wrapper why-mobile-shape--vector-top"
-                        style={{
-                          left: decorPos.vectorTop.left,
-                          top: decorPos.vectorTop.top,
-                          width: decorPos.vectorTop.width,
-                          height: decorPos.vectorTop.height,
-                          opacity: decorPos.vectorTop.opacity,
-                        }}
-                      >
-                        <img alt="" src={imgWhyVectorTop} />
-                      </div>
-                      <div
-                        className="why-mobile-shape-wrapper why-mobile-shape--vector-bottom"
-                        style={{
-                          left: decorPos.vectorBottom.left,
-                          top: decorPos.vectorBottom.top,
-                          width: decorPos.vectorBottom.width,
-                          height: decorPos.vectorBottom.height,
-                          opacity: decorPos.vectorBottom.opacity,
-                        }}
-                      >
-                        <img alt="" src={imgWhyVectorBottom} />
-                      </div>
-                      <div
-                        className="why-mobile-shape-wrapper why-mobile-shape--vector-wide"
-                        style={{
-                          left: decorPos.vectorWide.left,
-                          top: decorPos.vectorWide.top,
-                          width: decorPos.vectorWide.width,
-                          height: decorPos.vectorWide.height,
-                          opacity: decorPos.vectorWide.opacity,
-                        }}
-                      >
-                        <img alt="" src={imgWhyVectorWide} />
-                      </div>
-                      <div
-                        className="why-mobile-ellipse why-mobile-ellipse--left"
-                        style={{
-                          left: decorPos.ellipseLeft.left,
-                          top: decorPos.ellipseLeft.top,
-                          opacity: decorPos.ellipseLeft.opacity,
-                        }}
-                      >
-                        <div className="why-mobile-shape-wrapper">
-                          <img alt="" className="why-mobile-ellipse-image" src={imgEllipse242} />
-                        </div>
-                      </div>
-                      <div
-                        className="why-mobile-ellipse why-mobile-ellipse--right"
-                        style={{
-                          left: decorPos.ellipseRight.left,
-                          top: decorPos.ellipseRight.top,
-                          opacity: decorPos.ellipseRight.opacity,
-                        }}
-                      >
-                        <div className="why-mobile-shape-wrapper">
-                          <img alt="" className="why-mobile-ellipse-image" src={imgEllipse241} />
-                        </div>
-                      </div>
+                      {items.map((item) => {
+                        const isEllipse = item.type === 'ellipseLeft' || item.type === 'ellipseRight';
+                        const style = isEllipse ? figmaEllipseToStyle(item) : figmaToStyle(item as FigmaRect);
+                        const wrapperClass =
+                          item.type === 'ellipse'
+                            ? 'why-mobile-shape-wrapper why-mobile-shape--ellipse'
+                            : item.type === 'vectorTop'
+                              ? 'why-mobile-shape-wrapper why-mobile-shape--vector-top'
+                              : item.type === 'vectorBottom'
+                                ? 'why-mobile-shape-wrapper why-mobile-shape--vector-bottom'
+                                : item.type === 'vectorWide'
+                                  ? 'why-mobile-shape-wrapper why-mobile-shape--vector-wide'
+                                  : item.type === 'ellipseLeft'
+                                    ? 'why-mobile-ellipse why-mobile-ellipse--left'
+                                    : 'why-mobile-ellipse why-mobile-ellipse--right';
+                        const img = (
+                          <img
+                            alt=""
+                            className={isEllipse ? 'why-mobile-ellipse-image' : undefined}
+                            src={decorAssets[item.type]}
+                          />
+                        );
+                        return (
+                          <div key={item.id} className={wrapperClass} style={style}>
+                            {isEllipse ? <div className="why-mobile-shape-wrapper">{img}</div> : img}
+                          </div>
+                        );
+                      })}
                     </div>
                     <div className="why-mobile-content">
                       <img alt={slide.alt} className="why-image" loading="lazy" src={slide.image} />
@@ -851,6 +926,8 @@ export default function HomeScreen({ onMenuOpen }: HomeScreenProps) {
                 />
               ))}
             </div>
+            </>
+            )}
           </div>
           <div className="why-desktop">
             <div className="why-desktop-shell">

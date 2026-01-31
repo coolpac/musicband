@@ -79,9 +79,21 @@ export function createRedisRateLimiter(options: RateLimitOptions) {
 
       next();
     } catch (error) {
-      // В случае ошибки Redis, пропускаем rate limiting (fail open)
-      logger.error('Rate limiter error', { error, path: req.path });
-      next();
+      // В случае ошибки Redis, БЛОКИРУЕМ запрос (fail-secure)
+      // Это защищает от DDoS атак, если Redis недоступен
+      logger.error('Rate limiter error - denying request for security', {
+        error,
+        path: req.path,
+        identifier
+      });
+
+      res.status(503).json({
+        success: false,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Service temporarily unavailable. Please try again later.',
+        },
+      });
     }
   };
 }
@@ -136,8 +148,20 @@ export function createRoleBasedRateLimiter(
 
       next();
     } catch (error) {
-      logger.error('Role-based rate limiter error', { error, path: req.path });
-      next();
+      // Fail-secure: блокируем запрос при ошибке Redis
+      logger.error('Role-based rate limiter error - denying request for security', {
+        error,
+        path: req.path,
+        role: (req as any).user?.role || 'anonymous'
+      });
+
+      res.status(503).json({
+        success: false,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Service temporarily unavailable. Please try again later.',
+        },
+      });
     }
   };
 }
