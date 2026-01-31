@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import reviewFormBg from '../assets/figma/review-form-bg.webp';
 import '../styles/review.css';
 
@@ -12,11 +13,13 @@ export default function ReviewFormScreen({ onSubmit, onBack }: ReviewFormScreenP
   const [text, setText] = useState('');
 
   const handleStarClick = (index: number) => {
+    hapticSelection();
     setRating(index + 1);
   };
 
   const handleSubmit = () => {
     if (rating > 0) {
+      hapticImpact('light');
       onSubmit?.(rating, text);
     }
   };
@@ -38,7 +41,7 @@ export default function ReviewFormScreen({ onSubmit, onBack }: ReviewFormScreenP
   return (
     <main className="screen screen--review-form">
       {onBack && (
-        <button className="review-back-btn" onClick={onBack} type="button">
+        <button className="review-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
           Назад
         </button>
       )}

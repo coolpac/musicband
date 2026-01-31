@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import { Song } from '../types/vote';
 import { getSongs } from '../services/songService';
 import { useApiRequest } from '../hooks/useApiRequest';
@@ -47,11 +48,13 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
   }, [loadSongs]);
 
   const handleSongSelect = (songId: string) => {
+    hapticSelection();
     setSelectedSongId(songId);
   };
 
   const handleConfirm = () => {
     if (selectedSongId) {
+      hapticImpact('light');
       onSubmit?.(selectedSongId);
     }
   };
@@ -60,7 +63,7 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
     return (
       <main className="screen screen--voting">
         {onBack && (
-          <button className="voting-back-btn" onClick={onBack} type="button">
+          <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
             Назад
           </button>
         )}
@@ -80,7 +83,7 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
   return (
     <main className="screen screen--voting">
       {onBack && (
-        <button className="voting-back-btn" onClick={onBack} type="button">
+        <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
           Назад
         </button>
       )}

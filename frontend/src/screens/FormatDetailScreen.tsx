@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { hapticImpact } from '../telegram/telegramWebApp';
 import '../styles/format.css';
 import { Format } from '../types/format';
 import { getFormatById } from '../services/formatService';
@@ -50,7 +51,7 @@ export default function FormatDetailScreen({
       <main className="screen screen--format-detail">
         <div className="format-detail-container">
           <p>Формат не найден</p>
-          <button className="btn btn-primary" onClick={onBack} type="button">
+          <button className="btn btn-primary" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
             Назад
           </button>
         </div>
@@ -60,7 +61,7 @@ export default function FormatDetailScreen({
 
   return (
     <main className="screen screen--format-detail">
-      <button className="format-back-btn" onClick={onBack} type="button">
+      <button className="format-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
         Назад
       </button>
       <div className="format-detail-container">
@@ -130,7 +131,7 @@ export default function FormatDetailScreen({
           )}
         </div>
 
-        <button className="btn btn-primary format-detail-cta" onClick={onRequestPrice} type="button">
+        <button className="btn btn-primary format-detail-cta" onClick={() => { hapticImpact('light'); onRequestPrice(); }} type="button">
           Получить прайс
         </button>
       </div>

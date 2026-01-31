@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { hapticSelection } from '../telegram/telegramWebApp';
 import { residents } from '../data/residents';
 import '../styles/residents.css';
 
@@ -11,6 +12,7 @@ export default function ResidentsScreen() {
   const [openId, setOpenId] = useState<string | null>(null);
 
   const handleCardClick = useCallback((id: string, descriptionSvg?: string) => {
+    hapticSelection();
     setOpenId((prev) => (prev === id ? null : id));
   }, []);
 

@@ -1,3 +1,4 @@
+import { hapticImpact } from '../telegram/telegramWebApp';
 import navBg from '../assets/figma/downloaded/nav-bg.webp';
 import navTitle from '../assets/figma/downloaded/nav-title.svg';
 
@@ -30,7 +31,7 @@ export default function MenuOverlay({ isOpen, onClose, onNavigate }: MenuOverlay
     >
       <button 
         className="menu-overlay__backdrop" 
-        onClick={onClose} 
+        onClick={() => { hapticImpact('light'); onClose(); }} 
         type="button" 
         aria-label="Закрыть меню"
         tabIndex={isOpen ? 0 : -1}
@@ -42,7 +43,7 @@ export default function MenuOverlay({ isOpen, onClose, onNavigate }: MenuOverlay
           {menuItems.map((item) => (
             <button
               key={item.target}
-              onClick={() => onNavigate(item.target)}
+              onClick={() => { hapticImpact('light'); onNavigate(item.target); }}
               type="button"
               tabIndex={isOpen ? 0 : -1}
             >

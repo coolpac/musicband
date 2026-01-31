@@ -1,3 +1,4 @@
+import { hapticImpact } from '../telegram/telegramWebApp';
 import reviewSuccessImage from '../assets/figma/review-success-image.webp';
 import '../styles/review.css';
 
@@ -20,7 +21,7 @@ export default function ReviewSuccessScreen({ onBackHome }: ReviewSuccessScreenP
           <div className="review-success-image-gradient review-success-image-gradient--bottom"></div>
         </div>
         <p className="review-success-note">*благодарим за ваше внимание и отзыв</p>
-        <button className="btn btn-primary review-success-button" onClick={onBackHome} type="button">
+        <button className="btn btn-primary review-success-button" onClick={() => { hapticImpact('light'); onBackHome?.(); }} type="button">
           На главную
         </button>
       </div>

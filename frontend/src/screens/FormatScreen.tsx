@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import '../styles/format.css';
 import { Format } from '../types/format';
 import { getFormats } from '../services/formatService';
@@ -76,6 +77,7 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
 
   const handleDotClick = useCallback(
     (index: number) => {
+      hapticSelection();
       const slider = sliderRef.current;
       const step = stepRef.current;
       const offset = offsetRef.current;
@@ -136,7 +138,7 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
   if (error) {
     return (
       <main className="screen screen--format">
-        <button className="format-back-btn" onClick={onBack} type="button">
+        <button className="format-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
           Назад
         </button>
         <div className="format-container">
@@ -151,7 +153,7 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
 
   return (
     <main className="screen screen--format">
-      <button className="format-back-btn" onClick={onBack} type="button">
+      <button className="format-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
         Назад
       </button>
       <div className="format-container">
@@ -216,7 +218,7 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
             {activeFormat && (
               <button
                 className="btn btn-primary format-cta"
-                onClick={() => onFormatClick(activeFormat.id)}
+                onClick={() => { hapticImpact('light'); onFormatClick(activeFormat.id); }}
                 type="button"
               >
                 {activeFormat.status === 'coming-soon' ? 'Получить прайс' : 'Что в шоу?'}

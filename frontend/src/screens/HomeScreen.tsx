@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { hapticImpact, openTelegramLink, isInsideTelegram } from '../telegram/telegramWebApp';
 import posterImage from '../assets/figma/poster.webp';
 import promoPlay from '../assets/figma/play-promo.svg';
 import formatImage from '../assets/figma/format.webp';
@@ -174,10 +175,12 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
   }, []);
 
   const handleGoToCalendar = useCallback(() => {
+    hapticImpact('light');
     onGoToCalendar?.();
   }, [onGoToCalendar]);
 
   const handleMenuOpen = useCallback(() => {
+    hapticImpact('light');
     onMenuOpen?.();
   }, [onMenuOpen]);
 
@@ -671,7 +674,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
         <button
           className="btn btn-primary residents-btn"
           type="button"
-          onClick={() => onGoToResidents?.()}
+          onClick={() => { hapticImpact('light'); onGoToResidents?.(); }}
         >
           Познакомиться
         </button>
@@ -686,6 +689,12 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
             rel="noopener noreferrer"
             className="tile social-tile social-tile--telegram"
             aria-label="Telegram"
+            onClick={(e) => {
+              if (isInsideTelegram()) {
+                e.preventDefault();
+                openTelegramLink('https://t.me/example');
+              }
+            }}
           >
             <span className="social-tile__bg" aria-hidden />
             <span className="social-tile__icon" aria-hidden>

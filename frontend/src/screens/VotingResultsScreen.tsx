@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { hapticImpact } from '../telegram/telegramWebApp';
 import { Song } from '../types/vote';
 import { getSongs } from '../services/songService';
 import { getVoteResults, VoteResult } from '../services/voteService';
@@ -53,7 +54,7 @@ export default function VotingResultsScreen({ onBack, onSongClick }: VotingResul
     return (
       <main className="screen screen--voting-results">
         {onBack && (
-          <button className="voting-back-btn" onClick={onBack} type="button">
+          <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
             Назад
           </button>
         )}
@@ -73,7 +74,7 @@ export default function VotingResultsScreen({ onBack, onSongClick }: VotingResul
   return (
     <main className="screen screen--voting-results">
       {onBack && (
-        <button className="voting-back-btn" onClick={onBack} type="button">
+        <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
           Назад
         </button>
       )}
@@ -95,7 +96,7 @@ export default function VotingResultsScreen({ onBack, onSongClick }: VotingResul
                 type="button"
                 className="voting-result-card voting-result-card--clickable"
                 style={{ animationDelay: `${index * 0.06}s` }}
-                onClick={() => onSongClick?.(song.id)}
+                onClick={() => { hapticImpact('light'); onSongClick?.(song.id); }}
               >
                 <div className="voting-result-progress" style={{ width: `${percentage}%` }}></div>
                 <div className="voting-result-content">

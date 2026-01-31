@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useTelegramWebApp } from './telegram/useTelegramWebApp';
+import { hapticImpact, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser } from './telegram/telegramWebApp';
+import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
 import { castVote } from './services/voteService';
 import { submitReview } from './services/reviewService';
 import HomeScreen from './screens/HomeScreen';
@@ -50,6 +53,34 @@ export default function App() {
   const [currentFormatId, setCurrentFormatId] = useState<string | null>(formatIdParam);
   const [bookingDraft, setBookingDraft] = useState<BookingDraft | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const tg = useTelegramWebApp({ initOnMount: true });
+
+  useEffect(() => {
+    if (!tg.isTelegram) return;
+    if (currentScreen === 'home') {
+      tg.hideBackButton();
+      return;
+    }
+    tg.showBackButton();
+    const cleanup = tg.onBackButtonClick(() => {
+      hapticImpact('light');
+      window.history.back();
+    });
+    return () => {
+      cleanup?.();
+      tg.hideBackButton();
+    };
+  }, [currentScreen, tg.isTelegram, tg.showBackButton, tg.hideBackButton, tg.onBackButtonClick]);
+
+  // Подтверждение закрытия на экране формы заявки — чтобы не потерять данные
+  useEffect(() => {
+    if (!tg.isTelegram) return;
+    if (currentScreen === 'form') {
+      enableClosingConfirmation();
+      return () => disableClosingConfirmation();
+    }
+    disableClosingConfirmation();
+  }, [currentScreen, tg.isTelegram]);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
@@ -150,6 +181,7 @@ export default function App() {
           <RequestCalendarScreen
             onContinue={(draft) => {
               setBookingDraft(draft);
+              setBookingDraftToCloud(draft);
               setCurrentScreen('form');
               window.history.pushState({}, '', '?screen=form');
             }}
@@ -159,13 +191,15 @@ export default function App() {
         return (
           <RequestFormScreen
             bookingDraft={bookingDraft}
+            initialFullName={getTelegramUser()?.fullName}
             onSubmit={() => {
               setCurrentScreen('success');
               setBookingDraft(null);
+              clearAllBookingFromCloud();
               window.history.pushState({}, '', '?screen=success');
             }}
             onSubmitError={(message) => {
-              alert(message);
+              showAlert(message);
             }}
           />
         );
@@ -208,7 +242,7 @@ export default function App() {
                 window.history.pushState({}, '', '?screen=review-success');
               } catch (error) {
                 console.error('Failed to submit review:', error);
-                alert('Не удалось отправить отзыв. Попробуйте позже.');
+                showAlert('Не удалось отправить отзыв. Попробуйте позже.');
               }
             }}
           />

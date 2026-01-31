@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { hapticImpact } from '../telegram/telegramWebApp';
 import { getSongs } from '../services/songService';
 import { getSongLyrics } from '../services/songService';
 import { Song } from '../types/vote';
@@ -49,7 +50,7 @@ export default function SongLyricsScreen({ onBack, songId, variant = 'spotify' }
   return (
     <main className={`screen screen--lyrics screen--lyrics-${variant}`}>
       {onBack && (
-        <button className="voting-back-btn" onClick={onBack} type="button">
+        <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
           Назад
         </button>
       )}

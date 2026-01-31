@@ -37,9 +37,6 @@ pnpm-debug.log*
 **/coverage/
 **/.nyc_output/
 
-# Prisma
-**/prisma/migrations/
-
 # Local uploads/exports (backend)
 backend/uploads/
 !backend/uploads/.gitkeep

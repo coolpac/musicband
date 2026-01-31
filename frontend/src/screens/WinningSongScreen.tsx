@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { hapticImpact } from '../telegram/telegramWebApp';
 import { Song } from '../types/vote';
 import { getSongs } from '../services/songService';
 import NetworkError from '../components/NetworkError';
@@ -53,7 +54,7 @@ export default function WinningSongScreen({ onBack, onViewLyrics, songId }: Winn
   return (
     <main className="screen screen--winning-song">
       {onBack && (
-        <button className="voting-back-btn" onClick={onBack} type="button">
+        <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
           Назад
         </button>
       )}
@@ -151,7 +152,7 @@ export default function WinningSongScreen({ onBack, onViewLyrics, songId }: Winn
         <button
           className="btn btn-primary winning-song-lyrics-btn"
           type="button"
-          onClick={() => setLyricsOpen(true)}
+          onClick={() => { hapticImpact('light'); setLyricsOpen(true); }}
         >
           Текст песни
         </button>

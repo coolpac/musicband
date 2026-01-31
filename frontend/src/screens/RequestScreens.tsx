@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
+import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
+import { getBookingFormFromCloud, setBookingFormToCloud, clearBookingFormFromCloud, type BookingFormStorage } from '../telegram/cloudStorage';
 import '../styles/date.css';
 import '../styles/request.css';
 import { getAvailableDates } from '../services/bookingService';
@@ -107,7 +109,7 @@ function RequestSelect({
                 className={`request-select-menu__item${option === value ? ' is-active' : ''}`}
                 key={option}
                 type="button"
-                onClick={() => onSelect(option)}
+                onClick={() => { hapticSelection(); onSelect(option); }}
               >
                 {option}
               </button>
@@ -255,6 +257,7 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
 
   const handleContinue = () => {
     if (!onContinue || !selectedFormatId) return;
+    hapticImpact('light');
     const bookingDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
     onContinue({ formatId: selectedFormatId, bookingDate });
   };
@@ -290,7 +293,7 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
             <button
               className="request-icon-button request-icon-button--prev"
               type="button"
-              onClick={handlePrevMonth}
+              onClick={() => { hapticImpact('light'); handlePrevMonth(); }}
             >
               <img alt="" src={monthPrev} />
             </button>
@@ -298,7 +301,7 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
             <button
               className="request-icon-button request-icon-button--next"
               type="button"
-              onClick={handleNextMonth}
+              onClick={() => { hapticImpact('light'); handleNextMonth(); }}
             >
               <img alt="" src={monthNext} />
             </button>
@@ -313,6 +316,7 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
                 type="button"
                 onClick={() => {
                   if (!disabledDays.has(day)) {
+                    hapticSelection();
                     setSelectedDay(day);
                   }
                 }}
@@ -359,18 +363,44 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
 
 type RequestFormScreenProps = {
   bookingDraft: BookingDraft | null;
+  initialFullName?: string;
   onSubmit?: () => void;
   onSubmitError?: (message: string) => void;
 };
 
-export function RequestFormScreen({ bookingDraft, onSubmit, onSubmitError }: RequestFormScreenProps) {
-  const [fullName, setFullName] = useState('');
+export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit, onSubmitError }: RequestFormScreenProps) {
+  const [fullName, setFullName] = useState(initialFullName);
   const [contactType, setContactType] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [city, setCity] = useState('');
   const [source, setSource] = useState('');
   const [openSelect, setOpenSelect] = useState<'contact' | 'source' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formLoadedFromCloud, setFormLoadedFromCloud] = useState(false);
+
+  useEffect(() => {
+    if (!bookingDraft || formLoadedFromCloud) return;
+    let cancelled = false;
+    getBookingFormFromCloud().then((data) => {
+      if (cancelled) return;
+      setFormLoadedFromCloud(true);
+      if (data?.fullName !== undefined) setFullName(data.fullName);
+      if (data?.contactType !== undefined) setContactType(data.contactType);
+      if (data?.phoneNumber !== undefined) setPhoneNumber(data.phoneNumber);
+      if (data?.city !== undefined) setCity(data.city);
+      if (data?.source !== undefined) setSource(data.source);
+    });
+    return () => { cancelled = true; };
+  }, [bookingDraft, formLoadedFromCloud]);
+
+  useEffect(() => {
+    if (!bookingDraft) return;
+    const payload: BookingFormStorage = { fullName, contactType, phoneNumber, city, source };
+    const t = window.setTimeout(() => {
+      setBookingFormToCloud(payload);
+    }, 500);
+    return () => window.clearTimeout(t);
+  }, [bookingDraft, fullName, contactType, phoneNumber, city, source]);
 
   const toggleSelect = (target: 'contact' | 'source') => {
     setOpenSelect((prev) => (prev === target ? null : target));
@@ -389,6 +419,7 @@ export function RequestFormScreen({ bookingDraft, onSubmit, onSubmitError }: Req
       onSubmitError?.('Введите номер телефона');
       return;
     }
+    hapticImpact('light');
     setIsSubmitting(true);
     try {
       const { createBooking } = await import('../services/bookingService');
@@ -519,7 +550,7 @@ export function RequestSuccessScreen({ onBackHome }: RequestSuccessScreenProps) 
           <p>С вами свяжется руководитель</p>
           <p>группы Анна Кобякова</p>
         </div>
-        <button className="request-primary request-success-button request-success-in" type="button" onClick={onBackHome}>
+        <button className="request-primary request-success-button request-success-in" type="button" onClick={() => { hapticImpact('light'); onBackHome?.(); }}>
           Вернуться на главную
         </button>
       </div>
