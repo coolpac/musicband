@@ -305,6 +305,21 @@ cd /opt/musicians
 
 После входа лимит повышается до 200 pull за 6 часов. Образы postgres, redis и т.д. подтянутся один раз и будут кешироваться.
 
+### Миграция: "relation \"formats\" does not exist" / P3018
+
+Если в репозитории одна начальная миграция `20260101000000_init`, а на сервере БД пустая или миграция падала — сбросьте схему и примените миграции заново:
+
+```bash
+# Сброс схемы БД (данные удалятся; для пустой БД — безопасно)
+docker compose exec -T postgres psql -U musicians -d musicians_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+# Применить миграции
+docker compose run --rm backend npx prisma migrate deploy
+
+# Запустить backend
+docker compose up -d backend
+```
+
 ### Prisma: "failed to detect libssl" / "Could not parse schema engine response"
 
 На Alpine (node:20-alpine) в образ добавлены `openssl` и `binaryTargets = ["linux-musl-openssl-3.0.x"]`. Если ошибка остаётся — пересоберите образ без кеша:
