@@ -31,13 +31,21 @@ docker compose stop frontend
 apt update && apt install -y certbot
 ```
 
-Получите сертификат (standalone займёт порт 80 на 1–2 минуты):
+Получите сертификат (standalone займёт порт 80 на 1–2 минуты).
+
+**Вариант 1 — только основной домен** (если для www.vgulcover.ru приходит 502 или другой IP):
+
+```bash
+certbot certonly --standalone -d vgulcover.ru --non-interactive --agree-tos -m your@email.com
+```
+
+**Вариант 2 — домен и www** (если и vgulcover.ru, и www.vgulcover.ru указывают на этот сервер):
 
 ```bash
 certbot certonly --standalone -d vgulcover.ru -d www.vgulcover.ru --non-interactive --agree-tos -m your@email.com
 ```
 
-Замените `your@email.com` на свой email (нужен для уведомлений Let's Encrypt).
+Замените `your@email.com` на свой email. Если Certbot ругается на www (502 / другой IP), используйте вариант 1.
 
 Запустите frontend снова:
 
@@ -117,6 +125,31 @@ docker compose up -d backend
 ```
 
 ---
+
+## Если Certbot выдал 502 для www.vgulcover.ru
+
+Значит, **www** указывает на другой IP (прокси/CDN) или порт 80 там занят. Сделайте так:
+
+1. Взять сертификат **только для vgulcover.ru** (без www):
+   ```bash
+   docker compose stop frontend
+   certbot certonly --standalone -d vgulcover.ru --non-interactive --agree-tos -m your@email.com
+   docker compose start frontend
+   ```
+2. В `frontend/nginx/nginx-ssl.conf` в блоках `server_name` оставить только `vgulcover.ru` (убрать `www.vgulcover.ru`) или позже настроить DNS для www на этот сервер и перевыпустить сертификат с `-d www.vgulcover.ru`.
+
+## Если после включения SSL сайт не открывается
+
+Вы включили SSL-конфиг до получения сертификата: Nginx редиректит HTTP → HTTPS, а сертификата нет. Верните обычный конфиг и снова включите SSL после получения сертификата:
+
+```bash
+cd /opt/musicians
+cp frontend/nginx/nginx.conf.bak frontend/nginx/nginx.conf
+docker compose build --no-cache frontend
+docker compose up -d frontend
+```
+
+После этого http://vgulcover.ru снова будет открываться. Получите сертификат (см. выше), добавьте в docker-compose порт 443 и volume `/etc/letsencrypt`, снова подмените конфиг на `nginx-ssl.conf`, пересоберите frontend.
 
 ## Шаг 4: Автообновление сертификата
 
