@@ -78,10 +78,16 @@ for i in {1..30}; do
 done
 echo "✅ PostgreSQL готов"
 
-# 6. Сборка и запуск backend
+# 6. Сборка backend
 echo "Сборка backend..."
 docker compose build backend
 
+# 7. Миграции Prisma (через одноразовый контейнер, чтобы не зависеть от состояния backend)
+echo "Применение миграций БД..."
+docker compose run --rm backend npx prisma migrate deploy
+echo "✅ Миграции применены"
+
+# 8. Запуск backend
 echo "Запуск backend..."
 docker compose up -d backend
 
@@ -97,19 +103,14 @@ for i in {1..30}; do
     sleep 2
 done
 
-# 7. Миграции Prisma
-echo "Применение миграций БД..."
-docker compose exec -T backend npx prisma migrate deploy
-echo "✅ Миграции применены"
-
-# 8. Сборка и запуск frontend
+# 9. Сборка и запуск frontend
 echo "Сборка frontend..."
 docker compose build frontend
 
 echo "Запуск frontend..."
 docker compose up -d frontend
 
-# 9. Проверка
+# 10. Проверка
 echo ""
 echo "======================================="
 echo "  Проверка статуса сервисов"
