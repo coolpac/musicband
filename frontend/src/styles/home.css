@@ -5,7 +5,7 @@
 
 /* В мини-приложении Telegram — хиро вплотную к хедеру, без лишнего зазора. */
 .tg-mini-app .screen--home {
-  padding-top: 0;
+  padding-top: clamp(64px, 11svh, 107px);
   padding-bottom: 0;
 }
 
