@@ -13,9 +13,6 @@ jobs:
   frontend:
     name: Frontend (Vite)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,16 +26,15 @@ jobs:
 
       - name: Install
         run: npm ci
+        working-directory: frontend
 
       - name: Build
         run: npm run build
+        working-directory: frontend
 
   backend:
     name: Backend (TS)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,13 +48,17 @@ jobs:
 
       - name: Install
         run: npm ci
+        working-directory: backend
 
       - name: Type check
         run: npm run type-check
+        working-directory: backend
 
       - name: Lint
         run: npm run lint
+        working-directory: backend
 
       - name: Build
         run: npm run build
+        working-directory: backend
 
