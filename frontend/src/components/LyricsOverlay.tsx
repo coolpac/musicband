@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { getSongs } from '../services/songService';
 import { getSongLyrics } from '../services/songService';
 import { Song } from '../types/vote';
+import NetworkError from './NetworkError';
 import votingBg from '../assets/figma/voting-bg-only.svg';
 import '../styles/lyrics.css';
 

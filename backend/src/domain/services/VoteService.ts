@@ -7,6 +7,7 @@ import { redis } from '../../config/redis';
 import { CacheService, CACHE_KEYS } from '../../shared/utils/cache';
 import { CACHE_TTL } from '../../shared/constants';
 import { prisma } from '../../config/database';
+import type { VotingSession } from '@prisma/client';
 
 export class VoteService {
   constructor(
@@ -192,7 +193,7 @@ export class VoteService {
    * ВАЖНО: Использует DATABASE TRANSACTION для атомарности операций
    * Если любая операция упадет - все изменения откатятся автоматически
    */
-  async startSession(songIds: string[]): Promise<ReturnType<IVoteRepository['createSession']>> {
+  async startSession(songIds: string[]): Promise<VotingSession> {
     if (songIds.length === 0) {
       throw new ValidationError('At least one song is required');
     }
@@ -219,7 +220,7 @@ export class VoteService {
       });
 
       // 2. Создаем новую сессию голосования
-      const newSession = await tx.voteSession.create({
+      const newSession = await tx.votingSession.create({
         data: {
           isActive: true,
           totalVoters: 0,
@@ -267,15 +268,30 @@ export class VoteService {
     const votes = await this.voteRepository.findBySession(sessionId);
     const songIds = [...new Set(votes.map((v) => v.songId))];
 
+    // Собираем telegramId всех проголосовавших (ДО deleteMany в транзакции)
+    const uniqueUserIds = [...new Set(votes.map((v) => v.userId))];
+    const voterTelegramIds =
+      uniqueUserIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: uniqueUserIds } },
+            select: { telegramId: true },
+          })
+        : [];
+
+    // Победитель — песня с максимумом голосов (results уже отсортированы по votes DESC)
+    const winningSongId = results.length > 0 ? results[0].songId : null;
+
     // TRANSACTION: Завершаем сессию + деактивируем песни + удаляем голоса атомарно
     const endedSession = await prisma.$transaction(async (tx) => {
-      // 1. Завершаем сессию (устанавливаем isActive = false)
-      const updated = await tx.voteSession.update({
+      // 1. Завершаем сессию (устанавливаем isActive = false, победитель, expiresAt)
+      const updated = await tx.votingSession.update({
         where: { id: sessionId },
         data: {
           isActive: false,
           endedAt: new Date(),
           totalVoters: votes.length, // Сохраняем финальное кол-во голосов
+          winningSongId,
+          expiresAt: new Date(Date.now() + 6 * 60 * 60 * 1000), // 6 часов
         },
       });
 
@@ -295,6 +311,12 @@ export class VoteService {
       return updated;
     });
 
+    // Полные данные победителя для ответа
+    let winningSong = null;
+    if (winningSongId) {
+      winningSong = await this.songRepository.findById(winningSongId);
+    }
+
     // Очищаем Redis кеш (вне транзакции - не критично если упадет)
     try {
       await CacheService.delPattern(`votes:session:${sessionId}:*`);
@@ -312,6 +334,15 @@ export class VoteService {
       session: endedSession,
       finalResults: results,
       totalVoters: endedSession.totalVoters,
+      winningSong: winningSong
+        ? {
+            id: winningSong.id,
+            title: winningSong.title,
+            artist: winningSong.artist,
+            coverUrl: winningSong.coverUrl,
+          }
+        : null,
+      voterTelegramIds: voterTelegramIds.map((u) => u.telegramId),
     };
   }
 }

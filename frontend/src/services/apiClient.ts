@@ -256,3 +256,23 @@ export async function apiDelete<T>(
     );
   }
 }
+
+/**
+ * Low-level request for FormData or custom body (e.g. file upload).
+ */
+export async function apiRequest<T>(
+  path: string,
+  init: RequestInit,
+  options?: ApiRequestOptions
+): Promise<T> {
+  const url = `${getApiBaseUrl()}${path}`;
+  const response = await fetchWithAbort(
+    url,
+    {
+      credentials: 'include',
+      ...init,
+    },
+    options
+  );
+  return await parseResponse<T>(response);
+}

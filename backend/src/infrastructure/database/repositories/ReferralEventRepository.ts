@@ -147,10 +147,32 @@ export class PrismaReferralEventRepository implements IReferralEventRepository {
   }
 
   async findByAgentId(agentId: string, options?: FindReferralEventsOptions): Promise<{ events: ReferralEvent[]; total: number }> {
-    return this.findAll({
-      ...options,
-      // Переопределяем where для фильтрации по agentId
-    });
+    const page = options?.page || 1;
+    const limit = options?.limit || 10;
+    const skip = (page - 1) * limit;
+    const where: { agentId: string; eventType?: ReferralEventType; status?: ReferralEventStatus; createdAt?: { gte?: Date; lte?: Date } } = { agentId };
+    if (options?.eventType) where.eventType = options.eventType;
+    if (options?.status) where.status = options.status;
+    if (options?.startDate || options?.endDate) {
+      where.createdAt = {};
+      if (options.startDate) where.createdAt.gte = options.startDate;
+      if (options.endDate) where.createdAt.lte = options.endDate;
+    }
+    const [events, total] = await Promise.all([
+      this.client.referralEvent.findMany({
+        where,
+        include: {
+          agent: { include: { user: { select: { id: true, username: true, firstName: true, lastName: true } } } },
+          referredUser: { select: { id: true, username: true, firstName: true, lastName: true } },
+          referralLink: { select: { id: true, linkCode: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.client.referralEvent.count({ where }),
+    ]);
+    return { events, total };
   }
 
   async create(data: CreateReferralEventData): Promise<ReferralEvent> {
@@ -237,7 +259,6 @@ export class PrismaReferralEventRepository implements IReferralEventRepository {
       this.client.referralEvent.count({ where: { ...where, status: 'rejected' } }),
     ]);
 
-    const totalEvents = totalClicks + totalRegistrations + totalBookings + totalVotes;
     const conversionRate = totalClicks > 0 ? (totalRegistrations / totalClicks) * 100 : 0;
 
     return {

@@ -1,21 +1,26 @@
 import { ReactNode } from 'react';
 import topbarLogo from '../../assets/figma/topbar-left.svg';
 import '../../components/Header.css';
+import { useAdminAuth } from '../context/AdminAuthContext';
 import './AdminHeader.css';
 
 interface AdminHeaderProps {
   showBack?: boolean;
   onBack?: () => void;
   showAvatar?: boolean;
+  /** Буква в кружке, если контекст не дал аватарку и не передан явно */
   avatarLetter?: string;
   customContent?: ReactNode;
 }
 
 export default function AdminHeader({
   showAvatar = true,
-  avatarLetter = 'В',
+  avatarLetter: avatarLetterProp,
   customContent,
 }: AdminHeaderProps) {
+  const { avatarUrl, avatarLetter: avatarLetterFromContext, loading } = useAdminAuth();
+  const avatarLetter = avatarLetterProp ?? avatarLetterFromContext;
+
   return (
     <header className="app-header admin-header">
       <div className="app-topbar admin-topbar">
@@ -32,7 +37,16 @@ export default function AdminHeader({
         <div className="admin-topbar__right">
           {showAvatar && (
             <div className="admin-topbar__avatar">
-              {avatarLetter}
+              {!loading && avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="admin-topbar__avatar-img"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                avatarLetter
+              )}
             </div>
           )}
         </div>

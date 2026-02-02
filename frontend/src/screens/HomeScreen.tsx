@@ -3,7 +3,6 @@ import { hapticImpact, openTelegramLink, isInsideTelegram } from '../telegram/te
 import posterImage from '../assets/figma/poster.webp';
 import promoPlay from '../assets/figma/play-promo.svg';
 import formatImage from '../assets/figma/format.webp';
-import liveImage from '../assets/figma/live.webp';
 import livePlay from '../assets/figma/play-live.svg';
 import residentsImage from '../assets/figma/residents.webp';
 import dateWave from '../assets/figma/date-wave.svg';
@@ -37,8 +36,6 @@ import { OptimizedImage } from '../components/OptimizedImage';
 import { getOptimizedImageProps } from '../types/image';
 import { whyMobileSlides, whyDesktopSlides, promoVideos } from '../data/homeData';
 
-const liveVideoUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-
 
 type HomeScreenProps = {
   onMenuOpen?: () => void;
@@ -68,12 +65,16 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
     itemCount: promoVideos.length,
     slideSelector: '.promo-slide',
   });
+  const liveSlider = useSnapSlider({
+    itemCount: promoVideos.length,
+    slideSelector: '.live-slide',
+  });
 
   const decorStripRef = useRef<HTMLDivElement>(null);
   const swipeStateRef = useRef({ startX: 0, startIndex: 0, active: false });
   const desktopSwipeStateRef = useRef({ startX: 0, startIndex: 0, active: false });
   const promoVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
-  const liveVideoRef = useRef<HTMLVideoElement>(null);
+  const liveVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   const handleWhyScrollWithStrip = useCallback(() => {
     whySlider.handleScroll();
@@ -165,14 +166,14 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
   }, [promoSlider.activeIndex]);
 
   const handleLiveToggle = useCallback(() => {
-    const video = liveVideoRef.current;
+    const video = liveVideoRefs.current[liveSlider.activeIndex];
     if (!video) return;
     if (video.paused) {
       video.play().catch(() => undefined);
     } else {
       video.pause();
     }
-  }, []);
+  }, [liveSlider.activeIndex]);
 
   const handleGoToCalendar = useCallback(() => {
     hapticImpact('light');
@@ -224,6 +225,15 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
     });
     setIsPromoPlaying(false);
   }, [promoSlider.activeIndex]);
+
+  useEffect(() => {
+    liveVideoRefs.current.forEach((video, index) => {
+      if (video && index !== liveSlider.activeIndex) {
+        video.pause();
+      }
+    });
+    setIsLivePlaying(false);
+  }, [liveSlider.activeIndex]);
 
   return (
     <main className="screen screen--home">
@@ -641,25 +651,52 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
 
       <section className="section live" id="live">
         <h2 className="section-title">Live-видео</h2>
-        <div className={`live-card glass ${isLivePlaying ? 'is-playing' : ''}`}>
-          <div className="live-player">
-            <video
-              className="live-video"
-              loop
-              muted
-              onPause={() => setIsLivePlaying(false)}
-              onPlay={() => setIsLivePlaying(true)}
-              playsInline
-              poster={liveImage}
-              preload="metadata"
-              ref={liveVideoRef}
+        <div
+          className="live-slider"
+          onScroll={liveSlider.handleScroll}
+          ref={liveSlider.sliderRef}
+        >
+          {promoVideos.map((item, index) => (
+            <article
+              key={item.id}
+              className={`live-slide ${liveSlider.activeIndex === index && isLivePlaying ? 'is-playing' : ''}`}
             >
-              <source src={liveVideoUrl} type="video/mp4" />
-            </video>
-            <button className="video-play-button" onClick={handleLiveToggle} type="button">
-              <img alt="Play" src={livePlay} width={48} height={48} loading="lazy" decoding="async" />
-            </button>
-          </div>
+              <div className={`live-card glass ${liveSlider.activeIndex === index && isLivePlaying ? 'is-playing' : ''}`}>
+                <div className="live-player">
+                  <video
+                    className="live-video"
+                    loop
+                    onPause={() => setIsLivePlaying(false)}
+                    onPlay={() => setIsLivePlaying(true)}
+                    playsInline
+                    poster={item.poster}
+                    preload="metadata"
+                    ref={(el) => {
+                      liveVideoRefs.current[index] = el;
+                    }}
+                  >
+                    <source src={item.src} type="video/mp4" />
+                  </video>
+                  <button className="video-play-button" onClick={handleLiveToggle} type="button">
+                    <img alt="Play" src={livePlay} width={48} height={48} loading="lazy" decoding="async" />
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="dots live-dots">
+          {promoVideos.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-label={`Live-видео ${index + 1}`}
+              aria-selected={liveSlider.activeIndex === index}
+              className={`dot${liveSlider.activeIndex === index ? ' dot--active' : ''}`}
+              onClick={() => liveSlider.scrollToIndex(index)}
+            />
+          ))}
         </div>
         <button className="btn btn-primary live-btn" type="button" onClick={handleGoToCalendar}>
           Оставить заявку

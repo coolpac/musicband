@@ -43,7 +43,7 @@ export class AdminBookingController {
    * GET /api/admin/bookings/stats
    * Получить статистику бронирований
    */
-  async getStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getStats(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const stats = await this.bookingService.getStats();
 

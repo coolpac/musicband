@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { io, type Socket } from 'socket.io-client';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
-import { hapticImpact, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser } from './telegram/telegramWebApp';
+import { hapticImpact, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
 import { castVote } from './services/voteService';
 import { submitReview } from './services/reviewService';
@@ -51,8 +52,13 @@ export default function App() {
 
   const [currentScreen, setCurrentScreen] = useState<Screen>(initialScreen);
   const [currentFormatId, setCurrentFormatId] = useState<string | null>(formatIdParam);
+  const [votingSessionId, setVotingSessionId] = useState<string | null>(null);
   const [bookingDraft, setBookingDraft] = useState<BookingDraft | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socketStatus, setSocketStatus] = useState<'connected' | 'reconnecting' | 'disconnected' | 'error' | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState(0);
+  const [liveResults, setLiveResults] = useState<import('./screens/VotingResultsScreen').LiveResultsPayload | null>(null);
   const tg = useTelegramWebApp({ initOnMount: true });
 
   useEffect(() => {
@@ -129,10 +135,129 @@ export default function App() {
     handlePopState(); // Initial load
 
     return () => {
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('pushstate', handleNavigation);
+    window.removeEventListener('popstate', handlePopState);
+    window.removeEventListener('pushstate', handleNavigation);
     };
   }, []);
+
+  // Deep link vote_{sessionId}: парсим start_param или URL и запрашиваем статус сессии
+  useEffect(() => {
+    const startParam = getStartParam();
+    const urlSessionId = new URLSearchParams(window.location.search).get('sessionId');
+
+    let sessionId: string | null = null;
+    if (startParam && startParam.startsWith('vote_')) {
+      sessionId = startParam.substring(5);
+    } else if (urlSessionId) {
+      sessionId = urlSessionId;
+    }
+
+    if (!sessionId) return;
+
+    setVotingSessionId(sessionId);
+
+    const base = import.meta.env.VITE_API_URL || '';
+    fetch(`${base}/api/public/vote/session/${sessionId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) return;
+
+        const { status, winningSong } = data.data;
+
+        if (status === 'active') {
+          setCurrentScreen('voting');
+          window.history.replaceState({}, '', `?screen=voting&sessionId=${sessionId}`);
+        } else if (status === 'ended_with_winner' && winningSong) {
+          setCurrentScreen('winning-song');
+          window.history.replaceState(
+            {},
+            '',
+            `?screen=winning-song&songId=${winningSong.id}&sessionId=${sessionId}`
+          );
+        } else {
+          setCurrentScreen('home');
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load voting session:', err);
+      });
+  }, []);
+
+  // Socket.io: live-обновления результатов и реакция на завершение голосования (только на экранах voting / voting-results)
+  useEffect(() => {
+    if (currentScreen !== 'voting' && currentScreen !== 'voting-results') {
+      if (socket) {
+        socket.disconnect();
+        setSocket(null);
+      }
+      setSocketStatus(null);
+      setLiveResults(null);
+      return;
+    }
+
+    if (socket?.connected) return;
+
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const token = localStorage.getItem('auth_token');
+
+    if (!token) {
+      console.warn('No auth token for socket connection');
+      return;
+    }
+
+    const newSocket = io(apiUrl, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+    });
+
+    const manager = (newSocket as Socket & { io?: { reconnecting?: boolean; on?: (e: string, fn: () => void) => void } }).io;
+
+    newSocket.on('connect', () => {
+      setSocketStatus('connected');
+      newSocket.emit('vote:join', { sessionId: votingSessionId || undefined });
+    });
+
+    newSocket.on('disconnect', (reason: string) => {
+      const reconnecting = manager?.reconnecting === true;
+      setSocketStatus(reconnecting ? 'reconnecting' : 'disconnected');
+    });
+
+    newSocket.on('connect_error', () => {
+      setSocketStatus('error');
+    });
+
+    if (manager?.on) {
+      manager.on('reconnect_attempt', () => setSocketStatus('reconnecting'));
+      manager.on('reconnect', () => setSocketStatus('connected'));
+    }
+
+    newSocket.on('vote:results:updated', (data) => {
+      setLiveResults(data);
+    });
+
+    newSocket.on('vote:session:ended', (data: { winningSong?: { id: string; title: string; artist: string; coverUrl: string | null } }) => {
+      const { winningSong } = data;
+      if (winningSong) {
+        setCurrentScreen('winning-song');
+        window.history.pushState({}, '', `?screen=winning-song&songId=${winningSong.id}`);
+      }
+    });
+
+    setSocket(newSocket);
+    setSocketStatus(newSocket.connected ? 'connected' : 'reconnecting');
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [currentScreen]);
+
+  const handleRetryConnection = () => {
+    if (socket && !socket.connected) {
+      setSocketStatus('reconnecting');
+      socket.connect();
+    }
+    setRetryTrigger((t) => t + 1);
+  };
 
   const handleMenuNavigate = (target: MenuTarget) => {
     setMenuOpen(false);
@@ -286,6 +411,10 @@ export default function App() {
               setCurrentScreen('winning-song');
               window.history.pushState({}, '', `?screen=winning-song&songId=${songId}`);
             }}
+            liveResults={liveResults}
+            socketStatus={currentScreen === 'voting-results' ? socketStatus : null}
+            retryTrigger={retryTrigger}
+            onRetryConnection={handleRetryConnection}
           />
         );
       case 'winning-song': {
@@ -336,9 +465,36 @@ export default function App() {
     }
   };
 
+  const showSocketBanner =
+    (currentScreen === 'voting' || currentScreen === 'voting-results') &&
+    socket != null &&
+    socketStatus != null &&
+    socketStatus !== 'connected';
+
   return (
     <div className="app-shell">
       <Header />
+      {showSocketBanner && (
+        <div className="socket-status-banner" role="status" aria-live="polite">
+          {socketStatus === 'reconnecting' ? (
+            <>
+              <span className="socket-status-banner__spinner" aria-hidden />
+              <span className="socket-status-banner__text">Переподключение…</span>
+            </>
+          ) : (
+            <>
+              <span className="socket-status-banner__text">Потеряно соединение. Обновить данные?</span>
+              <button
+                type="button"
+                className="socket-status-banner__btn"
+                onClick={handleRetryConnection}
+              >
+                Обновить
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {renderScreen()}
       <MenuOverlay
         isOpen={menuOpen}

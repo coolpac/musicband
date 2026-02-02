@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete, isMockMode } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete } from './apiClient';
 
 // Types
 export type AdminStats = {
@@ -26,156 +26,53 @@ export type Track = TrackInput & {
   updatedAt: string;
 };
 
-// Mock data
-const mockStats: AdminStats = {
-  totalBookings: 28,
-  confirmedBookings: 3,
-  pendingBookings: 24,
-  cancelledBookings: 1,
-  totalRevenue: 24000,
-  conversionRate: 11,
-  pendingConfirmation: 24,
-};
-
-const mockTracks: Track[] = [
-  {
-    id: '1',
-    title: 'Черный дельфин',
-    artist: 'Гио Пика',
-    isActive: true,
-    orderIndex: 1,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '2',
-    title: 'Никого не жалко',
-    artist: 'Бумер',
-    isActive: true,
-    orderIndex: 2,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-];
-
 /**
  * Get admin dashboard statistics (from bookings API)
  */
 export async function getAdminStats(): Promise<AdminStats> {
-  if (isMockMode()) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockStats;
-  }
-
-  try {
-    const data = await apiGet<{
-      total: number;
-      confirmed: number;
-      pending: number;
-      cancelled: number;
-      totalIncome: number;
-      conversionRate: number;
-    }>('/api/admin/bookings/stats');
-    return {
-      totalBookings: data.total,
-      confirmedBookings: data.confirmed,
-      pendingBookings: data.pending,
-      cancelledBookings: data.cancelled,
-      totalRevenue: data.totalIncome ?? 0,
-      conversionRate: data.conversionRate ?? 0,
-      pendingConfirmation: data.pending,
-    };
-  } catch (error) {
-    console.warn('Failed to fetch admin stats, falling back to mock data', error);
-    return mockStats;
-  }
+  const data = await apiGet<{
+    total: number;
+    confirmed: number;
+    pending: number;
+    cancelled: number;
+    totalIncome: number;
+    conversionRate: number;
+  }>('/api/admin/bookings/stats');
+  return {
+    totalBookings: data.total,
+    confirmedBookings: data.confirmed,
+    pendingBookings: data.pending,
+    cancelledBookings: data.cancelled,
+    totalRevenue: data.totalIncome ?? 0,
+    conversionRate: data.conversionRate ?? 0,
+    pendingConfirmation: data.pending,
+  };
 }
 
 /**
  * Get all tracks (songs)
  */
 export async function getTracks(): Promise<Track[]> {
-  if (isMockMode()) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockTracks;
-  }
-
-  try {
-    return await apiGet<Track[]>('/api/admin/songs');
-  } catch (error) {
-    console.warn('Failed to fetch tracks, falling back to mock data', error);
-    return mockTracks;
-  }
+  return apiGet<Track[]>('/api/admin/songs');
 }
 
 /**
  * Create a new track
  */
 export async function createTrack(data: TrackInput): Promise<Track> {
-  if (isMockMode()) {
-    console.log('[Mock] Creating track:', data);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const newTrack: Track = {
-      ...data,
-      id: `track-${Date.now()}`,
-      isActive: data.isActive ?? false,
-      orderIndex: data.orderIndex ?? 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    return newTrack;
-  }
-
-  try {
-    return await apiPost<Track>('/api/admin/tracks', data);
-  } catch (error) {
-    console.error('Failed to create track:', error);
-    throw error;
-  }
+  return apiPost<Track>('/api/admin/songs', data);
 }
 
 /**
  * Update a track
  */
 export async function updateTrack(id: string, data: Partial<TrackInput>): Promise<Track> {
-  if (isMockMode()) {
-    console.log('[Mock] Updating track:', id, data);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const track = mockTracks.find((t) => t.id === id);
-    if (!track) throw new Error('Track not found');
-
-    return {
-      ...track,
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-  }
-
-  try {
-    return await apiPut<Track>(`/api/admin/songs/${id}`, data);
-  } catch (error) {
-    console.error('Failed to update track:', error);
-    throw error;
-  }
+  return apiPut<Track>(`/api/admin/songs/${id}`, data);
 }
 
 /**
  * Delete a track
  */
 export async function deleteTrack(id: string): Promise<void> {
-  if (isMockMode()) {
-    console.log('[Mock] Deleting track:', id);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return;
-  }
-
-  try {
-    await apiDelete<void>(`/api/admin/songs/${id}`);
-  } catch (error) {
-    console.error('Failed to delete track:', error);
-    throw error;
-  }
+  return apiDelete<void>(`/api/admin/songs/${id}`);
 }

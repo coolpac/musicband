@@ -5,13 +5,7 @@ import { logger } from '../../shared/utils/logger';
 import { RateLimitError } from '../../shared/errors';
 import { RATE_LIMIT } from '../../shared/constants';
 
-declare global {
-  namespace Express {
-    interface Request {
-      rateLimit?: { limit: number; remaining: number; reset: Date };
-    }
-  }
-}
+// Типы req.rateLimit и req.user объявлены в src/types/express.d.ts
 
 /**
  * Redis-based rate limiter для масштабирования
@@ -78,8 +72,7 @@ export function createRedisRateLimiter(options: RateLimitOptions) {
       res.setHeader('X-RateLimit-Remaining', Math.max(0, max - newCount).toString());
       res.setHeader('X-RateLimit-Reset', new Date(now + windowMs).toISOString());
 
-      // Сохраняем информацию о лимите в request для логирования
-      (req as any).rateLimit = {
+      req.rateLimit = {
         limit: max,
         remaining: Math.max(0, max - newCount),
         reset: new Date(now + windowMs),
@@ -160,7 +153,7 @@ export function createRoleBasedRateLimiter(
       logger.error('Role-based rate limiter error - denying request for security', {
         error,
         path: req.path,
-        role: (req as any).user?.role || 'anonymous'
+        role: req.user?.role || 'anonymous',
       });
 
       res.status(503).json({
@@ -194,7 +187,7 @@ export const voteRateLimiter = createRedisRateLimiter({
   windowMs: 60 * 1000, // 1 минута
   max: 1, // 1 голос в минуту
   keyGenerator: (req) => {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user?.userId) {
       return `vote:${req.ip}`;
     }
@@ -208,7 +201,7 @@ export const bookingRateLimiter = createRedisRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 час
   max: 10, // 10 бронирований в час
   keyGenerator: (req) => {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user?.userId) {
       return `booking:${req.ip}`;
     }
@@ -222,7 +215,7 @@ export const uploadRateLimiter = createRedisRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 час
   max: 20, // 20 загрузок в час
   keyGenerator: (req) => {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user?.userId) {
       return `upload:${req.ip}`;
     }
@@ -236,7 +229,7 @@ export const reviewRateLimiter = createRedisRateLimiter({
   windowMs: 24 * 60 * 60 * 1000, // 24 часа
   max: 5, // 5 отзывов в день
   keyGenerator: (req) => {
-    const user = (req as any).user;
+    const user = req.user;
     if (!user?.userId) {
       return `review:${req.ip}`;
     }

@@ -1,4 +1,4 @@
-import { IBookingRepository, CreateBookingData } from '../../infrastructure/database/repositories/BookingRepository';
+import { IBookingRepository, CreateBookingData, BookingWithUserAndFormat } from '../../infrastructure/database/repositories/BookingRepository';
 import { IBlockedDateRepository } from '../../infrastructure/database/repositories/BlockedDateRepository';
 import { IUserRepository } from '../../infrastructure/database/repositories/UserRepository';
 import { IFormatRepository } from '../../infrastructure/database/repositories/FormatRepository';
@@ -6,6 +6,7 @@ import { NotFoundError, ValidationError, ConflictError } from '../../shared/erro
 import { logger } from '../../shared/utils/logger';
 import { CacheService, CACHE_KEYS } from '../../shared/utils/cache';
 import { CACHE_TTL } from '../../shared/constants';
+import { getTodayDateString } from '../../shared/utils/timezone';
 
 export class BookingService {
   constructor(
@@ -18,7 +19,7 @@ export class BookingService {
   /**
    * Создание бронирования
    */
-  async createBooking(data: CreateBookingData): Promise<ReturnType<IBookingRepository['create']>> {
+  async createBooking(data: CreateBookingData): Promise<BookingWithUserAndFormat> {
     // Проверяем пользователя
     const user = await this.userRepository.findById(data.userId);
     if (!user) {
@@ -31,7 +32,6 @@ export class BookingService {
       throw new ValidationError('This date is blocked for booking');
     }
 
-    // Создаем бронирование
     const booking = await this.bookingRepository.create(data);
 
     // Инвалидация кеша доступных дат (при создании бронирования)
@@ -44,21 +44,21 @@ export class BookingService {
       date: data.bookingDate,
     });
 
-    return booking;
+    const withRelations = await this.bookingRepository.findById(booking.id);
+    if (!withRelations) throw new NotFoundError('Booking');
+    return withRelations as BookingWithUserAndFormat;
   }
 
   /**
    * Получение доступных дат для бронирования (с кешированием в Redis, TTL 5 мин).
    * formats не загружаются — в ответе только dates и blockedDates.
    */
-  async getAvailableDates(formatId?: string, month?: string): Promise<{
+  async getAvailableDates(_formatId?: string, month?: string): Promise<{
     dates: string[];
     blockedDates: string[];
   }> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = getTodayDateString();
 
-    // Валидация month: только YYYY-MM, иначе ValidationError
     if (month) {
       const match = month.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
       if (!match) {
@@ -66,55 +66,44 @@ export class BookingService {
       }
     }
 
-    const cacheMonth =
-      month ?? `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const cacheMonth = month ?? todayStr.slice(0, 7);
     const cacheKey = CACHE_KEYS.AVAILABLE_DATES(cacheMonth);
 
     return CacheService.getOrSet(
       cacheKey,
-      () => this.computeAvailableDates(cacheMonth, today),
+      () => this.computeAvailableDates(cacheMonth, todayStr),
       CACHE_TTL.AVAILABLE_DATES
     );
   }
 
   /**
    * Внутренний расчёт доступных дат (без кеша).
-   * Заблокированные даты — через Set для O(1) lookup вместо O(n) includes.
+   * Граница «сегодня» — в поясе приложения (Челябинск).
    */
   private async computeAvailableDates(
     cacheMonth: string,
-    today: Date
+    todayStr: string
   ): Promise<{ dates: string[]; blockedDates: string[] }> {
     const formatDate = (d: Date) => d.toISOString().split('T')[0];
 
-    let startDate: Date;
-    let endDate: Date;
+    const [year, monthNum] = cacheMonth.split('-').map(Number);
+    const startDate = new Date(year, monthNum - 1, 1);
+    const endDate = new Date(year, monthNum, 0);
 
-    if (cacheMonth) {
-      const [year, monthNum] = cacheMonth.split('-').map(Number);
-      startDate = new Date(year, monthNum - 1, 1);
-      endDate = new Date(year, monthNum, 0);
-    } else {
-      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    }
-
-    // Загружаем заблокированные даты один раз из БД
     const blockedDates = await this.blockedDateRepository.getBlockedDatesInRange(startDate, endDate);
     const blockedDatesStr = blockedDates.map((d) => formatDate(d));
     const blockedSet = new Set(blockedDatesStr);
 
-    // Все даты месяца (не прошедшие)
     const allDates: string[] = [];
     const current = new Date(startDate);
     while (current <= endDate) {
-      if (current >= today) {
-        allDates.push(formatDate(current));
+      const dateStr = formatDate(current);
+      if (dateStr >= todayStr) {
+        allDates.push(dateStr);
       }
       current.setDate(current.getDate() + 1);
     }
 
-    // O(1) проверка на блокировку вместо O(n) includes
     const availableDates = allDates.filter((dateStr) => !blockedSet.has(dateStr));
 
     return {
@@ -144,9 +133,11 @@ export class BookingService {
   /**
    * Обновление статуса бронирования
    */
-  async updateBookingStatus(id: string, status: 'confirmed' | 'cancelled') {
-    const booking = await this.getBookingById(id);
-    return this.bookingRepository.updateStatus(id, status);
+  async updateBookingStatus(id: string, status: 'confirmed' | 'cancelled'): Promise<BookingWithUserAndFormat> {
+    await this.getBookingById(id);
+    await this.bookingRepository.updateStatus(id, status);
+    const updated = await this.getBookingById(id);
+    return updated as BookingWithUserAndFormat;
   }
 
   /**
@@ -244,8 +235,7 @@ export class BookingService {
    * Список заблокированных дат за месяц (для админки)
    */
   async getBlockedDates(month?: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = getTodayDateString();
 
     let startDate: Date;
     let endDate: Date;
@@ -261,8 +251,9 @@ export class BookingService {
       startDate = new Date(year, monthNum - 1, 1);
       endDate = new Date(year, monthNum, 0);
     } else {
-      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const [y, m] = todayStr.slice(0, 7).split('-').map(Number);
+      startDate = new Date(y, m - 1, 1);
+      endDate = new Date(y, m, 0);
     }
 
     return this.blockedDateRepository.findInRange(startDate, endDate);
@@ -291,8 +282,7 @@ export class BookingService {
    * formats загружаются один раз вне цикла по датам.
    */
   async getCalendar(month?: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = getTodayDateString();
 
     let startDate: Date;
     let endDate: Date;
@@ -308,8 +298,9 @@ export class BookingService {
       startDate = new Date(year, monthNum - 1, 1);
       endDate = new Date(year, monthNum, 0);
     } else {
-      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const [y, m] = todayStr.slice(0, 7).split('-').map(Number);
+      startDate = new Date(y, m - 1, 1);
+      endDate = new Date(y, m, 0);
     }
 
     // Получаем все бронирования за месяц

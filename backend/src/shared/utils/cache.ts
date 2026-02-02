@@ -1,6 +1,5 @@
 import { redis } from '../../config/redis';
 import { logger } from './logger';
-import { CACHE_TTL } from '../constants';
 
 /**
  * Утилиты для кеширования в Redis

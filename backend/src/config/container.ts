@@ -28,6 +28,7 @@ import { PartnerService } from '../domain/services/PartnerService';
 import { AgentService } from '../domain/services/AgentService';
 import { ReviewService } from '../domain/services/ReviewService';
 import { ReferralService } from '../domain/services/ReferralService';
+import { redis } from './redis';
 
 /**
  * DI Container класс
@@ -231,7 +232,7 @@ class Container {
 
   get reviewService(): ReviewService {
     if (!this._reviewService) {
-      this._reviewService = new ReviewService(this.reviewRepository);
+      this._reviewService = new ReviewService(this.reviewRepository, this.userRepository);
     }
     return this._reviewService;
   }
@@ -241,7 +242,8 @@ class Container {
       this._referralService = new ReferralService(
         this.referralLinkRepository,
         this.referralEventRepository,
-        this.agentRepository
+        this.agentRepository,
+        this.userRepository
       );
     }
     return this._referralService;

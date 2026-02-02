@@ -19,25 +19,28 @@ export default function SongLyricsScreen({ onBack, songId, variant = 'spotify' }
   const scrollRef = useRef<HTMLDivElement>(null);
   const [song, setSong] = useState<Song | null>(null);
   const [lines, setLines] = useState<string[]>([]);
+  const [error, setError] = useState<Error | null>(null);
+
+  const loadData = useCallback(async () => {
+    setError(null);
+    try {
+      const songs = await getSongs();
+      const foundSong = songId ? songs.find((s) => s.id === songId) || songs[0] : songs[0];
+      setSong(foundSong || null);
+
+      if (foundSong) {
+        const lyrics = await getSongLyrics(foundSong.id);
+        setLines(lyrics);
+      }
+    } catch (err) {
+      console.error('Failed to load song lyrics:', err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    }
+  }, [songId]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const songs = await getSongs();
-        const foundSong = songId ? songs.find((s) => s.id === songId) || songs[0] : songs[0];
-        setSong(foundSong || null);
-
-        if (foundSong) {
-          const lyrics = await getSongLyrics(foundSong.id);
-          setLines(lyrics);
-        }
-      } catch (error) {
-        console.error('Failed to load song lyrics:', error);
-      }
-    };
-
     loadData();
-  }, [songId]);
+  }, [loadData]);
 
   useEffect(() => {
     if (scrollRef.current) {

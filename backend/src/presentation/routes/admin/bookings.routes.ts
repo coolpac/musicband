@@ -15,7 +15,8 @@ import {
 } from '../../../application/dto/booking.dto';
 import { authenticate, requireAdmin } from '../../middleware/auth';
 import { AuthService } from '../../../domain/services/AuthService';
-import { adminRateLimiter } from '../middleware/rateLimit';
+import { adminRateLimiter } from '../../middleware/rateLimit';
+import { redis } from '../../../config/redis';
 
 const router = Router();
 

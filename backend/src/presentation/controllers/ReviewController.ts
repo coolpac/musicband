@@ -7,6 +7,22 @@ export class ReviewController {
   constructor(private reviewService: ReviewService) {}
 
   /**
+   * GET /api/reviews
+   * Получить список отзывов (публичный)
+   */
+  async getReviews(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const reviews = await this.reviewService.getReviews();
+      res.json({
+        success: true,
+        data: reviews,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /api/reviews
    * Создать отзыв
    */

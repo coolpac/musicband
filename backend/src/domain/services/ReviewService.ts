@@ -14,6 +14,11 @@ export class ReviewService {
     return this.reviewRepository.findAll(options);
   }
 
+  /** Публичный список отзывов (для GET /api/reviews) */
+  async getReviews() {
+    return this.reviewRepository.findAll({ limit: 50 });
+  }
+
   async getReviewById(id: string) {
     const review = await this.reviewRepository.findById(id);
     if (!review) {

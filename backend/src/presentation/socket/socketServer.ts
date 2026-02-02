@@ -2,6 +2,7 @@ import { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { redis } from '../../config/redis';
+import { getAllowedOrigins } from '../../config/cors';
 import { logger } from '../../shared/utils/logger';
 import { AuthService } from '../../domain/services/AuthService';
 import { VoteService } from '../../domain/services/VoteService';
@@ -28,10 +29,11 @@ export class SocketServer {
     this.songService = songService;
     this.authService = authService;
 
-    // Инициализируем Socket.io
+    // Инициализируем Socket.io (те же CORS origins, что и Express)
+    const allowedOrigins = getAllowedOrigins();
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: process.env.FRONTEND_URL || '*',
+        origin: allowedOrigins,
         credentials: true,
       },
       transports: ['websocket', 'polling'],
@@ -340,10 +342,17 @@ export class SocketServer {
    */
   async broadcastSessionEnded(data: {
     sessionId: string;
-    results: Array<{ song: any; votes: number; percentage: number }>;
+    results: Array<{
+      song: { id: string; title?: string; artist?: string; coverUrl?: string | null } | null;
+      votes: number;
+      percentage: number;
+    }>;
     totalVoters: number;
+    winningSong?: { id: string; title: string; artist: string; coverUrl: string | null } | null;
   }): Promise<void> {
     try {
+      const roomName = `vote:session:${data.sessionId}`;
+      this.io.to(roomName).emit('vote:session:ended', data);
       this.io.emit('vote:session:ended', data);
       logger.info('Session ended broadcasted', { sessionId: data.sessionId });
     } catch (error) {

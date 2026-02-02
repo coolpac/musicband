@@ -351,6 +351,7 @@
   }
 }
 
+/* Плавное изменение ширины полоски при обновлении процентов (live / сокет) */
 .voting-result-progress {
   position: absolute;
   top: 0;
@@ -358,7 +359,7 @@
   height: 100%;
   background: rgba(255, 255, 255, 0.1);
   z-index: 1;
-  transition: width 0.5s ease;
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .voting-result-content {
@@ -378,6 +379,23 @@
   font-family: "Geologica", sans-serif;
   line-height: 1.4;
   margin-left: auto;
+}
+
+/* Лёгкая анимация при обновлении числа процента (key меняется при смене значения) */
+.voting-result-percentage-value {
+  display: inline-block;
+  animation: voting-percentage-in 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes voting-percentage-in {
+  from {
+    opacity: 0.5;
+    transform: scale(1.12);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Desktop: результаты — те же размеры, что и у голосования */
@@ -410,6 +428,17 @@
   .voting-result-card {
     opacity: 1;
   }
+  .voting-result-progress {
+    transition: none;
+  }
+  .voting-result-percentage-value {
+    animation: none;
+  }
+  .screen--winning-song .voting-container,
+  .screen--winning-song .winning-song-cover-wrapper,
+  .screen--winning-song .winning-song-info {
+    animation: none;
+  }
 }
 
 /* Winning Song Screen */
@@ -426,11 +455,55 @@
   display: block !important;
 }
 
+/* Плавное появление экрана победителя при переходе с результатов / по сокету */
 .screen--winning-song .voting-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding-bottom: 40px;
+  animation: winning-song-enter 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes winning-song-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Обложка и блок инфо — лёгкая задержка для каскадного появления */
+.screen--winning-song .winning-song-cover-wrapper {
+  animation: winning-song-cover-in 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.08s both;
+}
+
+.screen--winning-song .winning-song-info {
+  animation: winning-song-info-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.18s both;
+}
+
+@keyframes winning-song-cover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes winning-song-info-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .winning-song-title {
@@ -701,5 +774,92 @@
     height: 60px;
     font-size: 20px;
     border-radius: var(--radius-lg);
+  }
+}
+
+/* Баннер потери соединения сокета (voting / voting-results) — под шапкой */
+.socket-status-banner {
+  position: fixed;
+  top: clamp(64px, 11svh, 107px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.92);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: socket-banner-in 0.3s ease-out;
+}
+
+@keyframes socket-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.socket-status-banner__spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--white);
+  border-radius: 50%;
+  animation: socket-spin 0.8s linear infinite;
+}
+
+@keyframes socket-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.socket-status-banner__text {
+  flex: 1;
+  text-align: center;
+  max-width: 280px;
+}
+
+.socket-status-banner__btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--white);
+  font-family: "Geologica", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.socket-status-banner__btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.socket-status-banner__btn:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .socket-status-banner {
+    animation: none;
+  }
+  .socket-status-banner__spinner {
+    animation: none;
+    border-top-color: var(--white);
   }
 }

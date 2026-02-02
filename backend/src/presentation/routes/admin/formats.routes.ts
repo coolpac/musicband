@@ -8,7 +8,7 @@ import { authenticate, requireAdmin } from '../../middleware/auth';
 import { AuthService } from '../../../domain/services/AuthService';
 import { redis } from '../../../config/redis';
 import { PrismaUserRepository } from '../../../infrastructure/database/repositories/UserRepository';
-import { adminRateLimiter } from '../middleware/rateLimit';
+import { adminRateLimiter } from '../../middleware/rateLimit';
 
 const router = Router();
 

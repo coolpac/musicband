@@ -7,17 +7,15 @@ import { prisma } from '../../config/database';
 
 export class AdminBot {
   private bot: TelegramBot;
-  private userRepository: IUserRepository;
   private bookingRepository: IBookingRepository;
   private adminTelegramIds: Set<number>;
 
   constructor(
     token: string,
-    userRepository: IUserRepository,
+    _userRepository: IUserRepository,
     bookingRepository: IBookingRepository
   ) {
     this.bot = new TelegramBot(token, { polling: true });
-    this.userRepository = userRepository;
     this.bookingRepository = bookingRepository;
     this.adminTelegramIds = new Set();
 
@@ -247,16 +245,25 @@ export class AdminBot {
     fullName: string;
     contactValue: string;
     city?: string;
+    telegramId?: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
   }): Promise<void> {
     try {
       const message =
         '📅 Новое бронирование:\n\n' +
-        `🆔 ID: ${bookingData.id}\n` +
+        `🆔 ID заявки: ${bookingData.id}\n` +
         `📅 Дата: ${bookingData.bookingDate}\n` +
         (bookingData.formatName ? `🎤 Формат: ${bookingData.formatName}\n` : '') +
-        `👤 Имя: ${bookingData.fullName}\n` +
+        `👤 Имя из формы: ${bookingData.fullName}\n` +
         `📞 Контакт: ${bookingData.contactValue}\n` +
-        (bookingData.city ? `📍 Город: ${bookingData.city}\n` : '');
+        (bookingData.city ? `📍 Город: ${bookingData.city}\n` : '') +
+        (bookingData.telegramId ? `🆔 Telegram ID: ${bookingData.telegramId}\n` : '') +
+        (bookingData.username ? `👤 Username: @${bookingData.username}\n` : '') +
+        (bookingData.firstName || bookingData.lastName
+          ? `📋 Имя в Telegram: ${[bookingData.firstName, bookingData.lastName].filter(Boolean).join(' ')}\n`
+          : '');
 
       // Отправляем всем админам
       for (const adminId of this.adminTelegramIds) {
@@ -273,9 +280,12 @@ export class AdminBot {
               ],
             },
           });
-        } catch (error: any) {
-          if (error.response?.error_code !== 403) {
-            logger.error('Error sending new booking notification', { error, adminId });
+        } catch (err: unknown) {
+          const code = err && typeof err === 'object' && 'response' in err
+            ? (err as { response?: { error_code?: number } }).response?.error_code
+            : undefined;
+          if (code !== 403) {
+            logger.error('Error sending new booking notification', { error: err, adminId });
           }
         }
       }
@@ -289,6 +299,13 @@ export class AdminBot {
    */
   async refreshAdmins(): Promise<void> {
     await this.loadAdmins();
+  }
+
+  /**
+   * Остановка polling (для graceful shutdown)
+   */
+  async stop(): Promise<void> {
+    this.bot.stopPolling();
   }
 
   /**

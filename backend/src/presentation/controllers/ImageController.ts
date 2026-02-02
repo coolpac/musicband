@@ -60,7 +60,7 @@ export class ImageController {
             : undefined,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       next(error);
     }
   }

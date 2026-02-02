@@ -1,4 +1,4 @@
-import { PrismaClient, Format } from '@prisma/client';
+import { Prisma, PrismaClient, Format } from '@prisma/client';
 import { prisma } from '../../../config/database';
 
 /** Статусы формата: available — показывать в бронировании, hidden — скрыт */
@@ -45,6 +45,13 @@ export class PrismaFormatRepository implements IFormatRepository {
     });
   }
 
+  async findAllForBooking(): Promise<Format[]> {
+    return this.client.format.findMany({
+      where: { status: 'available' },
+      orderBy: { order: 'asc', name: 'asc' },
+    });
+  }
+
   async findById(id: string): Promise<Format | null> {
     return this.client.format.findUnique({
       where: { id },
@@ -62,17 +69,6 @@ export class PrismaFormatRepository implements IFormatRepository {
       data: {
         name: data.name,
         description: data.description,
-      },
-    });
-  }
-
-  async update(id: string, data: UpdateFormatData): Promise<Format> {
-    return this.client.format.update({
-      where: { id },
-      data: {
-        name: data.name,
-        description: data.description,
-      },
         shortDescription: data.shortDescription,
         imageUrl: data.imageUrl,
         suitableFor: data.suitableFor ?? undefined,
@@ -91,7 +87,19 @@ export class PrismaFormatRepository implements IFormatRepository {
         ...(data.description !== undefined && { description: data.description }),
         ...(data.shortDescription !== undefined && { shortDescription: data.shortDescription }),
         ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
-        ...(data.suitableFor !== undefined && { suitableFor: data.suitableFor }),
-        ...(data.performers !== undefined && { performers: data.performers }),
+        ...(data.suitableFor !== undefined && {
+          suitableFor: data.suitableFor === null ? Prisma.JsonNull : data.suitableFor,
+        }),
+        ...(data.performers !== undefined && {
+          performers: data.performers === null ? Prisma.JsonNull : data.performers,
+        }),
         ...(data.status !== undefined && { status: data.status }),
         ...(data.order !== undefined && { order: data.order }),
+      },
+    });
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.client.format.delete({ where: { id } });
+  }
+}

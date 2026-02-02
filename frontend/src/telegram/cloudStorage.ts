@@ -29,7 +29,7 @@ function getItem(key: string): Promise<string | null> {
   const storage = getStorage();
   if (!storage) return Promise.resolve(null);
   return new Promise((resolve) => {
-    storage.getItem(key, (err, value) => {
+    storage.getItem(key, (err: string | null, value?: string) => {
       if (err) {
         resolve(null);
         return;
@@ -53,7 +53,7 @@ function removeItem(key: string): Promise<boolean> {
   const storage = getStorage();
   if (!storage) return Promise.resolve(false);
   return new Promise((resolve) => {
-    storage.removeItem(key, (err, success) => {
+    storage.removeItem(key, (err: string | null, success?: boolean) => {
       resolve(!err && !!success);
     });
   });

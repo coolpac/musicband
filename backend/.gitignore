@@ -43,5 +43,6 @@ uploads/
 exports/
 !exports/.gitkeep
 
-# Prisma
-prisma/migrations/
+# Prisma (SQLite dev DB, если используется)
+prisma/*.db
+prisma/*.db-journal

@@ -4,7 +4,7 @@ import { PartnerService } from '../../domain/services/PartnerService';
 export class PartnerController {
   constructor(private partnerService: PartnerService) {}
 
-  async getAllPartners(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getAllPartners(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const partners = await this.partnerService.getAllPartners();
       res.json({

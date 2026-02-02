@@ -6,7 +6,7 @@ import { logger } from '../../shared/utils/logger';
 export class AdminFormatController {
   constructor(private formatService: FormatService) {}
 
-  async getAllFormats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getAllFormats(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const formats = await this.formatService.getAllFormats();
       res.json({

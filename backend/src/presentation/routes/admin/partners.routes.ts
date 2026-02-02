@@ -3,12 +3,12 @@ import { AdminPartnerController } from '../../controllers/AdminPartnerController
 import { PartnerService } from '../../../domain/services/PartnerService';
 import { PrismaPartnerRepository } from '../../../infrastructure/database/repositories/PartnerRepository';
 import { validate } from '../../middleware/validator';
-import { CreatePartnerSchema, UpdatePartnerSchema } from '../../../application/dto/partner.dto';
+import { CreatePartnerSchema, UpdatePartnerSchema, ReorderPartnersSchema } from '../../../application/dto/partner.dto';
 import { authenticate, requireAdmin } from '../../middleware/auth';
 import { AuthService } from '../../../domain/services/AuthService';
 import { redis } from '../../../config/redis';
 import { PrismaUserRepository } from '../../../infrastructure/database/repositories/UserRepository';
-import { adminRateLimiter } from '../middleware/rateLimit';
+import { adminRateLimiter } from '../../middleware/rateLimit';
 
 const router = Router();
 
@@ -37,6 +37,7 @@ router.use(adminRateLimiter);
 
 router.get('/', adminPartnerController.getAllPartners.bind(adminPartnerController));
 router.post('/', validate(CreatePartnerSchema), adminPartnerController.createPartner.bind(adminPartnerController));
+router.patch('/reorder', validate(ReorderPartnersSchema), adminPartnerController.reorderPartners.bind(adminPartnerController));
 router.put('/:id', validate(UpdatePartnerSchema), adminPartnerController.updatePartner.bind(adminPartnerController));
 router.delete('/:id', adminPartnerController.deletePartner.bind(adminPartnerController));
 

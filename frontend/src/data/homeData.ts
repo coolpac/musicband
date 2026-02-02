@@ -26,31 +26,30 @@ export type PromoVideoItem = {
   title: string;
 };
 
-/** Промо-видео: позже подставите реальные URL и постеры. */
 export const promoVideos: PromoVideoItem[] = [
   {
-    id: 'promo-1',
-    src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-    poster: promoImage,
-    title: 'Название промо ролика',
+    id: 'live-1',
+    src: '/videos/7 лепесток с вами_optimized.mp4',
+    poster: '/videos/thumbs/7 лепесток с вами_thumb.jpg',
+    title: '7 лепесток с вами',
   },
   {
-    id: 'promo-2',
-    src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    poster: promoImage,
-    title: 'Промо 2',
+    id: 'live-2',
+    src: '/videos/Не удержались_optimized.mp4',
+    poster: '/videos/thumbs/Не удержались_thumb.jpg',
+    title: 'Не удержались',
   },
   {
-    id: 'promo-3',
-    src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    poster: promoImage,
-    title: 'Промо 3',
+    id: 'live-3',
+    src: '/videos/Январская въюга_optimized.mp4',
+    poster: '/videos/thumbs/Январская въюга_thumb.jpg',
+    title: 'Январская въюга',
   },
   {
-    id: 'promo-4',
-    src: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    poster: promoImage,
-    title: 'Промо 4',
+    id: 'promo-main',
+    src: '/videos/ПРИЗВАНИЕ АРТИСТ 2025 (Горизонтальный)_optimized.mp4',
+    poster: '/videos/thumbs/ПРИЗВАНИЕ АРТИСТ 2025 (Горизонтальный)_thumb.jpg',
+    title: 'ПРИЗВАНИЕ АРТИСТ 2025',
   },
 ];
 

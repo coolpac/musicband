@@ -6,7 +6,7 @@ import { logger } from '../../shared/utils/logger';
 export class AdminPosterController {
   constructor(private posterService: PosterService) {}
 
-  async getAllPosters(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getAllPosters(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const posters = await this.posterService.getAllPosters();
       res.json({

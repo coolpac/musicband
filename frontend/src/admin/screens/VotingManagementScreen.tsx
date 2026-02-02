@@ -1,45 +1,42 @@
 import { useState, useEffect } from 'react';
-import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import Modal from '../components/Modal';
+import { getTracks, type Track } from '../../services/adminService';
+import * as adminVoteService from '../../services/adminVoteService';
 import '../../styles/admin.css';
 import './VotingManagementScreen.css';
 
-// Types
 interface VotingSession {
   id: string;
   isActive: boolean;
   startedAt: string;
-  endedAt?: string;
+  endedAt?: string | null;
   totalVotes: number;
-  songIds: string[];
 }
 
-interface Song {
+interface SongWithVotes {
   id: string;
   title: string;
   artist: string;
-  coverUrl?: string;
   voteCount?: number;
   percentage?: number;
 }
 
-interface VotingHistory {
+interface VotingHistoryItem {
   id: string;
   startedAt: string;
-  endedAt: string;
+  endedAt: string | null;
   totalVotes: number;
 }
 
 export default function VotingManagementScreen() {
   const [activeSession, setActiveSession] = useState<VotingSession | null>(null);
-  const [allSongs, setAllSongs] = useState<Song[]>([]);
-  const [liveResults, setLiveResults] = useState<Song[]>([]);
-  const [history, setHistory] = useState<VotingHistory[]>([]);
+  const [allSongs, setAllSongs] = useState<Track[]>([]);
+  const [liveResults, setLiveResults] = useState<SongWithVotes[]>([]);
+  const [history, setHistory] = useState<VotingHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Modal states
   const [showStartModal, setShowStartModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
@@ -52,13 +49,8 @@ export default function VotingManagementScreen() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Загрузка активной сессии
       await loadActiveSession();
-
-      // Загрузка всех песен
       await loadAllSongs();
-
-      // Загрузка истории
       await loadHistory();
     } catch (error) {
       console.error('Error loading data:', error);
@@ -69,71 +61,49 @@ export default function VotingManagementScreen() {
   };
 
   const loadActiveSession = async () => {
-    // Mock data
-    const mockSession: VotingSession = {
-      id: 'session-1',
-      isActive: true,
-      startedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      totalVotes: 142,
-      songIds: ['1', '2', '3'],
-    };
-
-    setActiveSession(mockSession);
-
-    // Загрузить live результаты
-    if (mockSession.isActive) {
-      loadLiveResults();
+    const session = await adminVoteService.getActiveSession();
+    if (session) {
+      setActiveSession({
+        id: session.id,
+        isActive: session.isActive,
+        startedAt: session.startedAt,
+        endedAt: session.endedAt ?? undefined,
+        totalVotes: session.totalVoters,
+      });
+      await loadLiveResults(session.id);
+    } else {
+      setActiveSession(null);
+      setLiveResults([]);
     }
   };
 
   const loadAllSongs = async () => {
-    // Mock data
-    const mockSongs: Song[] = [
-      { id: '1', title: 'Черный дельфин', artist: 'Гио Пика' },
-      { id: '2', title: 'Никого не жалко', artist: 'Бумер' },
-      { id: '3', title: 'Мама', artist: 'Витя Ак' },
-      { id: '4', title: 'Шалом', artist: 'Гио Пика' },
-      { id: '5', title: 'Лимбо', artist: 'Монеточка' },
-    ];
-
-    setAllSongs(mockSongs);
+    const tracks = await getTracks();
+    setAllSongs(tracks);
   };
 
-  const loadLiveResults = async () => {
-    // Mock data с процентами
-    const mockResults: Song[] = [
-      { id: '1', title: 'Черный дельфин', artist: 'Гио Пика', voteCount: 58, percentage: 40.8 },
-      { id: '2', title: 'Никого не жалко', artist: 'Бумер', voteCount: 45, percentage: 31.7 },
-      { id: '3', title: 'Мама', artist: 'Витя Ак', voteCount: 39, percentage: 27.5 },
-    ];
-
-    setLiveResults(mockResults);
+  const loadLiveResults = async (sessionId: string) => {
+    const stats = await adminVoteService.getStats(sessionId);
+    const results: SongWithVotes[] = (stats.results ?? []).map((r) => ({
+      id: r.song?.id ?? '',
+      title: r.song?.title ?? '',
+      artist: r.song?.artist ?? '',
+      voteCount: r.votes,
+      percentage: r.percentage,
+    })).filter((s) => s.id);
+    setLiveResults(results);
   };
 
   const loadHistory = async () => {
-    // Mock data
-    const mockHistory: VotingHistory[] = [
-      {
-        id: 'hist-1',
-        startedAt: '2024-01-20T18:00:00Z',
-        endedAt: '2024-01-20T23:00:00Z',
-        totalVotes: 230,
-      },
-      {
-        id: 'hist-2',
-        startedAt: '2024-01-19T18:00:00Z',
-        endedAt: '2024-01-19T23:00:00Z',
-        totalVotes: 185,
-      },
-      {
-        id: 'hist-3',
-        startedAt: '2024-01-18T18:00:00Z',
-        endedAt: '2024-01-18T23:00:00Z',
-        totalVotes: 210,
-      },
-    ];
-
-    setHistory(mockHistory);
+    const data = await adminVoteService.getHistory(1, 10);
+    setHistory(
+      data.sessions.map((s) => ({
+        id: s.id,
+        startedAt: s.startedAt,
+        endedAt: s.endedAt,
+        totalVotes: s.totalVoters,
+      }))
+    );
   };
 
   const handleStartVoting = () => {
@@ -158,13 +128,9 @@ export default function VotingManagementScreen() {
     }
 
     try {
-      // API call to start voting session
-      console.log('Starting session with songs:', Array.from(selectedSongs));
-
+      await adminVoteService.startSession(Array.from(selectedSongs));
       toast.success('Голосование запущено!');
       setShowStartModal(false);
-
-      // Reload data
       await loadData();
     } catch (error) {
       console.error('Error starting session:', error);
@@ -182,12 +148,8 @@ export default function VotingManagementScreen() {
     if (!confirmed) return;
 
     try {
-      // API call to end session
-      console.log('Ending session:', activeSession.id);
-
+      await adminVoteService.endSession(activeSession.id);
       toast.success('Голосование завершено');
-
-      // Reload data
       await loadData();
     } catch (error) {
       console.error('Error ending session:', error);
@@ -199,22 +161,12 @@ export default function VotingManagementScreen() {
     if (!activeSession) return;
 
     try {
-      const votingUrl = `${window.location.origin}/voting?session=${activeSession.id}`;
-
-      const qrDataUrl = await QRCode.toDataURL(votingUrl, {
-        width: 512,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF',
-        },
-      });
-
-      setQrCodeDataUrl(qrDataUrl);
+      const data = await adminVoteService.getSessionQR(activeSession.id);
+      setQrCodeDataUrl(data.qrCode?.dataURL ?? '');
       setShowQRModal(true);
     } catch (error) {
-      console.error('Error generating QR:', error);
-      toast.error('Не удалось создать QR-код');
+      console.error('Error loading QR:', error);
+      toast.error('Не удалось загрузить QR-код');
     }
   };
 
@@ -351,7 +303,7 @@ export default function VotingManagementScreen() {
               <div className="admin-empty__icon">🗳️</div>
               <h3 className="admin-empty__title">Нет активного голосования</h3>
               <p className="admin-empty__text">Запустите новую сессию голосования</p>
-              <button className="admin-btn" onClick={handleStartVoting}>
+              <button className="admin-btn admin-btn--glass-green" onClick={handleStartVoting}>
                 Запустить голосование
               </button>
             </div>
@@ -367,10 +319,10 @@ export default function VotingManagementScreen() {
                 <div key={session.id} className="admin-list-item">
                   <div className="admin-list-item__content">
                     <div className="admin-list-item__title">
-                      {formatDate(session.startedAt)} - {formatDate(session.endedAt)}
+                      {formatDate(session.startedAt)} — {session.endedAt ? formatDate(session.endedAt) : '—'}
                     </div>
                     <div className="admin-list-item__subtitle">
-                      Голосов: {session.totalVotes} · Длительность: {formatDuration(session.startedAt, session.endedAt)}
+                      Голосов: {session.totalVotes} · Длительность: {formatDuration(session.startedAt, session.endedAt ?? undefined)}
                     </div>
                   </div>
                   <div className="status-badge status-badge--completed">Завершено</div>

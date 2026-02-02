@@ -13,6 +13,7 @@ import { CreateReferralLinkSchema } from '../../application/dto/agent.dto';
 import { authenticate } from '../middleware/auth';
 import { AuthService } from '../../domain/services/AuthService';
 import { publicApiRateLimiter, referralRateLimiter } from '../middleware/rateLimit';
+import { redis } from '../../config/redis';
 
 const router = Router();
 

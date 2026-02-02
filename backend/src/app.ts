@@ -46,20 +46,68 @@ import {
   PrismaAgentRepository,
 } from './infrastructure/database/repositories';
 import { BotManager, setBotManager, getBotManager } from './infrastructure/telegram/botManager';
+import { getAllowedOrigins } from './config/cors';
 
 // Загружаем переменные окружения
 dotenv.config();
+
+/** Получить экземпляр Socket.io сервера (для контроллеров). */
+export function getSocketServer(): SocketServer | undefined {
+  return (global as typeof globalThis & { socketServer?: SocketServer }).socketServer;
+}
+
+// Валидация обязательных переменных при старте
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+  logger.error('JWT_SECRET must be set and at least 32 characters!');
+  process.exit(1);
+}
+
+const allowedOrigins = getAllowedOrigins();
+if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+  logger.error('FRONTEND_URL must be set in production!');
+  process.exit(1);
+}
 
 const app: Express = express();
 const httpServer: HTTPServer = createServer(app);
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(helmet());
+// Middleware: Helmet с CSP и HSTS
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        connectSrc: ["'self'", 'wss:', 'https:'],
+        mediaSrc: ["'self'", 'https://storage.googleapis.com'],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  })
+);
+
+// CORS без wildcard: только разрешённые origins
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 app.use(cookieParser());
@@ -74,7 +122,7 @@ app.use('/uploads', express.static(uploadDir));
 app.use('/health', healthRoutes);
 
 // API routes
-app.get('/api', (req, res) => {
+app.get('/api', (_req, res) => {
   res.json({
     message: 'Музыканты API',
     version: '1.0.0',
@@ -159,7 +207,7 @@ async function startServer() {
 
     // Инициализируем Socket.io сервер
     const socketServer = new SocketServer(httpServer, voteService, songService, authService);
-    (global as any).socketServer = socketServer;
+    globalThis.socketServer = socketServer;
     logger.info('Socket.io server initialized');
 
     // Инициализируем Telegram Bots
@@ -208,7 +256,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
     });
 
     // 2. Закрываем Socket.IO соединения
-    const socketServer = (global as any).socketServer as SocketServer;
+    const socketServer = globalThis.socketServer;
     if (socketServer) {
       const io = socketServer.getIO();
       io.disconnectSockets(true);

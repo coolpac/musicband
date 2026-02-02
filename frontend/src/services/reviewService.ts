@@ -10,7 +10,7 @@ export type ReviewData = {
  */
 export async function submitReview(data: ReviewData): Promise<void> {
   if (isMockMode()) {
-    console.log('[Mock] Submitting review:', data);
+    // [Mock] Submitting review
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
     return;

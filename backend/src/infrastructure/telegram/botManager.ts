@@ -3,7 +3,7 @@ import { AdminBot } from './AdminBot';
 import { ReferralService } from '../../domain/services/ReferralService';
 import { BookingService } from '../../domain/services/BookingService';
 import { IUserRepository } from '../database/repositories/UserRepository';
-import { IBookingRepository } from '../database/repositories/BookingRepository';
+import { IBookingRepository, BookingWithUserAndFormat } from '../database/repositories/BookingRepository';
 import { logger } from '../../shared/utils/logger';
 
 export class BotManager {
@@ -16,6 +16,10 @@ export class BotManager {
     private userRepository: IUserRepository,
     private bookingRepository: IBookingRepository
   ) {}
+
+  getBookingService(): BookingService {
+    return this.bookingService;
+  }
 
   /**
    * Инициализация ботов
@@ -81,6 +85,10 @@ export class BotManager {
     fullName: string;
     contactValue: string;
     city?: string;
+    telegramId?: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
   }): Promise<void> {
     if (this.adminBot) {
       await this.adminBot.notifyNewBooking(bookingData);
@@ -101,6 +109,51 @@ export class BotManager {
   }
 
   /**
+   * Уведомление проголосовавших о победителе голосования (массовая рассылка с учётом rate limit)
+   */
+  async notifyVotingWinner(
+    voterTelegramIds: bigint[],
+    winningSong: { id: string; title: string; artist: string; coverUrl: string | null },
+    sessionId: string
+  ): Promise<void> {
+    if (!this.userBot) {
+      logger.warn('UserBot not initialized, skipping voting winner notifications');
+      return;
+    }
+
+    logger.info('Sending voting winner notifications', {
+      sessionId,
+      voterCount: voterTelegramIds.length,
+      winningSong: winningSong.title,
+    });
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const telegramId of voterTelegramIds) {
+      try {
+        await this.userBot.sendVotingWinnerNotification(telegramId, winningSong, sessionId);
+        sent++;
+      } catch (error) {
+        failed++;
+        logger.error('Failed to send winner notification', { telegramId: telegramId.toString(), error });
+      }
+
+      // Telegram rate limit: ~30 msg/sec. Задержка 1s каждые 25 сообщений = ~25 msg/sec (с запасом)
+      if (sent % 25 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    logger.info('Voting winner notifications completed', {
+      sessionId,
+      sent,
+      failed,
+      total: voterTelegramIds.length,
+    });
+  }
+
+  /**
    * Отправка уведомления о подтверждении бронирования пользователю
    */
   async notifyBookingConfirmed(bookingData: {
@@ -112,7 +165,7 @@ export class BotManager {
   }): Promise<void> {
     try {
       // Получаем пользователя по bookingId
-      const booking = await this.bookingRepository.findById(bookingData.bookingId);
+      const booking = (await this.bookingRepository.findById(bookingData.bookingId)) as BookingWithUserAndFormat | null;
       if (!booking || !booking.user) {
         logger.warn('Booking not found for confirmation notification', { bookingId: bookingData.bookingId });
         return;
@@ -145,7 +198,7 @@ export class BotManager {
 
     if (this.userBot) {
       stopPromises.push(
-        this.userBot.stop().catch((error) => {
+        this.userBot.stop().catch((error: unknown) => {
           logger.error('Error stopping User Bot', { error });
         })
       );
@@ -153,7 +206,7 @@ export class BotManager {
 
     if (this.adminBot) {
       stopPromises.push(
-        this.adminBot.stop().catch((error) => {
+        this.adminBot.stop().catch((error: unknown) => {
           logger.error('Error stopping Admin Bot', { error });
         })
       );

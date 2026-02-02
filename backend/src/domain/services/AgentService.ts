@@ -2,7 +2,7 @@ import { IAgentRepository } from '../../infrastructure/database/repositories/Age
 import { IUserRepository } from '../../infrastructure/database/repositories/UserRepository';
 import { IReferralLinkRepository } from '../../infrastructure/database/repositories/ReferralLinkRepository';
 import { IReferralEventRepository } from '../../infrastructure/database/repositories/ReferralEventRepository';
-import { NotFoundError, ValidationError, ConflictError } from '../../shared/errors';
+import { NotFoundError, ConflictError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
 import { USER_ROLES } from '../../shared/constants';
 import crypto from 'crypto';
@@ -14,6 +14,13 @@ export class AgentService {
     private referralLinkRepository: IReferralLinkRepository,
     private referralEventRepository: IReferralEventRepository
   ) {}
+
+  getReferralLinkRepository(): IReferralLinkRepository {
+    return this.referralLinkRepository;
+  }
+  getReferralEventRepository(): IReferralEventRepository {
+    return this.referralEventRepository;
+  }
 
   /**
    * Создание агента из пользователя
@@ -118,9 +125,9 @@ export class AgentService {
         });
 
         return agent;
-      } catch (error: any) {
-        // Проверяем, это ошибка дубликата кода?
-        if (error.code === 'P2002') {
+      } catch (error: unknown) {
+        const err = error as { code?: string };
+        if (err.code === 'P2002') {
           // P2002 = Prisma unique constraint violation
           logger.debug('Agent code collision detected, retrying', {
             attempt: attempt + 1,
@@ -142,11 +149,4 @@ export class AgentService {
     );
   }
 
-  /**
-   * Генерация случайного кода (теперь без проверки БД)
-   * Проверку делает createAgentWithUniqueCode через unique constraint
-   */
-  private generateRandomCode(): string {
-    return crypto.randomBytes(4).toString('hex').toUpperCase();
-  }
 }

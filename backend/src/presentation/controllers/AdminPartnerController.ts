@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { PartnerService } from '../../domain/services/PartnerService';
-import { CreatePartnerDto, UpdatePartnerDto } from '../../application/dto/partner.dto';
+import { CreatePartnerDto, UpdatePartnerDto, ReorderPartnersDto } from '../../application/dto/partner.dto';
 import { logger } from '../../shared/utils/logger';
 
 export class AdminPartnerController {
   constructor(private partnerService: PartnerService) {}
 
-  async getAllPartners(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getAllPartners(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const partners = await this.partnerService.getAllPartners();
       res.json({
@@ -60,6 +60,25 @@ export class AdminPartnerController {
       res.json({
         success: true,
         message: 'Partner deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async reorderPartners(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { ids } = req.body as ReorderPartnersDto;
+      await this.partnerService.reorderPartners(ids);
+
+      logger.info('Partners reordered by admin', {
+        count: ids.length,
+        adminId: req.user?.userId,
+      });
+
+      res.json({
+        success: true,
+        message: 'Partners reordered',
       });
     } catch (error) {
       next(error);

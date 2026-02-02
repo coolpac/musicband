@@ -411,14 +411,41 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
       onSubmitError?.('Не выбраны дата и формат. Вернитесь на предыдущий шаг.');
       return;
     }
-    if (!fullName.trim()) {
+    const trimmedName = fullName.trim();
+    if (!trimmedName) {
       onSubmitError?.('Введите ФИО');
       return;
     }
-    if (!phoneNumber.trim()) {
+    if (trimmedName.length < 2) {
+      onSubmitError?.('ФИО должно быть не короче 2 символов');
+      return;
+    }
+    const trimmedPhone = phoneNumber.trim();
+    if (!trimmedPhone) {
       onSubmitError?.('Введите номер телефона');
       return;
     }
+    const digitsOnly = trimmedPhone.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      onSubmitError?.('Введите корректный российский номер: минимум 10 цифр');
+      return;
+    }
+    if (digitsOnly.length > 11) {
+      onSubmitError?.('Слишком длинный номер. Формат: 9XXXXXXXXX или 79XXXXXXXXX');
+      return;
+    }
+    if (digitsOnly.length === 10 && digitsOnly[0] !== '9') {
+      onSubmitError?.('Мобильный номер должен начинаться с 9 (например 9XX XXX XX XX)');
+      return;
+    }
+    if (digitsOnly.length === 11 && digitsOnly[0] !== '7' && digitsOnly[0] !== '8') {
+      onSubmitError?.('Номер с кодом страны должен начинаться с 7 или 8 (например 79XXXXXXXXX)');
+      return;
+    }
+    const normalizedPhone =
+      digitsOnly.length === 10
+        ? `+7${digitsOnly}`
+        : `+7${digitsOnly[0] === '7' || digitsOnly[0] === '8' ? digitsOnly.slice(1) : digitsOnly}`;
     hapticImpact('light');
     setIsSubmitting(true);
     try {
@@ -426,9 +453,9 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
       await createBooking({
         formatId: bookingDraft.formatId,
         bookingDate: bookingDraft.bookingDate,
-        fullName: fullName.trim(),
+        fullName: trimmedName,
         contactType: contactType || undefined,
-        contactValue: phoneNumber.trim(),
+        contactValue: normalizedPhone,
         city: city.trim() || undefined,
         source: source || undefined,
       });

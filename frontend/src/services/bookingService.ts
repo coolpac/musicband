@@ -35,7 +35,7 @@ export async function getAvailableDates(month?: string): Promise<number[]> {
  */
 export async function createBooking(data: BookingData): Promise<void> {
   if (isMockMode()) {
-    console.log('[Mock] Creating booking:', data);
+    // [Mock] Creating booking
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
     return;

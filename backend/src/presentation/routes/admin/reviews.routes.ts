@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { AdminReviewController } from '../../controllers/AdminReviewController';
 import { ReviewService } from '../../../domain/services/ReviewService';
-import { PrismaReviewRepository, PrismaUserRepository } from '../../infrastructure/database/repositories';
+import { PrismaReviewRepository, PrismaUserRepository } from '../../../infrastructure/database/repositories';
 import { authenticate, requireAdmin } from '../../middleware/auth';
 import { AuthService } from '../../../domain/services/AuthService';
 import { redis } from '../../../config/redis';
-import { adminRateLimiter } from '../middleware/rateLimit';
+import { adminRateLimiter } from '../../middleware/rateLimit';
 
 const router = Router();
 

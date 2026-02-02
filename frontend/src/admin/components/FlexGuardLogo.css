@@ -1,0 +1,186 @@
+/* FlexGuard Logo — дашборд админки */
+
+.flexguard-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--admin-text, #fff);
+}
+
+.flexguard-logo--sm {
+  gap: 8px;
+}
+
+.flexguard-logo--sm .flexguard-logo__badge {
+  width: 28px;
+  height: 28px;
+}
+
+.flexguard-logo--sm .flexguard-logo__shield {
+  width: 28px;
+  height: 28px;
+}
+
+.flexguard-logo--sm .flexguard-logo__text {
+  font-size: 18px;
+}
+
+.flexguard-logo--md {
+  gap: 10px;
+}
+
+.flexguard-logo--md .flexguard-logo__badge {
+  width: 36px;
+  height: 36px;
+}
+
+.flexguard-logo--md .flexguard-logo__shield {
+  width: 36px;
+  height: 36px;
+}
+
+.flexguard-logo--md .flexguard-logo__text {
+  font-size: 22px;
+}
+
+.flexguard-logo--lg {
+  gap: 14px;
+}
+
+.flexguard-logo--lg .flexguard-logo__badge {
+  width: 48px;
+  height: 48px;
+}
+
+.flexguard-logo--lg .flexguard-logo__shield {
+  width: 48px;
+  height: 48px;
+}
+
+.flexguard-logo--lg .flexguard-logo__text {
+  font-size: 28px;
+}
+
+@media (min-width: 600px) {
+  .flexguard-logo--lg .flexguard-logo__text {
+    font-size: 32px;
+  }
+}
+
+.flexguard-logo__badge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 8px rgba(52, 199, 89, 0.35));
+}
+
+.flexguard-logo__shield {
+  display: block;
+}
+
+.flexguard-logo__text {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.flexguard-logo__flex {
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+}
+
+.flexguard-logo__guard {
+  background: linear-gradient(135deg, #34c759, #5dd879);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-left: 2px;
+}
+
+/* Блок логотипа на дашборде */
+.dashboard-hero {
+  text-align: center;
+  padding: 24px 0 28px;
+  margin-bottom: 8px;
+}
+
+.dashboard-hero .flexguard-logo {
+  justify-content: center;
+}
+
+.dashboard-hero__tagline {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--admin-text-secondary, #8e8e93);
+  letter-spacing: 0.02em;
+}
+
+.dashboard-hero--glass .dashboard-hero__tagline {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.dashboard-hero--bottom {
+  margin-top: 56px;
+  padding-top: 32px;
+  padding-bottom: 16px;
+  margin-bottom: 0;
+}
+
+/* Glassmorphism + shimmer (оптимизировано: один backdrop-filter, анимация через transform) */
+.dashboard-hero--glass {
+  position: relative;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 280px;
+  padding: 16px 20px 14px;
+  border-radius: var(--admin-radius, 16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+@supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+  .dashboard-hero--glass {
+    background: rgba(255, 255, 255, 0.04);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* Перелив: градиент движется по контейнеру (GPU-friendly) */
+.dashboard-hero--glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 255, 255, 0.03) 45%,
+    rgba(52, 199, 89, 0.08) 55%,
+    rgba(255, 255, 255, 0.03) 65%,
+    transparent 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: flexguard-shimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes flexguard-shimmer {
+  0%, 100% { transform: translateX(-50%); }
+  50% { transform: translateX(50%); }
+}
+
+.dashboard-hero--glass .flexguard-logo,
+.dashboard-hero--glass .dashboard-hero__tagline {
+  position: relative;
+  z-index: 1;
+}
+

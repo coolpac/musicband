@@ -3,7 +3,9 @@
  * Документация: https://core.telegram.org/bots/webapps
  */
 
-export function getTelegramWebApp(): Window['Telegram']['WebApp'] | null {
+type TelegramWebApp = NonNullable<Window['Telegram']>['WebApp'];
+
+export function getTelegramWebApp(): TelegramWebApp | null {
   if (typeof window === 'undefined') return null;
   return window.Telegram?.WebApp ?? null;
 }
@@ -70,7 +72,7 @@ export function showConfirm(message: string): Promise<boolean> {
   const tg = getTelegramWebApp();
   if (tg?.showConfirm) {
     return new Promise((resolve) => {
-      tg!.showConfirm!(message, (ok) => resolve(ok));
+      tg!.showConfirm!(message, (ok: boolean) => resolve(ok));
     });
   }
   return Promise.resolve(window.confirm(message));
@@ -94,6 +96,11 @@ export function openTelegramLink(url: string): void {
   } else {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
+}
+
+/** start_param из deep link (initDataUnsafe.start_param). */
+export function getStartParam(): string | null {
+  return getTelegramWebApp()?.initDataUnsafe?.start_param ?? null;
 }
 
 /** Данные пользователя из initDataUnsafe (только для префилла UI; на бэке проверять initData). */

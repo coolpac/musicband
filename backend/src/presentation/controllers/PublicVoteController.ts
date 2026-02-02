@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { VoteService } from '../../domain/services/VoteService';
 import { SongService } from '../../domain/services/SongService';
-import { logger } from '../../shared/utils/logger';
 
 /**
  * Публичный контроллер для страницы голосования в Mini App
@@ -15,7 +14,8 @@ export class PublicVoteController {
 
   /**
    * GET /api/public/vote/session/:sessionId
-   * Получить информацию о сессии голосования (для публичной страницы)
+   * Получить информацию о сессии голосования (для публичной страницы).
+   * Три состояния: active, ended_with_winner, expired.
    */
   async getSessionInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -29,37 +29,63 @@ export class PublicVoteController {
         return;
       }
 
-      if (!session.isActive) {
-        res.status(400).json({
-          success: false,
-          error: { message: 'Session is not active', code: 'SESSION_ENDED' },
+      // Состояние 1: Активная сессия — голосование идёт
+      if (session.isActive) {
+        const songs = await this.songService.getActiveSongs();
+        const results = await this.voteService.getResults(sessionId);
+
+        res.json({
+          success: true,
+          data: {
+            status: 'active',
+            session: { id: session.id, startedAt: session.startedAt, isActive: true },
+            songs: songs.map((s) => ({
+              id: s.id,
+              title: s.title,
+              artist: s.artist,
+              coverUrl: s.coverUrl,
+              isActive: s.isActive,
+            })),
+            results: { songs: results.songs, totalVotes: results.totalVotes },
+          },
         });
         return;
       }
 
-      // Получаем песни и результаты
-      const songs = await this.songService.getActiveSongs();
-      const results = await this.voteService.getResults(sessionId);
+      // Состояние 2: Завершена, но не истекла — показать победителя
+      if (session.expiresAt && new Date(session.expiresAt) > new Date()) {
+        let winningSong: { id: string; title: string; artist: string; coverUrl: string | null } | null = null;
+        if (session.winningSongId) {
+          try {
+            const song = await this.songService.getSongById(session.winningSongId);
+            winningSong = { id: song.id, title: song.title, artist: song.artist, coverUrl: song.coverUrl };
+          } catch {
+            // Песня удалена или не найдена — оставляем winningSong null
+          }
+        }
 
+        res.json({
+          success: true,
+          data: {
+            status: 'ended_with_winner',
+            session: {
+              id: session.id,
+              startedAt: session.startedAt,
+              endedAt: session.endedAt,
+              isActive: false,
+            },
+            winningSong,
+          },
+        });
+        return;
+      }
+
+      // Состояние 3: Истекла — редирект на главную
       res.json({
         success: true,
         data: {
-          session: {
-            id: session.id,
-            startedAt: session.startedAt,
-            isActive: session.isActive,
-          },
-          songs: songs.map((s) => ({
-            id: s.id,
-            title: s.title,
-            artist: s.artist,
-            coverUrl: s.coverUrl,
-            isActive: s.isActive,
-          })),
-          results: {
-            songs: results.songs,
-            totalVotes: results.totalVotes,
-          },
+          status: 'expired',
+          session: { id: session.id, isActive: false },
         },
       });
     } catch (error) {
@@ -71,7 +97,7 @@ export class PublicVoteController {
    * GET /api/public/vote/active
    * Получить активную сессию голосования
    */
-  async getActiveSession(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getActiveSession(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const session = await this.voteService.getActiveSession();
 

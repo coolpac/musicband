@@ -7,7 +7,7 @@ import {
   PrismaSongRepository,
   PrismaUserRepository,
 } from '../../../infrastructure/database/repositories';
-import { publicApiRateLimiter } from '../middleware/rateLimit';
+import { publicApiRateLimiter } from '../../middleware/rateLimit';
 
 const router = Router();
 

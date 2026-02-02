@@ -5,16 +5,17 @@ import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
 import { OptimizedImage } from '../../components/OptimizedImage';
 import { getOptimizedImageProps } from '../../types/image';
+import {
+  getAdminPartners,
+  createAdminPartner,
+  updateAdminPartner,
+  deleteAdminPartner,
+  reorderAdminPartners,
+  MAX_PARTNERS,
+  type AdminPartner,
+} from '../../services/adminPartnersService';
 import '../../styles/admin.css';
 import './PartnersManagementScreen.css';
-
-interface Partner {
-  id: string;
-  name: string;
-  logoUrl: string;
-  website?: string;
-  order: number;
-}
 
 interface PartnerInput {
   name: string;
@@ -24,11 +25,12 @@ interface PartnerInput {
 }
 
 export default function PartnersManagementScreen() {
-  const [partners, setPartners] = useState<Partner[]>([]);
+  const [partners, setPartners] = useState<AdminPartner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
+  const [editingPartner, setEditingPartner] = useState<AdminPartner | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const [formData, setFormData] = useState<PartnerInput>({
     name: '',
@@ -69,14 +71,19 @@ export default function PartnersManagementScreen() {
       name: '',
       logoUrl: '',
       website: '',
-      order: partners.length + 1,
+      order: partners.length,
     });
     setShowModal(true);
   };
 
-  const handleEdit = (partner: Partner) => {
+  const handleEdit = (partner: AdminPartner) => {
     setEditingPartner(partner);
-    setFormData({ ...partner });
+    setFormData({
+      name: partner.name,
+      logoUrl: partner.logoUrl,
+      website: partner.website ?? '',
+      order: partner.order,
+    });
     setShowModal(true);
   };
 
@@ -90,12 +97,33 @@ export default function PartnersManagementScreen() {
     if (!confirmed) return;
 
     try {
-      console.log('Deleting partner:', id);
+      await deleteAdminPartner(id);
       toast.success('Партнер удален');
       await loadPartners();
     } catch (error) {
       console.error('Error deleting partner:', error);
       toast.error('Не удалось удалить партнера');
+    }
+  };
+
+  const handleMove = async (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= partners.length) return;
+
+    const next = [...partners];
+    const [removed] = next.splice(index, 1);
+    next.splice(newIndex, 0, removed);
+
+    setReordering(true);
+    try {
+      await reorderAdminPartners(next.map((p) => p.id));
+      setPartners(next);
+      toast.success('Порядок обновлен');
+    } catch (error) {
+      console.error('Error reordering partners:', error);
+      toast.error('Не удалось изменить порядок');
+    } finally {
+      setReordering(false);
     }
   };
 
@@ -110,10 +138,20 @@ export default function PartnersManagementScreen() {
     setIsSaving(true);
     try {
       if (editingPartner) {
-        console.log('Updating partner:', editingPartner.id, formData);
+        await updateAdminPartner(editingPartner.id, {
+          name: formData.name,
+          logoUrl: formData.logoUrl,
+          website: formData.website || undefined,
+          order: formData.order,
+        });
         toast.success('Партнер обновлен');
       } else {
-        console.log('Creating partner:', formData);
+        await createAdminPartner({
+          name: formData.name,
+          logoUrl: formData.logoUrl,
+          website: formData.website || undefined,
+          order: formData.order,
+        });
         toast.success('Партнер добавлен');
       }
 
@@ -148,6 +186,9 @@ export default function PartnersManagementScreen() {
 
       <div className="admin-content">
         <h1 className="admin-title">Управление партнерами</h1>
+        {partners.length > 0 && (
+          <p className="admin-title-hint">Максимум {MAX_PARTNERS} партнеров. Порядок можно менять кнопками ↑ ↓.</p>
+        )}
 
         {partners.length === 0 ? (
           <div className="admin-empty">
@@ -157,10 +198,33 @@ export default function PartnersManagementScreen() {
           </div>
         ) : (
           <div className="partners-grid">
-            {partners.map((partner) => {
+            {partners.map((partner, index) => {
               const logoProps = getOptimizedImageProps(partner.logoUrl);
               return (
               <div key={partner.id} className="partner-card">
+                <div className="partner-card__order">
+                  <button
+                    type="button"
+                    className="partner-card__order-btn"
+                    onClick={() => handleMove(index, 'up')}
+                    disabled={reordering || index === 0}
+                    aria-label="Поднять выше"
+                    title="Поднять выше"
+                  >
+                    ↑
+                  </button>
+                  <span className="partner-card__order-num">{index + 1}</span>
+                  <button
+                    type="button"
+                    className="partner-card__order-btn"
+                    onClick={() => handleMove(index, 'down')}
+                    disabled={reordering || index === partners.length - 1}
+                    aria-label="Опустить ниже"
+                    title="Опустить ниже"
+                  >
+                    ↓
+                  </button>
+                </div>
                 {logoProps ? (
                   <div className="partner-card__logo">
                     <OptimizedImage
@@ -209,7 +273,13 @@ export default function PartnersManagementScreen() {
           </div>
         )}
 
-        <button className="admin-fab" onClick={handleAdd} aria-label="Добавить партнера">
+        <button
+          className="admin-fab"
+          onClick={handleAdd}
+          disabled={partners.length >= MAX_PARTNERS}
+          aria-label={partners.length >= MAX_PARTNERS ? `Максимум ${MAX_PARTNERS} партнеров` : 'Добавить партнера'}
+          title={partners.length >= MAX_PARTNERS ? `Максимум ${MAX_PARTNERS} партнеров` : undefined}
+        >
           +
         </button>
       </div>

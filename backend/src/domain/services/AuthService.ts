@@ -51,7 +51,7 @@ export class AuthService {
    */
   async authenticateWithTelegram(
     rawInitData: string,
-    referralCode?: string,
+    _referralCode?: string,
     startParam?: string
   ): Promise<AuthResult> {
     // Пробуем валидировать initData от обоих ботов
@@ -248,7 +248,7 @@ export class AuthService {
   private generateToken(payload: Omit<JWTPayload, 'iat' | 'exp' | 'jti'>): string {
     const withJti = { ...payload, jti: crypto.randomUUID() };
     return jwt.sign(withJti, this.jwtSecret, {
-      expiresIn: this.jwtExpiresIn,
+      expiresIn: this.jwtExpiresIn as jwt.SignOptions['expiresIn'],
     });
   }
 }

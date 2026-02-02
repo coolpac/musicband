@@ -95,7 +95,7 @@ export default function PostersManagementScreen() {
     if (!confirmed) return;
 
     try {
-      console.log('Deleting poster:', id);
+      // Deleting poster
       toast.success('Афиша удалена');
       await loadPosters();
     } catch (error) {
@@ -115,10 +115,10 @@ export default function PostersManagementScreen() {
     setIsSaving(true);
     try {
       if (editingPoster) {
-        console.log('Updating poster:', editingPoster.id, formData);
+        // Updating poster
         toast.success('Афиша обновлена');
       } else {
-        console.log('Creating poster:', formData);
+        // Creating poster
         toast.success('Афиша добавлена');
       }
 

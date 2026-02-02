@@ -45,6 +45,10 @@ export class BookingController {
           fullName: booking.fullName,
           contactValue: booking.contactValue,
           city: booking.city || undefined,
+          telegramId: booking.user.telegramId.toString(),
+          username: booking.user.username ?? undefined,
+          firstName: booking.user.firstName ?? undefined,
+          lastName: booking.user.lastName ?? undefined,
         });
 
         // Уведомление пользователю (будет отправлено после подтверждения админом)

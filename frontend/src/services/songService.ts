@@ -1,6 +1,4 @@
-import { apiGet, isMockMode, type ApiRequestOptions } from './apiClient';
-import { mockSongs } from '../data/songs';
-import { mockLyrics } from '../data/lyrics';
+import { apiGet, type ApiRequestOptions } from './apiClient';
 import { Song } from '../types/vote';
 
 /**
@@ -8,12 +6,7 @@ import { Song } from '../types/vote';
  * @param options.signal — для отмены при unmount (useApiRequest)
  */
 export async function getSongs(options?: ApiRequestOptions): Promise<Song[]> {
-  if (isMockMode()) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockSongs;
-  }
-
-  return await apiGet<Song[]>('/api/songs', options);
+  return apiGet<Song[]>('/api/songs', options);
 }
 
 /**
@@ -23,14 +16,9 @@ export async function getSongLyrics(
   songId: string,
   options?: ApiRequestOptions
 ): Promise<string[]> {
-  if (isMockMode()) {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    return mockLyrics[songId] ?? ['Текст песни пока недоступен.'];
-  }
-
   const response = await apiGet<{ lyrics: string[] }>(
     `/api/songs/${songId}/lyrics`,
     options
   );
-  return response.lyrics;
+  return response?.lyrics ?? ['Текст песни пока недоступен.'];
 }

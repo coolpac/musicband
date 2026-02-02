@@ -1,5 +1,7 @@
-import { PrismaClient, Booking, BookingStatus } from '@prisma/client';
+import { PrismaClient, Booking, BookingStatus, User, Format } from '@prisma/client';
 import { prisma } from '../../../config/database';
+
+export type BookingWithUserAndFormat = Booking & { user: User; format: Format | null };
 
 export interface FindBookingsOptions {
   date?: Date;
@@ -60,14 +62,15 @@ export interface BookingStats {
 export class PrismaBookingRepository implements IBookingRepository {
   constructor(private client: PrismaClient = prisma) {}
 
-  async findById(id: string): Promise<Booking | null> {
-    return this.client.booking.findUnique({
+  async findById(id: string): Promise<BookingWithUserAndFormat | null> {
+    const row = await this.client.booking.findUnique({
       where: { id },
       include: {
         user: true,
         format: true,
       },
     });
+    return row as BookingWithUserAndFormat | null;
   }
 
   async findByUserId(userId: string): Promise<Booking[]> {

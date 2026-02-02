@@ -33,7 +33,7 @@ export async function getVoteResults(): Promise<VoteResult[]> {
  */
 export async function castVote(songId: string): Promise<void> {
   if (isMockMode()) {
-    console.log('[Mock] Casting vote for song:', songId);
+    // [Mock] Casting vote for song
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
     return;

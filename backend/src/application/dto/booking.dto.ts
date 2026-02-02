@@ -1,11 +1,16 @@
 import { z } from 'zod';
+import { normalizeContactValue } from '../../shared/utils/phone';
 
 export const CreateBookingSchema = z.object({
   formatId: z.string().uuid().optional(),
   bookingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   fullName: z.string().min(2, 'Full name is required').max(255),
   contactType: z.string().optional(),
-  contactValue: z.string().min(5, 'Contact value is required').max(255),
+  contactValue: z
+    .string()
+    .min(5, 'Contact value is required')
+    .max(255)
+    .transform(normalizeContactValue),
   city: z.string().max(255).optional(),
   source: z.string().max(255).optional(),
   referralCode: z.string().optional(),

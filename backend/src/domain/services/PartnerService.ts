@@ -17,9 +17,16 @@ export class PartnerService {
     return partner;
   }
 
-  async createPartner(data: { name: string; logoUrl?: string; link?: string }) {
+  private static readonly MAX_PARTNERS = 9;
+
+  async createPartner(data: { name: string; logoUrl?: string; link?: string; order?: number }) {
     if (!data.name || data.name.trim().length === 0) {
       throw new ValidationError('Partner name is required');
+    }
+
+    const count = await this.partnerRepository.count();
+    if (count >= PartnerService.MAX_PARTNERS) {
+      throw new ValidationError(`Максимум ${PartnerService.MAX_PARTNERS} партнеров`);
     }
 
     const partner = await this.partnerRepository.create(data);
@@ -29,9 +36,15 @@ export class PartnerService {
     return partner;
   }
 
-  async updatePartner(id: string, data: { name?: string; logoUrl?: string; link?: string }) {
+  async updatePartner(id: string, data: { name?: string; logoUrl?: string; link?: string; order?: number }) {
     await this.getPartnerById(id);
     return this.partnerRepository.update(id, data);
+  }
+
+  async reorderPartners(ids: string[]): Promise<void> {
+    for (let i = 0; i < ids.length; i++) {
+      await this.partnerRepository.updateOrder(ids[i], i);
+    }
   }
 
   async deletePartner(id: string) {

@@ -1,8 +1,27 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react';
 import { Toaster } from 'react-hot-toast';
 import TabBar, { AdminTab } from './components/TabBar';
+import AdminTerminalLoader, { MIN_LOADER_DISPLAY_MS } from './components/AdminTerminalLoader';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+import { AdminAuthProvider } from './context/AdminAuthContext';
 import '../styles/admin.css';
 import '../styles/admin-tabbar.css';
+
+function DelayedContent({
+  delay,
+  children,
+}: {
+  delay: number;
+  children: ReactNode;
+}) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+  if (!ready) return <AdminTerminalLoader />;
+  return <>{children}</>;
+}
 
 const DashboardScreen = lazy(() => import('./screens/DashboardScreen'));
 const VotingManagementScreen = lazy(() => import('./screens/VotingManagementScreen'));
@@ -25,18 +44,21 @@ export default function AdminApp() {
   };
 
   const renderScreen = () => {
-    const fallback = <div className="admin-screen-loader">Загрузка...</div>;
+    const fallback = <AdminTerminalLoader />;
+    const delay = MIN_LOADER_DISPLAY_MS;
 
     switch (activeTab) {
       case 'dashboard':
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <DashboardScreen
-                onGoToBookings={goToBookingsLog}
-                onGoToAgents={() => setActiveTab('agents')}
-                onGoToReviews={() => setActiveTab('reviews')}
-              />
+              <DelayedContent delay={delay}>
+                <DashboardScreen
+                  onGoToBookings={goToBookingsLog}
+                  onGoToAgents={() => setActiveTab('agents')}
+                  onGoToReviews={() => setActiveTab('reviews')}
+                />
+              </DelayedContent>
             </Suspense>
           </ErrorBoundary>
         );
@@ -45,7 +67,9 @@ export default function AdminApp() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <VotingManagementScreen />
+              <DelayedContent delay={delay}>
+                <VotingManagementScreen />
+              </DelayedContent>
             </Suspense>
           </ErrorBoundary>
         );
@@ -54,7 +78,9 @@ export default function AdminApp() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <SongsManagementScreen />
+              <DelayedContent delay={delay}>
+                <SongsManagementScreen />
+              </DelayedContent>
             </Suspense>
           </ErrorBoundary>
         );
@@ -63,13 +89,17 @@ export default function AdminApp() {
         return bookingsView === 'log' ? (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <BookingsLogScreen onGoToCalendar={() => setBookingsView('calendar')} />
+              <DelayedContent delay={delay}>
+                <BookingsLogScreen onGoToCalendar={() => setBookingsView('calendar')} />
+              </DelayedContent>
             </Suspense>
           </ErrorBoundary>
         ) : (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <BookingsManagementScreen onGoToLog={() => setBookingsView('log')} />
+              <DelayedContent delay={delay}>
+                <BookingsManagementScreen onGoToLog={() => setBookingsView('log')} />
+              </DelayedContent>
             </Suspense>
           </ErrorBoundary>
         );
@@ -78,7 +108,9 @@ export default function AdminApp() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <ContentScreen />
+              <DelayedContent delay={delay}>
+                <ContentScreen />
+              </DelayedContent>
             </Suspense>
           </ErrorBoundary>
         );
@@ -87,7 +119,9 @@ export default function AdminApp() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <AgentsManagementScreen />
+              <DelayedContent delay={delay}>
+                <AgentsManagementScreen />
+              </DelayedContent>
             </Suspense>
           </ErrorBoundary>
         );
@@ -96,7 +130,9 @@ export default function AdminApp() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <ReviewsManagementScreen />
+              <DelayedContent delay={delay}>
+                <ReviewsManagementScreen />
+              </DelayedContent>
             </Suspense>
           </ErrorBoundary>
         );
@@ -107,9 +143,10 @@ export default function AdminApp() {
   };
 
   return (
-    <div className="admin-app">
-      {renderScreen()}
-      <TabBar
+    <AdminAuthProvider>
+      <div className="admin-app">
+        {renderScreen()}
+        <TabBar
         activeTab={activeTab}
         onTabChange={(tab) => {
           if (tab === 'bookings') setBookingsView('calendar');
@@ -141,7 +178,8 @@ export default function AdminApp() {
             },
           },
         }}
-      />
-    </div>
+        />
+      </div>
+    </AdminAuthProvider>
   );
 }

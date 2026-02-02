@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { VoteService } from '../../domain/services/VoteService';
 import { CastVoteDto } from '../../application/dto/vote.dto';
-import { logger } from '../../shared/utils/logger';
 
 export class VoteController {
   constructor(private voteService: VoteService) {}

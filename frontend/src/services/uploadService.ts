@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiRequest } from './apiClient';
 
 export interface UploadResponse {
   success: boolean;
@@ -39,19 +39,12 @@ export async function uploadFile(
       setTimeout(() => clearInterval(interval), 1000);
     }
 
-    const response = await apiClient<UploadResponse>('/admin/upload', {
+    const data = await apiRequest<UploadResponse['data']>('/admin/upload', {
       method: 'POST',
       body: formData,
-      headers: {
-        // Не устанавливаем Content-Type, браузер сам установит с boundary
-      },
     });
 
-    if (!response.success) {
-      throw new Error('Не удалось загрузить файл');
-    }
-
-    return response.data.url;
+    return data.url;
   } catch (error) {
     console.error('Upload error:', error);
     throw error;
@@ -86,8 +79,9 @@ export async function uploadImage(
  */
 export async function deleteFile(url: string): Promise<void> {
   try {
-    await apiClient('/admin/upload', {
+    await apiRequest<unknown>('/admin/upload', {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
     });
   } catch (error) {

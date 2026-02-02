@@ -8,13 +8,10 @@ export interface IVoteRepository {
   findBySession(sessionId: string): Promise<Vote[]>;
   countBySong(songId: string, sessionId: string): Promise<number>;
   getResults(sessionId: string): Promise<VoteResult[]>;
-  deleteBySession(sessionId: string): Promise<void>;
 
-  // Voting Sessions
-  createSession(): Promise<VotingSession>;
+  // Voting Sessions (start/end делаются в VoteService через prisma.$transaction)
   findActiveSession(): Promise<VotingSession | null>;
   findSessionById(id: string): Promise<VotingSession | null>;
-  endSession(id: string): Promise<VotingSession>;
   getSessionHistory(page: number, limit: number): Promise<{ sessions: VotingSession[]; total: number }>;
 }
 
@@ -118,30 +115,7 @@ export class PrismaVoteRepository implements IVoteRepository {
     return results.sort((a, b) => b.votes - a.votes);
   }
 
-  async deleteBySession(sessionId: string): Promise<void> {
-    await this.client.vote.deleteMany({
-      where: { sessionId },
-    });
-  }
-
   // Voting Sessions
-  async createSession(): Promise<VotingSession> {
-    // Закрываем все активные сессии
-    await this.client.votingSession.updateMany({
-      where: { isActive: true },
-      data: {
-        isActive: false,
-        endedAt: new Date(),
-      },
-    });
-
-    return this.client.votingSession.create({
-      data: {
-        isActive: true,
-      },
-    });
-  }
-
   async findActiveSession(): Promise<VotingSession | null> {
     return this.client.votingSession.findFirst({
       where: { isActive: true },
@@ -149,34 +123,10 @@ export class PrismaVoteRepository implements IVoteRepository {
     });
   }
 
+  /** Сессия без подгрузки голосов — для getSessionInfo, socket, admin (результаты берутся отдельно через getResults). */
   async findSessionById(id: string): Promise<VotingSession | null> {
     return this.client.votingSession.findUnique({
       where: { id },
-      include: {
-        votes: {
-          include: {
-            song: true,
-            user: true,
-          },
-        },
-      },
-    });
-  }
-
-  async endSession(id: string): Promise<VotingSession> {
-    // Подсчитываем уникальных голосовавших
-    const uniqueVoters = await this.client.vote.groupBy({
-      by: ['userId'],
-      where: { sessionId: id },
-    });
-
-    return this.client.votingSession.update({
-      where: { id },
-      data: {
-        isActive: false,
-        endedAt: new Date(),
-        totalVoters: uniqueVoters.length,
-      },
     });
   }
 

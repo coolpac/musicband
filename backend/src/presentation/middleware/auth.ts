@@ -1,22 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../../domain/services/AuthService';
-import { UnauthorizedError, ForbiddenError } from '../../shared/errors';
+import { UnauthorizedError } from '../../shared/errors';
 import { USER_ROLES } from '../../shared/constants';
 
-// Расширяем тип Request для хранения user и токена (для logout/revoke)
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        userId: string;
-        telegramId: string;
-        role: string;
-      };
-      /** JWT строка — заполняется authenticate, используется в logout для отзыва */
-      token?: string;
-    }
-  }
-}
+// Типы req.user и req.token объявлены в src/types/express.d.ts
 
 /**
  * Middleware для проверки JWT токена
@@ -112,7 +99,7 @@ export const requireAdminOrAgent = authorize(USER_ROLES.ADMIN, USER_ROLES.AGENT)
  * Middleware для проверки, что пользователь является агентом
  * (проверяет не только роль, но и наличие записи в Agents)
  */
-export function requireAgentRecord(authService: AuthService) {
+export function requireAgentRecord(_authService: AuthService) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
       res.status(401).json({

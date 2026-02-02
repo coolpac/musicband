@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getAdminStats } from '../../services/adminService';
 import AdminHeader from '../components/AdminHeader';
+import FlexGuardLogo from '../components/FlexGuardLogo';
 import '../../styles/admin.css';
 
 /* Оптимизированные SVG-иконки (stroke, 24×24) */
@@ -100,12 +101,12 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
   }
 
   return (
-    <div className="admin-screen">
+    <div className="admin-screen dashboard-screen">
       <AdminHeader showBack onBack={() => window.history.back()} />
-      <main className="admin-content">
-        <h1 className="admin-title">Админ-панель</h1>
+      <main className="admin-content dashboard-content">
+        <h1 className="admin-title dashboard-title">Админ-панель</h1>
 
-        <div className="admin-grid">
+        <div className="admin-grid dashboard-grid">
           {/* Total Bookings Card — по нажатию переход к заявкам */}
           <button
             type="button"
@@ -144,7 +145,7 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
         </div>
 
         {/* Revenue Card */}
-        <div className="admin-card admin-card--large">
+        <div className="admin-card admin-card--large dashboard-card-large">
           <div className="admin-card__header">
             <h2 className="admin-card__title">Общий доход</h2>
           </div>
@@ -154,7 +155,7 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
         </div>
 
         {/* Conversion Card */}
-        <div className="admin-card admin-card--large">
+        <div className="admin-card admin-card--large dashboard-card-large">
           <div className="admin-card__header">
             <h2 className="admin-card__title">Конверсия</h2>
           </div>
@@ -200,6 +201,11 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
             )}
           </div>
         </section>
+
+        <footer className="dashboard-hero dashboard-hero--bottom dashboard-hero--glass">
+          <FlexGuardLogo size="md" showBadge />
+          <p className="dashboard-hero__tagline">Админ-панель</p>
+        </footer>
       </main>
     </div>
   );

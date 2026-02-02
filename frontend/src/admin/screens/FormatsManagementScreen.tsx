@@ -85,7 +85,7 @@ export default function FormatsManagementScreen() {
       setFormats(list.map(fromApi));
     } catch (error) {
       console.warn('Backend unavailable, showing demo data:', error);
-      setFormats(DEMO_FORMATS);
+      setFormats([]);
       toast('Бэкенд недоступен. Показаны демо-данные.', { icon: 'ℹ️' });
     } finally {
       setIsLoading(false);

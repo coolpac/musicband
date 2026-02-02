@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { SongService } from '../../domain/services/SongService';
-import { logger } from '../../shared/utils/logger';
 
 export class SongController {
   constructor(private songService: SongService) {}

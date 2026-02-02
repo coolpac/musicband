@@ -1,5 +1,5 @@
 import multer from 'multer';
-import { Request } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { ValidationError } from '../../shared/errors';
 import { IMAGE_LIMITS } from '../../shared/constants';
 
@@ -7,7 +7,7 @@ import { IMAGE_LIMITS } from '../../shared/constants';
 const storage = multer.memoryStorage();
 
 // Фильтр файлов
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   // Проверяем MIME тип
   const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 
@@ -30,10 +30,10 @@ export const upload = multer({
 
 // Middleware для обработки ошибок Multer
 export function handleUploadError(
-  error: any,
-  req: Request,
-  res: any,
-  next: any
+  error: unknown,
+  _req: Request,
+  res: Response,
+  next: NextFunction
 ): void {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {

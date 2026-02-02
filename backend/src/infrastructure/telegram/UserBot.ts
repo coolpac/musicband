@@ -29,6 +29,11 @@ export class UserBot {
         const chatId = msg.chat.id;
         const referralCode = match?.[1]?.trim();
 
+        if (referralCode && referralCode.startsWith('vote_')) {
+          const sessionId = referralCode.substring(5);
+          await this.handleVotingDeepLink(chatId, sessionId);
+          return;
+        }
         if (referralCode) {
           // Обрабатываем реферальную ссылку
           await this.handleReferralLink(chatId, referralCode, msg.from);
@@ -82,10 +87,11 @@ export class UserBot {
         referralCode,
         linkId: result.link.id,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error handling referral link', { error, chatId, referralCode });
 
-      if (error.message.includes('not found') || error.message.includes('not active')) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('not found') || msg.includes('not active')) {
         await this.bot.sendMessage(
           chatId,
           '⚠️ Реферальная ссылка недействительна или истекла.'
@@ -93,6 +99,35 @@ export class UserBot {
       } else {
         await this.bot.sendMessage(chatId, '❌ Произошла ошибка при обработке ссылки.');
       }
+    }
+  }
+
+  /**
+   * Обработка deep link голосования vote_{sessionId}
+   */
+  private async handleVotingDeepLink(chatId: number, sessionId: string): Promise<void> {
+    try {
+      const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+      // startapp параметр передаётся в Mini App как initDataUnsafe.start_param
+      const votingUrl = `${miniAppUrl}?startapp=vote_${sessionId}`;
+
+      await this.bot.sendMessage(
+        chatId,
+        'Голосование за песню! Нажмите кнопку ниже, чтобы проголосовать:',
+        {
+          reply_markup: {
+            inline_keyboard: [[
+              {
+                text: '🎵 Голосовать',
+                web_app: { url: votingUrl },
+              },
+            ]],
+          },
+        }
+      );
+    } catch (error) {
+      logger.error('Error handling voting deep link', { error, chatId, sessionId });
+      await this.bot.sendMessage(chatId, 'Не удалось открыть голосование. Попробуйте позже.');
     }
   }
 
@@ -151,12 +186,52 @@ export class UserBot {
         'С вами свяжутся в ближайшее время.';
 
       await this.bot.sendMessage(telegramId, message);
-    } catch (error: any) {
-      // Если пользователь заблокировал бота, игнорируем ошибку
-      if (error.response?.error_code === 403) {
+    } catch (err: unknown) {
+      const code = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { error_code?: number } }).response?.error_code
+        : undefined;
+      if (code === 403) {
         logger.warn('User blocked the bot', { telegramId });
       } else {
-        logger.error('Error sending booking confirmation', { error, telegramId });
+        logger.error('Error sending booking confirmation', { error: err, telegramId });
+      }
+    }
+  }
+
+  /**
+   * Уведомление проголосовавшего о победителе голосования
+   */
+  async sendVotingWinnerNotification(
+    telegramId: bigint,
+    winningSong: { id: string; title: string; artist: string; coverUrl: string | null },
+    sessionId: string
+  ): Promise<void> {
+    try {
+      const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+      const winnerUrl = `${miniAppUrl}?screen=winning-song&songId=${winningSong.id}&sessionId=${sessionId}`;
+
+      await this.bot.sendMessage(
+        telegramId.toString(),
+        `🎉 Голосование завершено!\n\nПобедитель: ${winningSong.title} — ${winningSong.artist}\n\nОткройте приложение, чтобы увидеть результат:`,
+        {
+          reply_markup: {
+            inline_keyboard: [[
+              {
+                text: '🏆 Смотреть победителя',
+                web_app: { url: winnerUrl },
+              },
+            ]],
+          },
+        }
+      );
+    } catch (err: unknown) {
+      const code = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { error_code?: number } }).response?.error_code
+        : undefined;
+      if (code === 403) {
+        logger.warn('User blocked the bot, skipping winner notification', { telegramId: telegramId.toString() });
+      } else {
+        logger.error('Error sending voting winner notification', { error: err, telegramId: telegramId.toString() });
       }
     }
   }
@@ -167,13 +242,23 @@ export class UserBot {
   async sendAdminMessage(telegramId: number, message: string): Promise<void> {
     try {
       await this.bot.sendMessage(telegramId, `📩 Сообщение от администратора:\n\n${message}`);
-    } catch (error: any) {
-      if (error.response?.error_code === 403) {
+    } catch (err: unknown) {
+      const code = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { error_code?: number } }).response?.error_code
+        : undefined;
+      if (code === 403) {
         logger.warn('User blocked the bot', { telegramId });
       } else {
-        logger.error('Error sending admin message', { error, telegramId });
+        logger.error('Error sending admin message', { error: err, telegramId });
       }
     }
+  }
+
+  /**
+   * Остановка polling (для graceful shutdown)
+   */
+  async stop(): Promise<void> {
+    this.bot.stopPolling();
   }
 
   /**

@@ -3,6 +3,7 @@ import { VoteService } from '../../domain/services/VoteService';
 import { StartSessionDto } from '../../application/dto/vote.dto';
 import { logger } from '../../shared/utils/logger';
 import { getSocketServer } from '../../app';
+import { getBotManager } from '../../infrastructure/telegram/botManager';
 import { generateVotingSessionQR } from '../../infrastructure/utils/qrcode';
 
 export class AdminVoteController {
@@ -164,7 +165,16 @@ export class AdminVoteController {
             percentage: r.percentage,
           })),
           totalVoters: result.totalVoters,
+          winningSong: result.winningSong,
         });
+      }
+
+      // Уведомления проголосовавшим через бота (fire-and-forget)
+      const botManager = getBotManager();
+      if (botManager && result.winningSong && result.voterTelegramIds.length > 0) {
+        botManager
+          .notifyVotingWinner(result.voterTelegramIds, result.winningSong, id)
+          .catch((err) => logger.error('Failed to notify voters', { err, sessionId: id }));
       }
 
       logger.info('Voting session ended by admin', {

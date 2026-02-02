@@ -43,7 +43,10 @@ function checkDiskSpace(): { status: 'ok' | 'low'; freeGB: number } {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    const statfsSync = (fs as any).statfsSync;
+    interface FsWithStatFs {
+      statfsSync?(path: string): { bsize?: number; frsize?: number; bavail?: number; bfree?: number };
+    }
+    const statfsSync = (fs as FsWithStatFs).statfsSync;
     if (typeof statfsSync !== 'function') {
       return { status: 'ok', freeGB: 0 };
     }

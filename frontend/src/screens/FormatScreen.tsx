@@ -111,20 +111,23 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
     swipeStateRef.current.active = false;
   }, [formats.length, handleDotClick]);
 
-  useEffect(() => {
-    const loadFormats = async () => {
-      try {
-        const data = await getFormats();
-        setFormats(data.sort((a, b) => a.order - b.order));
-      } catch (error) {
-        console.error('Failed to load formats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadFormats();
+  const loadFormats = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getFormats();
+      setFormats(data.sort((a, b) => a.order - b.order));
+    } catch (err) {
+      console.error('Failed to load formats:', err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadFormats();
+  }, [loadFormats]);
 
   useEffect(() => {
     updateSlideStep();

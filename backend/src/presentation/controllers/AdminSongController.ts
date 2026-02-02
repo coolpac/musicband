@@ -3,9 +3,8 @@ import { SongService } from '../../domain/services/SongService';
 import { CreateSongDto, UpdateSongDto } from '../../application/dto/song.dto';
 import { logger } from '../../shared/utils/logger';
 
-// Получаем socketServer из глобального контекста
 function getSocketServer() {
-  return (global as any).socketServer || null;
+  return globalThis.socketServer ?? null;
 }
 
 export class AdminSongController {
@@ -15,7 +14,7 @@ export class AdminSongController {
    * GET /api/admin/songs
    * Получить все песни (админ)
    */
-  async getAllSongs(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getAllSongs(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const songs = await this.songService.getAllSongs();
 

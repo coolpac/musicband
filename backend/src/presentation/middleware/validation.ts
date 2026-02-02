@@ -5,6 +5,7 @@
 import { Request, Response, NextFunction } from 'express';
 import xss from 'xss';
 import { ValidationError } from '../../shared/errors';
+import { logger } from '../../shared/utils/logger';
 
 /**
  * Валидация и клампинг параметров пагинации
@@ -17,7 +18,7 @@ export function validatePagination(options: {
   const maxLimit = options.maxLimit || 100;
   const defaultLimit = options.defaultLimit || 50;
 
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     // Валидация page
     const pageParam = req.query.page as string | undefined;
     let page = 1;
@@ -60,7 +61,7 @@ export function validatePagination(options: {
 
       // Предупреждение в логах, если клиент запросил больше максимума
       if (parsed > maxLimit) {
-        req.log?.warn?.('Client requested limit exceeding maximum', {
+        logger.warn('Client requested limit exceeding maximum', {
           requested: parsed,
           clamped: limit,
           maxLimit,
@@ -68,8 +69,7 @@ export function validatePagination(options: {
       }
     }
 
-    // Сохраняем валидированные значения в req для контроллера
-    (req as any).pagination = {
+    req.pagination = {
       page,
       limit,
       offset: (page - 1) * limit,
@@ -83,7 +83,7 @@ export function validatePagination(options: {
  * Валидация даты в формате YYYY-MM-DD
  */
 export function validateDateParam(paramName: string) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     const dateStr = (req.query[paramName] || req.body[paramName]) as string | undefined;
 
     if (!dateStr) {
@@ -116,7 +116,7 @@ export function validateDateParam(paramName: string) {
  * Валидация месяца в формате YYYY-MM
  */
 export function validateMonthParam(paramName: string) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     const monthStr = (req.query[paramName] || req.body[paramName]) as string | undefined;
 
     if (!monthStr) {
@@ -151,7 +151,7 @@ export function validateMonthParam(paramName: string) {
  * Защита от XSS через библиотеку xss (whiteList: {}, stripIgnoreTag: true)
  */
 export function sanitizeText(fields: string[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     fields.forEach((field) => {
       const value = req.body[field];
 
@@ -171,7 +171,7 @@ export function sanitizeText(fields: string[]) {
  * Валидация максимальной длины текста
  */
 export function validateTextLength(field: string, maxLength: number) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     const value = req.body[field];
 
     if (typeof value === 'string' && value.length > maxLength) {

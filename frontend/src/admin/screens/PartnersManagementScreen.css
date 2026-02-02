@@ -2,7 +2,7 @@
 
 .partners-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
 }
 
@@ -14,12 +14,58 @@
   border-radius: var(--admin-radius);
   overflow: hidden;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .partner-card:hover {
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.25));
   border-color: rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
+}
+
+.partner-card__order {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.partner-card__order-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--admin-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.partner-card__order-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--admin-text);
+}
+
+.partner-card__order-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.partner-card__order-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  min-width: 20px;
+  text-align: center;
 }
 
 .partner-card__logo,
@@ -52,6 +98,10 @@
 
 .partner-card__content {
   padding: 16px;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .partner-card__title {
@@ -79,10 +129,12 @@
 .partner-card__actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
 }
 
 .partner-card__actions .admin-btn {
-  flex: 1;
+  flex: 1 1 auto;
   padding: 8px 12px;
   font-size: 13px;
 }

@@ -88,12 +88,12 @@ export default function FileUpload({
     e.stopPropagation();
     setIsDragging(false);
     const files = e.dataTransfer.files;
-    if (files?.length > 0) handleFile(files[0]);
+    if (files && files.length > 0) handleFile(files[0]);
   };
 
   const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files?.length > 0) handleFile(files[0]);
+    if (files && files.length > 0) handleFile(files[0]);
   };
 
   const handleFile = async (file: File) => {

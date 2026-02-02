@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "partners" ADD COLUMN IF NOT EXISTS "order" INTEGER NOT NULL DEFAULT 0;
