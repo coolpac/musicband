@@ -61,9 +61,25 @@ body {
   padding-right: var(--tg-safe-area-inset-right, var(--safe-area-inset-right));
 }
 
+/* В мини-приложении Telegram убираем padding, используем viewport height */
+.tg-mini-app body {
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+  padding-right: 0;
+  min-height: 100dvh;
+}
+
 #root,
 .app-shell {
   overflow-x: hidden;
+}
+
+/* В мини-приложении контент заполняет весь экран */
+.tg-mini-app #root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 img {

@@ -60,3 +60,10 @@
   text-shadow: var(--shadow-glow);
   z-index: 1;
 }
+
+/* В мини-приложении footer-date идёт до самого низа экрана */
+.tg-mini-app .footer-date .date-card {
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  padding-bottom: max(32px, env(safe-area-inset-bottom, 20px));
+  min-height: 400px;
+}

@@ -119,6 +119,7 @@ export function applyTelegramViewportAndSafeArea(): void {
   const tg = getTelegramWebApp();
   if (!tg) return;
   const root = document.documentElement;
+  root.classList.add('tg-mini-app');
   if (tg.safeAreaInset) {
     root.style.setProperty('--tg-safe-area-inset-top', `${tg.safeAreaInset.top}px`);
     root.style.setProperty('--tg-safe-area-inset-bottom', `${tg.safeAreaInset.bottom}px`);

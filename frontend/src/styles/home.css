@@ -3,6 +3,16 @@
   padding-bottom: 0;
 }
 
+/* В мини-приложении Telegram — хиро вплотную к хедеру, без лишнего зазора. */
+.tg-mini-app .screen--home {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.tg-mini-app .hero {
+  padding-bottom: 12px;
+}
+
 .hero {
   position: relative;
   background: var(--bg);

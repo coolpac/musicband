@@ -24,6 +24,8 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
     "db:setup": "prisma migrate deploy && prisma generate",
+    "seed": "tsx prisma/seed.ts",
+    "migrate": "prisma migrate deploy",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

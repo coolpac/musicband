@@ -23,6 +23,24 @@ const DEFAULT_TIMEOUT_MS = 15000;
 const GET_RETRY_MAX = 2;
 const GET_RETRY_BACKOFF_MS = [1000, 2000];
 
+/** Получить токен админа из localStorage */
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('admin_token');
+}
+
+/** Получить заголовки с авторизацией */
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
@@ -114,7 +132,7 @@ export async function apiGet<T>(
         {
           method: 'GET',
           credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
         },
         options
       );
@@ -164,7 +182,7 @@ export async function apiPost<T>(
       {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: body ? JSON.stringify(body) : undefined,
       },
       options
@@ -201,7 +219,7 @@ export async function apiPut<T>(
       {
         method: 'PUT',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: body ? JSON.stringify(body) : undefined,
       },
       options
@@ -237,7 +255,7 @@ export async function apiDelete<T>(
       {
         method: 'DELETE',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
       },
       options
     );
