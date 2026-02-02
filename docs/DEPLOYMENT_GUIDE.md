@@ -210,25 +210,30 @@ public/videos/*.mov
 public/videos/thumbs/*.jpg
 ```
 
-## Nginx конфигурация (если нужен SSL)
+## SSL для vgulcover.ru (HTTPS)
 
-Если у вас есть домен и нужен HTTPS:
+Пошаговая настройка Let's Encrypt и Nginx для https://vgulcover.ru:
+
+📖 **[docs/SSL_SETUP.md](SSL_SETUP.md)** — получение сертификата, замена конфига Nginx, порт 443, обновление FRONTEND_URL, автообновление сертификата.
+
+Кратко: остановить frontend → `certbot certonly --standalone -d vgulcover.ru -d www.vgulcover.ru` → в `docker-compose` добавить порт 443 и volume `/etc/letsencrypt` → заменить `nginx.conf` на `nginx-ssl.conf` → пересобрать frontend → в `.env` указать `FRONTEND_URL=https://vgulcover.ru`.
+
+## Проверка сайта vgulcover.ru
+
+| Что проверить | Как |
+|---------------|-----|
+| Сайт открывается | https://vgulcover.ru (или http:// до настройки SSL) |
+| Редирект HTTP → HTTPS | После SSL: http://vgulcover.ru должен перенаправлять на https:// |
+| API отвечает | https://vgulcover.ru/api/formats — JSON с форматами |
+| Админка | https://vgulcover.ru/admin |
+| Сертификат (после SSL) | В браузере: замок рядом с адресом, клик → сертификат Let's Encrypt |
+
+С сервера:
 
 ```bash
-# Установка Certbot
-apt install -y certbot
-
-# Получение сертификата
-certbot certonly --standalone -d musicians.example.com
-
-# Добавить в docker-compose.yml (frontend):
-ports:
-  - "80:80"
-  - "443:443"
-volumes:
-  - /etc/letsencrypt:/etc/letsencrypt:ro
-
-# Обновить frontend/nginx/default.conf для SSL
+curl -sI http://vgulcover.ru
+curl -s http://vgulcover.ru/api/formats | head -c 300
+docker compose ps
 ```
 
 ## Бэкапы
@@ -307,16 +312,23 @@ cd /opt/musicians
 
 ### Миграция: "relation \"formats\" does not exist" / P3018
 
-Если в репозитории одна начальная миграция `20260101000000_init`, а на сервере БД пустая или миграция падала — сбросьте схему и примените миграции заново:
+Если в репозитории одна начальная миграция `20260101000000_init`, а Prisma всё равно находит старые миграции — на сервере остались пустые папки. Выполните по шагам:
 
 ```bash
-# Сброс схемы БД (данные удалятся; для пустой БД — безопасно)
+cd /opt/musicians
+
+# 1. Удалить пустые папки старых миграций (если есть)
+rm -rf backend/prisma/migrations/20260128150400_add_format_fields \
+       backend/prisma/migrations/20260131120000_add_partner_order \
+       backend/prisma/migrations/20260202120000_add_voting_session_winner_expires
+
+# 2. Сброс схемы БД (данные удалятся; для пустой БД — безопасно)
 docker compose exec -T postgres psql -U musicians -d musicians_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-# Применить миграции
+# 3. Применить миграции (одна команда — через run, не up!)
 docker compose run --rm backend npx prisma migrate deploy
 
-# Запустить backend
+# 4. Запустить backend
 docker compose up -d backend
 ```
 

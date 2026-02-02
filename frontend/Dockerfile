@@ -40,6 +40,9 @@ RUN chown -R nginx:nginx /usr/share/nginx/html \
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -qO- http://localhost:80/health || exit 1
 
-EXPOSE 80
+EXPOSE 80 443
+
+# Для SSL: каталог для ACME challenge (certbot renew --webroot)
+RUN mkdir -p /var/www/acme
 
 CMD ["nginx", "-g", "daemon off;"]

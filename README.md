@@ -54,8 +54,9 @@ brew install ffmpeg  # macOS
 ## 🚀 Деплой на production
 
 ### Документация
-- 📘 [Полное руководство по деплою](docs/DEPLOYMENT_GUIDE.md) - сервер 89.223.64.110
-- 🐳 [Docker оптимизации](docs/DOCKER_OPTIMIZATION.md) - архитектура и best practices
+- 📘 [Полное руководство по деплою](docs/DEPLOYMENT_GUIDE.md) — сервер 89.223.64.110
+- 🔒 [SSL для vgulcover.ru (HTTPS)](docs/SSL_SETUP.md) — Let's Encrypt и проверка сайта
+- 🐳 [Docker оптимизации](docs/DOCKER_OPTIMIZATION.md) — архитектура и best practices
 
 ### Первоначальная настройка сервера (vgulcover.ru / 89.223.64.110)
 
