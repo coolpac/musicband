@@ -12,6 +12,10 @@
   display: block !important;
 }
 
+.tg-mini-app .screen--voting {
+  min-height: var(--app-viewport-height);
+}
+
 .voting-back-btn {
   position: fixed;
   top: clamp(64px, 11svh, 107px);
@@ -43,6 +47,10 @@
   pointer-events: none;
 }
 
+.tg-mini-app .voting-hero {
+  height: var(--app-viewport-height);
+}
+
 .voting-bg-image {
   position: absolute;
   top: 0;
@@ -68,6 +76,11 @@
   padding-bottom: 100px;
   z-index: 10;
   pointer-events: auto;
+}
+
+.tg-mini-app .voting-container {
+  min-height: var(--app-viewport-height);
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 }
 
 .voting-title {
@@ -161,9 +174,12 @@
   color: var(--white);
   font-family: "Geologica", sans-serif;
   line-height: 1.3;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .voting-song-artist {
@@ -172,9 +188,12 @@
   color: rgba(255, 255, 255, 0.8);
   font-family: "Geologica", sans-serif;
   line-height: 1.4;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .voting-song-heart {
@@ -200,6 +219,17 @@
   background: var(--white);
   color: #000000;
   border: none;
+}
+
+/* iOS/Safari: env() может возвращать 0 — max() даёт fallback для home indicator (~34px) */
+@media (max-width: 768px) {
+  .voting-confirm-btn {
+    margin-bottom: max(34px, calc(20px + env(safe-area-inset-bottom, 0px)));
+  }
+}
+
+.tg-mini-app .voting-confirm-btn {
+  margin-bottom: max(34px, calc(20px + env(safe-area-inset-bottom, 0px)));
 }
 
 .voting-confirm-btn:disabled {

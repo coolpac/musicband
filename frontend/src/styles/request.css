@@ -10,11 +10,19 @@
    padding-top: clamp(64px, 11svh, 107px);
  }
 
+.tg-mini-app .request-screen {
+  min-height: var(--app-viewport-height);
+}
+
 .request-screen--form {
   height: 100vh;
   overflow: hidden;
   padding-top: clamp(64px, 11svh, 107px);
  }
+
+.tg-mini-app .request-screen--form {
+  height: var(--app-viewport-height);
+}
  
  .request-body {
    position: relative;
@@ -43,6 +51,11 @@
   min-height: 100vh;
   padding-bottom: 120px;
  }
+
+.tg-mini-app .request-body--pattern {
+  min-height: var(--app-viewport-height);
+  padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+}
 
 /* Форма заявки: контейнер с фоном не растёт — фон не пересчитывается при открытии селекта */
 .request-screen--form .request-body--form {
@@ -125,26 +138,36 @@
    width: 161px;
  }
  
- .request-nav-links {
-   position: absolute;
-   right: 40px;
-   top: 570px;
-   display: flex;
-   flex-direction: column;
-   gap: 5px;
-   text-align: right;
-   font-size: 30px;
- }
- 
- .request-nav-links button {
-   background: none;
-   border: none;
-   color: var(--white);
-   text-align: right;
-   font-size: 30px;
-   font-family: "Geologica", sans-serif;
- }
- 
+.request-nav-links {
+  position: absolute;
+  right: 40px;
+  top: 570px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: right;
+  font-size: clamp(20px, 5.5vw, 30px);
+}
+
+.request-nav-links button {
+  background: none;
+  border: none;
+  color: var(--white);
+  text-align: right;
+  font-size: clamp(20px, 5.5vw, 30px);
+  font-family: "Geologica", sans-serif;
+}
+
+@media (max-width: 360px) {
+  .request-nav-links {
+    right: 16px;
+    font-size: clamp(18px, 5vw, 24px);
+  }
+  .request-nav-links button {
+    font-size: clamp(18px, 5vw, 24px);
+  }
+}
+
 .request-calendar-block {
   position: absolute;
   top: 117.42px;
@@ -163,10 +186,10 @@
   padding: 0 17px;
 }
  
- .request-calendar-title {
-   font-family: "Proletarsk", sans-serif;
-  font-size: 30px;
- }
+.request-calendar-title {
+  font-family: "Proletarsk", sans-serif;
+  font-size: clamp(20px, 5.5vw, 30px);
+}
  
  .request-icon-button {
   width: 19px;
@@ -450,6 +473,17 @@
   z-index: 6;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
+
+/* iOS/Safari: max() fallback для home indicator */
+@media (max-width: 768px) {
+  .request-primary--floating {
+    bottom: max(34px, calc(16px + env(safe-area-inset-bottom, 0px)));
+  }
+}
+
+.tg-mini-app .request-primary--floating {
+  bottom: max(34px, calc(16px + env(safe-area-inset-bottom, 0px)));
+}
  
  .request-success-photo {
    width: 451px;
@@ -498,6 +532,11 @@
   position: relative;
 }
 
+.tg-mini-app .request-success-body {
+  min-height: var(--app-viewport-height);
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+}
+
 .request-success-photo {
   margin-top: clamp(100px, 15vw, 140px);
   z-index: 1;
@@ -541,6 +580,17 @@
   width: min(410px, calc(100% - 30px));
   z-index: 6;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* iOS/Safari: max() fallback для home indicator */
+@media (max-width: 768px) {
+  .request-success-button {
+    bottom: max(34px, calc(16px + env(safe-area-inset-bottom, 0px)));
+  }
+}
+
+.tg-mini-app .request-success-button {
+  bottom: max(34px, calc(16px + env(safe-area-inset-bottom, 0px)));
 }
 
 /* Каскадное появление контента (только transform + opacity, GPU) */

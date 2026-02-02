@@ -13,6 +13,12 @@
   display: block !important;
 }
 
+/* Telegram Mini App: корректная высота и safe-area */
+.tg-mini-app .screen--format,
+.tg-mini-app .screen--format-detail {
+  min-height: var(--app-viewport-height);
+}
+
 .format-back-btn {
   position: fixed;
   top: clamp(64px, 11svh, 107px);
@@ -39,6 +45,10 @@
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+}
+
+.tg-mini-app .format-container {
+  height: var(--app-viewport-height);
 }
 
 /* Format Screen (List with pagination) */
@@ -69,6 +79,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.tg-mini-app .format-slide {
+  height: var(--app-viewport-height);
 }
 
 .format-hero {
@@ -115,6 +129,10 @@
   padding: 0 16px;
   padding-bottom: 100px;
   z-index: 1;
+}
+
+.tg-mini-app .format-overlay {
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 }
 
 .format-content {
@@ -184,6 +202,18 @@
   z-index: 50;
 }
 
+/* iOS: max() fallback для home indicator */
+/* iOS/Safari: max() fallback для home indicator */
+@media (max-width: 768px) {
+  .format-cta {
+    margin-bottom: max(34px, calc(20px + env(safe-area-inset-bottom, 0px)));
+  }
+}
+
+.tg-mini-app .format-cta {
+  margin-bottom: max(34px, calc(20px + env(safe-area-inset-bottom, 0px)));
+}
+
 /* Format Detail Screen */
 .format-detail-container {
   position: relative;
@@ -193,6 +223,10 @@
   flex-direction: column;
   padding: 0;
   padding-bottom: 80px;
+}
+
+.tg-mini-app .format-detail-container {
+  min-height: var(--app-viewport-height);
 }
 
 .format-detail-hero {
@@ -206,6 +240,10 @@
   background: #000;
   z-index: 0;
   pointer-events: none;
+}
+
+.tg-mini-app .format-detail-hero {
+  height: var(--app-viewport-height);
 }
 
 .format-detail-hero::before {
@@ -260,6 +298,10 @@
   background: transparent;
   width: 100%;
   pointer-events: auto;
+}
+
+.tg-mini-app .format-detail-content {
+  min-height: calc(var(--app-viewport-height) - 60px);
 }
 
 .format-detail-title {
@@ -376,6 +418,16 @@
   margin: 0 0 20px;
   border-radius: var(--radius-lg);
   z-index: 50;
+}
+
+@media (max-width: 768px) {
+  .format-detail-cta {
+    margin-bottom: max(34px, calc(20px + env(safe-area-inset-bottom, 0px)));
+  }
+}
+
+.tg-mini-app .format-detail-cta {
+  margin-bottom: max(34px, calc(20px + env(safe-area-inset-bottom, 0px)));
 }
 
 /* Desktop styles */
