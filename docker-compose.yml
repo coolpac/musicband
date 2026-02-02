@@ -1,5 +1,4 @@
-version: '3.9'
-
+# Docker Compose (version attribute obsolete in Compose V2)
 services:
   # ========================
   # PostgreSQL

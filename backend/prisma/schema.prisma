@@ -143,12 +143,14 @@ model Song {
 }
 
 model VotingSession {
-  id         String    @id @default(uuid())
-  startedAt  DateTime  @default(now()) @map("started_at")
-  endedAt    DateTime? @map("ended_at")
-  isActive   Boolean   @default(true) @map("is_active")
-  totalVoters Int      @default(0) @map("total_voters")
-  createdAt  DateTime  @default(now()) @map("created_at")
+  id             String    @id @default(uuid())
+  startedAt      DateTime  @default(now()) @map("started_at")
+  endedAt        DateTime? @map("ended_at")
+  isActive       Boolean   @default(true) @map("is_active")
+  totalVoters    Int       @default(0) @map("total_voters")
+  winningSongId  String?   @map("winning_song_id")
+  expiresAt      DateTime? @map("expires_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   votes Vote[]
 
@@ -199,6 +201,7 @@ model Partner {
   name      String
   logoUrl   String?  @map("logo_url")
   link      String?
+  order     Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

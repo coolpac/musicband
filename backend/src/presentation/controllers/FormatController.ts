@@ -20,7 +20,7 @@ export class FormatController {
    * GET /api/formats/for-booking
    * Форматы, доступные для выбора при бронировании (status = 'available').
    */
-  async getFormatsForBooking(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getFormatsForBooking(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const formats = await this.formatService.getFormatsForBooking();
       res.json({

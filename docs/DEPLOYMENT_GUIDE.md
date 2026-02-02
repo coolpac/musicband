@@ -288,6 +288,23 @@ docker system df -v
 
 ## Troubleshooting
 
+### Docker Hub: "You have reached your unauthenticated pull rate limit"
+
+Docker Hub ограничивает анонимные запросы (100 pull за 6 часов). Решение — войти в бесплатный аккаунт:
+
+```bash
+# 1. Создать аккаунт на https://hub.docker.com (бесплатно)
+# 2. На сервере выполнить:
+docker login
+# Ввести username и password (или Access Token из Docker Hub → Account Settings → Security)
+
+# 3. Запустить снова
+cd /opt/musicians
+./init.sh
+```
+
+После входа лимит повышается до 200 pull за 6 часов. Образы postgres, redis и т.д. подтянутся один раз и будут кешироваться.
+
 ### Backend не запускается
 
 ```bash
