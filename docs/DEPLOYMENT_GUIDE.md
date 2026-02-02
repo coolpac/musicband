@@ -305,6 +305,15 @@ cd /opt/musicians
 
 После входа лимит повышается до 200 pull за 6 часов. Образы postgres, redis и т.д. подтянутся один раз и будут кешироваться.
 
+### Prisma: "failed to detect libssl" / "Could not parse schema engine response"
+
+На Alpine (node:20-alpine) в образ добавлены `openssl` и `binaryTargets = ["linux-musl-openssl-3.0.x"]`. Если ошибка остаётся — пересоберите образ без кеша:
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d backend
+```
+
 ### Backend не запускается
 
 ```bash

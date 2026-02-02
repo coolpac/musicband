@@ -3,8 +3,8 @@
 # ============================
 FROM node:20-alpine AS deps
 
-# Native зависимости для sharp и bcrypt
-RUN apk add --no-cache python3 make g++ vips-dev
+# Native зависимости для sharp, bcrypt и Prisma (OpenSSL для linux-musl)
+RUN apk add --no-cache python3 make g++ vips-dev openssl
 
 WORKDIR /app
 
@@ -37,8 +37,8 @@ RUN npm run build
 # ============================
 FROM node:20-alpine AS production
 
-# Runtime зависимости для sharp
-RUN apk add --no-cache vips-dev
+# Runtime зависимости для sharp и Prisma (OpenSSL)
+RUN apk add --no-cache vips-dev openssl
 
 # Безопасность: не root пользователь
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
