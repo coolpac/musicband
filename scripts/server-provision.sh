@@ -252,10 +252,13 @@ log "Server is ready for deployment!"
 PROVISION_SCRIPT
 
 # Copy provision script to server and execute
-log "Uploading provision script..."
+echo ""
+echo "📤 Uploading provision script to server..."
 scp -P "$REMOTE_PORT" ${SSH_KEY:+-i "$SSH_KEY"} /tmp/provision.sh "${REMOTE_USER}@${REMOTE_HOST}:/tmp/provision.sh"
 
-log "Executing provision script on server..."
+echo ""
+echo "⚙️  Executing provision script on server..."
+echo ""
 "${SSH_CMD[@]}" "bash /tmp/provision.sh '$REPO_URL_ESC' '$REMOTE_PATH_ESC' '$DOMAIN_ESC'"
 
 rm -f /tmp/provision.sh
