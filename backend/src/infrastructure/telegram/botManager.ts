@@ -122,7 +122,7 @@ export class BotManager {
       .filter((id) => !Number.isNaN(id));
 
     const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
-    const baseButtons = payload.buttons.length
+    const baseButtons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }> = payload.buttons.length
       ? payload.buttons
       : [{ text: 'Открыть приложение', url: miniAppUrl, kind: 'web_app' }];
 
