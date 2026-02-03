@@ -183,7 +183,7 @@ export default function VotingManagementScreen() {
     toast.success('QR-код скачан');
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (!activeSession) return;
 
     try {
