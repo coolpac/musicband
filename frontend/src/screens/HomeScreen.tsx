@@ -813,14 +813,9 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
 
       <section className="section partners" id="partners">
         <h2 className="section-title">Наши партнеры</h2>
-        {partners.length > 0 && (
-          <span className="partners-badge" aria-hidden>
-            Разработчики
-          </span>
-        )}
         <div className="tile-grid tile-grid--multi partners-grid">
           {partners.length > 0
-            ? partners.map((partner) => {
+            ? partners.map((partner, index) => {
                 const logoProps = getOptimizedImageProps(partner.logoUrl);
                 const content = (
                   <>
@@ -840,6 +835,31 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                     <span className="partner-tile__name">{partner.name}</span>
                   </>
                 );
+                const tile =
+                  partner.link ? (
+                    <a
+                      href={partner.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="tile partner-tile"
+                    >
+                      {content}
+                    </a>
+                  ) : (
+                    <div className="tile partner-tile">
+                      {content}
+                    </div>
+                  );
+                if (index === 0) {
+                  return (
+                    <div key={partner.id} className="partner-first-cell">
+                      <span className="partners-badge" aria-hidden>
+                        Разработчики
+                      </span>
+                      {tile}
+                    </div>
+                  );
+                }
                 return partner.link ? (
                   <a
                     key={partner.id}

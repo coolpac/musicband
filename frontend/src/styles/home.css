@@ -1135,12 +1135,24 @@ a.social-tile:hover {
   align-items: stretch;
 }
 
-/* Бейдж «Разработчики» над областью партнёров (не перекрывает логотипы) */
+/* Первая ячейка: плашка «Разработчики» над первой карточкой партнёра */
+.partner-first-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.partner-first-cell .partners-badge {
+  flex-shrink: 0;
+}
+
+/* Бейдж «Разработчики» над первым партнёром */
 .partners-badge {
   display: inline-block;
   width: fit-content;
-  align-self: center;
-  margin: -4px 0 12px;
+  align-self: flex-start;
+  margin: 0;
   padding: 6px 14px;
   font-size: 11px;
   font-weight: 700;
