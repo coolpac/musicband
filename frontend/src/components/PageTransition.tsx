@@ -9,25 +9,19 @@ interface PageTransitionProps {
 const variants = {
   initial: {
     opacity: 0,
-    x: 10,
-    scale: 0.99,
   },
   animate: {
     opacity: 1,
-    x: 0,
-    scale: 1,
     transition: {
-      duration: 0.4,
-      ease: [0.22, 1, 0.36, 1], // Custom cubic-bezier for a modern "app" feel
+      duration: 0.2,
+      ease: 'easeOut',
     },
   },
   exit: {
     opacity: 0,
-    x: -10,
-    scale: 0.99,
     transition: {
-      duration: 0.3,
-      ease: [0.22, 1, 0.36, 1],
+      duration: 0.1,
+      ease: 'easeIn',
     },
   },
 };

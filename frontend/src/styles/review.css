@@ -1,27 +1,3 @@
-.review-back-btn {
-  position: fixed;
-  top: clamp(64px, 11svh, 107px);
-  left: 0;
-  z-index: 100;
-  background: transparent;
-  border: none;
-  color: var(--white);
-  font-size: 20px;
-  font-family: "Geologica", sans-serif;
-  cursor: pointer;
-  padding: 16px;
-}
-
-.review-back-btn:hover {
-  opacity: 0.8;
-}
-
-@media (min-width: 900px) {
-  .review-back-btn {
-    left: 40px;
-  }
-}
-
 /* Review Form Screen */
 .screen--review-form {
   width: 100vw !important;
@@ -298,29 +274,41 @@
   background: linear-gradient(0deg, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.8) 30%, rgba(0, 0, 0, 0) 100%);
 }
 
+/* Нижний блок: текст и кнопка в одной колонке с общими отступами */
+.review-success-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px;
+  padding-bottom: max(34px, calc(20px + env(safe-area-inset-bottom, 0px)));
+  box-sizing: border-box;
+}
+
 .review-success-note {
-  margin: 0;
-  margin-top: -20px;
+  margin: 0 0 12px;
   font-size: 14px;
   font-weight: 400;
   color: rgba(255, 255, 255, 0.7);
   font-family: "Geologica", sans-serif;
   text-align: center;
   line-height: 1.4;
-  padding: 0 16px;
+  width: 100%;
+  max-width: 400px;
+  box-sizing: border-box;
 }
 
 .review-success-button {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 32px);
+  width: 100%;
   max-width: 400px;
   height: 60px;
-  margin: 0 0 20px;
+  margin: 0;
   border-radius: var(--radius-lg);
-  z-index: 50;
+  box-sizing: border-box;
 }
 
 /* Desktop styles for review success */
@@ -344,13 +332,18 @@
     height: 150px;
   }
 
+  .review-success-bottom {
+    padding-left: 40px;
+    padding-right: 40px;
+    padding-bottom: 30px;
+  }
+
   .review-success-note {
     font-size: 16px;
-    padding: 0 40px;
+    max-width: 500px;
   }
 
   .review-success-button {
     max-width: 500px;
-    margin-bottom: 30px;
   }
 }

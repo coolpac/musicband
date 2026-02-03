@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Toaster } from 'react-hot-toast';
 import TabBar, { AdminTab } from './components/TabBar';
 import AdminTerminalLoader, { MIN_LOADER_DISPLAY_MS } from './components/AdminTerminalLoader';
@@ -9,20 +9,26 @@ import { useTelegramWebApp } from '../telegram/useTelegramWebApp';
 import '../styles/admin.css';
 import '../styles/admin-tabbar.css';
 
-function DelayedContent({
-  delay,
-  children,
-}: {
-  delay: number;
-  children: ReactNode;
-}) {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setReady(true), delay);
-    return () => clearTimeout(t);
-  }, [delay]);
-  if (!ready) return <AdminTerminalLoader />;
-  return <>{children}</>;
+/** Лёгкий спиннер для Suspense при переключении табов (после первого входа) */
+function LightLoader() {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '40vh',
+    }}>
+      <div style={{
+        width: 32,
+        height: 32,
+        border: '3px solid rgba(255,255,255,0.15)',
+        borderTopColor: 'rgba(255,255,255,0.7)',
+        borderRadius: '50%',
+        animation: 'spin .6s linear infinite',
+      }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 }
 
 const DashboardScreen = lazy(() => import('./screens/DashboardScreen'));
@@ -42,6 +48,20 @@ function AdminContent() {
   const [bookingsView, setBookingsView] = useState<BookingsView>('log');
   const { isAuthenticated, loading } = useAdminAuth();
 
+  // Показываем терминал-лоадер только один раз при первом входе
+  const hasBooted = useRef(false);
+  const [booting, setBooting] = useState(!hasBooted.current);
+
+  useEffect(() => {
+    if (hasBooted.current || loading || !isAuthenticated) return;
+    // Первая загрузка — показываем терминал на MIN_LOADER_DISPLAY_MS
+    const t = setTimeout(() => {
+      hasBooted.current = true;
+      setBooting(false);
+    }, MIN_LOADER_DISPLAY_MS);
+    return () => clearTimeout(t);
+  }, [loading, isAuthenticated]);
+
   // Показываем загрузку пока проверяем токен
   if (loading) {
     return <AdminTerminalLoader />;
@@ -52,27 +72,30 @@ function AdminContent() {
     return <LoginScreen />;
   }
 
+  // Первый вход — терминал-лоадер
+  if (booting) {
+    return <AdminTerminalLoader />;
+  }
+
   const goToBookingsLog = () => {
     setBookingsView('log');
     setActiveTab('bookings');
   };
 
-  const renderScreen = () => {
-    const fallback = <AdminTerminalLoader />;
-    const delay = MIN_LOADER_DISPLAY_MS;
+  // После первого входа — лёгкий спиннер для Suspense
+  const fallback = <LightLoader />;
 
+  const renderScreen = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <DelayedContent delay={delay}>
-                <DashboardScreen
-                  onGoToBookings={goToBookingsLog}
-                  onGoToAgents={() => setActiveTab('agents')}
-                  onGoToReviews={() => setActiveTab('reviews')}
-                />
-              </DelayedContent>
+              <DashboardScreen
+                onGoToBookings={goToBookingsLog}
+                onGoToAgents={() => setActiveTab('agents')}
+                onGoToReviews={() => setActiveTab('reviews')}
+              />
             </Suspense>
           </ErrorBoundary>
         );
@@ -81,9 +104,7 @@ function AdminContent() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <DelayedContent delay={delay}>
-                <VotingManagementScreen />
-              </DelayedContent>
+              <VotingManagementScreen />
             </Suspense>
           </ErrorBoundary>
         );
@@ -92,9 +113,7 @@ function AdminContent() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <DelayedContent delay={delay}>
-                <SongsManagementScreen />
-              </DelayedContent>
+              <SongsManagementScreen />
             </Suspense>
           </ErrorBoundary>
         );
@@ -103,17 +122,13 @@ function AdminContent() {
         return bookingsView === 'log' ? (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <DelayedContent delay={delay}>
-                <BookingsLogScreen onGoToCalendar={() => setBookingsView('calendar')} />
-              </DelayedContent>
+              <BookingsLogScreen onGoToCalendar={() => setBookingsView('calendar')} />
             </Suspense>
           </ErrorBoundary>
         ) : (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <DelayedContent delay={delay}>
-                <BookingsManagementScreen onGoToLog={() => setBookingsView('log')} />
-              </DelayedContent>
+              <BookingsManagementScreen onGoToLog={() => setBookingsView('log')} />
             </Suspense>
           </ErrorBoundary>
         );
@@ -122,9 +137,7 @@ function AdminContent() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <DelayedContent delay={delay}>
-                <ContentScreen />
-              </DelayedContent>
+              <ContentScreen />
             </Suspense>
           </ErrorBoundary>
         );
@@ -133,9 +146,7 @@ function AdminContent() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <DelayedContent delay={delay}>
-                <AgentsManagementScreen />
-              </DelayedContent>
+              <AgentsManagementScreen />
             </Suspense>
           </ErrorBoundary>
         );
@@ -144,9 +155,7 @@ function AdminContent() {
         return (
           <ErrorBoundary>
             <Suspense fallback={fallback}>
-              <DelayedContent delay={delay}>
-                <ReviewsManagementScreen />
-              </DelayedContent>
+              <ReviewsManagementScreen />
             </Suspense>
           </ErrorBoundary>
         );

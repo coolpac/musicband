@@ -447,10 +447,6 @@ export default function App() {
       case 'review-form':
         return (
           <ReviewFormScreen
-            onBack={() => {
-              setCurrentScreen('home');
-              window.history.pushState({}, '', '?screen=home');
-            }}
             onSubmit={async (rating, text) => {
               try {
                 await submitReview({ rating, text });
@@ -612,7 +608,7 @@ export default function App() {
         </div>
       )}
       
-      <AnimatePresence mode="popLayout" initial={false}>
+      <AnimatePresence mode="wait" initial={false}>
         <PageTransition key={currentScreen + (currentFormatId || '')} id={currentScreen + (currentFormatId || '')}>
           {renderScreen()}
         </PageTransition>

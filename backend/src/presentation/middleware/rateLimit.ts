@@ -171,10 +171,10 @@ export function createRoleBasedRateLimiter(
  * Готовые rate limiters для разных типов endpoints
  */
 
-// Auth endpoints - строгий лимит (защита от брутфорса)
+// Auth endpoints - лимит против брутфорса, с запасом для повторных попыток
 export const authRateLimiter = createRedisRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 минут
-  max: 5, // 5 попыток входа за 15 минут
+  max: 100, // 100 попыток за 15 минут
   keyGenerator: (req) => {
     const user = (req as any).user;
     return user?.userId || req.ip || 'unknown';
@@ -272,7 +272,7 @@ export const referralRateLimiter = createRedisRateLimiter({
 export const expressRateLimiters = {
   auth: rateLimit({
     windowMs: 15 * 60 * 1000, // 15 минут
-    max: 5,
+    max: 100,
     message: 'Too many authentication attempts. Please try again in 15 minutes.',
     standardHeaders: true,
     legacyHeaders: false,

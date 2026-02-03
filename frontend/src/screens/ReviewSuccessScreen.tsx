@@ -33,24 +33,26 @@ export default function ReviewSuccessScreen({ onBackHome }: ReviewSuccessScreenP
           />
           <div className="review-success-image-gradient review-success-image-gradient--bottom"></div>
         </motion.div>
-        <motion.p
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.5 }}
-          className="review-success-note"
+          className="review-success-bottom"
         >
-          *благодарим за ваше внимание и отзыв
-        </motion.p>
-        <motion.button
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.7 }}
-          className="btn btn-primary review-success-button"
-          onClick={() => { hapticImpact('light'); onBackHome?.(); }}
-          type="button"
-        >
-          На главную
-        </motion.button>
+          <p className="review-success-note">
+            *благодарим за ваше внимание и отзыв
+          </p>
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.7 }}
+            className="btn btn-primary review-success-button"
+            onClick={() => { hapticImpact('light'); onBackHome?.(); }}
+            type="button"
+          >
+            На главную
+          </motion.button>
+        </motion.div>
       </div>
     </main>
   );

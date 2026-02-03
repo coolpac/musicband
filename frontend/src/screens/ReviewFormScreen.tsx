@@ -6,10 +6,9 @@ import '../styles/review.css';
 
 type ReviewFormScreenProps = {
   onSubmit?: (rating: number, text: string) => void;
-  onBack?: () => void;
 };
 
-export default function ReviewFormScreen({ onSubmit, onBack }: ReviewFormScreenProps) {
+export default function ReviewFormScreen({ onSubmit }: ReviewFormScreenProps) {
   const [rating, setRating] = useState(0);
   const [text, setText] = useState('');
 
@@ -41,11 +40,6 @@ export default function ReviewFormScreen({ onSubmit, onBack }: ReviewFormScreenP
 
   return (
     <main className="screen screen--review-form">
-      {onBack && (
-        <button className="review-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-          Назад
-        </button>
-      )}
       <div className="review-form-hero">
         <img alt="" className="review-form-bg-image" src={reviewFormBg} />
       </div>
