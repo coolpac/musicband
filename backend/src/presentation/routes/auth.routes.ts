@@ -41,5 +41,6 @@ router.post(
 router.post('/logout', authenticate(authService), authController.logout.bind(authController));
 
 router.get('/me', authenticate(authService), authController.getCurrentUser.bind(authController));
+router.get('/me/avatar', authenticate(authService), authController.getAvatar.bind(authController));
 
 export default router;

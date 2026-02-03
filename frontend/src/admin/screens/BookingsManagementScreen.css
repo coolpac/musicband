@@ -6,13 +6,18 @@
 
 /* Calendar wrapper — карточка с лёгким фоном (#1E1E1E вместо чистого чёрного) */
 .modern-calendar {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto 24px;
+  box-sizing: border-box;
   background: linear-gradient(160deg, rgba(28, 28, 30, 0.95), rgba(0, 0, 0, 0.6));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 20px;
   padding: 20px;
-  margin-bottom: 24px;
+  overflow: hidden;
+  contain: layout paint;
 }
 
 /* Header: навигация + месяц + «Сегодня» */
@@ -77,9 +82,11 @@
 /* Calendar Grid */
 .calendar-weekdays {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .calendar-weekday {
@@ -94,8 +101,10 @@
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Calendar Day Cell */
@@ -108,13 +117,14 @@
   border-radius: 12px;
   padding: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 60px;
+  min-width: 0;
 }
 
 .calendar-day:hover {
@@ -670,6 +680,13 @@
 }
 
 @media (max-width: 480px) {
+  .modern-calendar {
+    padding: 14px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(16, 16, 18, 0.92);
+  }
+
   .bookings-stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
@@ -691,6 +708,8 @@
     min-height: 44px;
     padding: 4px;
     border-radius: 10px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .calendar-day__number {
@@ -711,5 +730,11 @@
   .legend-dot {
     width: 8px;
     height: 8px;
+  }
+}
+
+@media (hover: none) {
+  .calendar-day:hover {
+    transform: none;
   }
 }

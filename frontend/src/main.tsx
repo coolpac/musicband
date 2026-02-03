@@ -18,10 +18,13 @@ function ClientRoot() {
   const [minLoaderElapsed, setMinLoaderElapsed] = useState(false);
 
   useEffect(() => {
-    if (!isAdminRoute) return;
+    if (isAdminRoute) {
+      if (isInsideTelegram()) initTelegramWebApp();
+      const t = setTimeout(() => setMinLoaderElapsed(true), MIN_LOADER_DISPLAY_MS);
+      return () => clearTimeout(t);
+    }
+    // Основное приложение: сразу сообщаем Telegram ready(), чтобы скрыть сплэш и показать наш лоадер
     if (isInsideTelegram()) initTelegramWebApp();
-    const t = setTimeout(() => setMinLoaderElapsed(true), MIN_LOADER_DISPLAY_MS);
-    return () => clearTimeout(t);
   }, [isAdminRoute]);
 
   if (isAdminRoute) {

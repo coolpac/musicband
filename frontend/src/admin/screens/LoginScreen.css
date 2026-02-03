@@ -148,3 +148,30 @@
 .login-hint a:hover {
   text-decoration: underline;
 }
+
+.login-hint--refresh {
+  margin-top: 20px;
+  line-height: 1.4;
+}
+
+.login-refresh-btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+  background: var(--white);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.login-refresh-btn:hover {
+  opacity: 0.92;
+}
+
+.login-refresh-btn:active {
+  transform: scale(0.98);
+}

@@ -483,9 +483,9 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
         <img alt="Лого" className="request-logo" src={requestLogo} />
         <div className="request-body__scroll">
         <div className="request-form-card">
-          <h1>Форма для заявки</h1>
+          <h1 className="request-form-title request-form-appear">Форма для заявки</h1>
           <div className="request-fields">
-            <div className="request-field">
+            <div className="request-field request-form-appear">
               <label htmlFor="request-full-name">ФИО</label>
               <input
                 className="request-input"
@@ -497,7 +497,7 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 onChange={(event) => setFullName(event.target.value)}
               />
             </div>
-            <div className="request-field">
+            <div className="request-field request-form-appear">
               <label>Тип контакта</label>
               <RequestSelect
                 isOpen={openSelect === 'contact'}
@@ -512,7 +512,7 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 value={contactType}
               />
             </div>
-            <div className="request-field">
+            <div className="request-field request-form-appear">
               <label htmlFor="request-phone">Номер телефона</label>
               <input
                 className="request-input"
@@ -524,7 +524,7 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 onChange={(event) => setPhoneNumber(event.target.value)}
               />
             </div>
-            <div className="request-field">
+            <div className="request-field request-form-appear">
               <label htmlFor="request-city">Город проведения мероприятия</label>
               <input
                 className="request-input"
@@ -536,7 +536,7 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 onChange={(event) => setCity(event.target.value)}
               />
             </div>
-            <div className="request-field">
+            <div className="request-field request-form-appear">
               <label>Откуда узнали?</label>
               <RequestSelect
                 isOpen={openSelect === 'source'}
@@ -554,7 +554,7 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
           </div>
         </div>
         <button
-          className="request-primary request-primary--floating"
+          className="request-primary request-primary--floating request-form-appear request-form-appear--button"
           type="button"
           onClick={handleSubmit}
           disabled={isSubmitting}

@@ -675,6 +675,75 @@
   margin-top: 20px;
 }
 
+/* Плавное современное появление формы (GPU-friendly) */
+@media (prefers-reduced-motion: no-preference) {
+  .request-form-appear {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: request-form-appear 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    will-change: transform, opacity;
+  }
+
+  .request-form-title {
+    animation-delay: 0.06s;
+  }
+
+  .request-fields .request-field:nth-child(1) {
+    animation-delay: 0.14s;
+  }
+
+  .request-fields .request-field:nth-child(2) {
+    animation-delay: 0.20s;
+  }
+
+  .request-fields .request-field:nth-child(3) {
+    animation-delay: 0.26s;
+  }
+
+  .request-fields .request-field:nth-child(4) {
+    animation-delay: 0.32s;
+  }
+
+  .request-fields .request-field:nth-child(5) {
+    animation-delay: 0.38s;
+  }
+
+  .request-form-appear--button {
+    animation-delay: 0.46s;
+    animation-name: request-form-appear-btn;
+  }
+}
+
+@keyframes request-form-appear {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes request-form-appear-btn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .request-form-appear {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .request-day {
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }

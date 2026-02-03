@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import heroLogo from '../assets/figma/downloaded/hero-logo.svg';
 import './AppLoader.css';
 
-const MIN_DISPLAY_MS = 800;
-const MAX_WAIT_MS = 1500;
-const EXIT_ANIMATION_MS = 200;
+/** Минимальное время показа лоадера (чтобы был виден, а не только сплэш Telegram). */
+const MIN_DISPLAY_MS = 1600;
+const MAX_WAIT_MS = 3500;
+const EXIT_ANIMATION_MS = 320;
 const EQUALIZER_BAR_COUNT = 5;
 const EQUALIZER_STAGGER_S = 0.15;
 
@@ -14,12 +15,6 @@ export default function AppLoader({ onReady }: { onReady: () => void }) {
   useEffect(() => {
     const start = performance.now();
     let done = false;
-
-    if (document.readyState === 'complete') {
-      done = true;
-      setIsExiting(true);
-      return;
-    }
 
     const tryFinish = () => {
       if (done) return;
@@ -38,6 +33,7 @@ export default function AppLoader({ onReady }: { onReady: () => void }) {
 
     window.addEventListener('load', onLoad);
 
+    // Всегда ждём минимум MIN_DISPLAY_MS, затем проверяем document ready
     const minTimer = setTimeout(tryFinish, MIN_DISPLAY_MS);
     const maxTimer = setTimeout(() => {
       done = true;
