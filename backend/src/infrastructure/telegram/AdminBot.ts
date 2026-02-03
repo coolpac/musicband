@@ -18,10 +18,20 @@ export class AdminBot {
   }) => Promise<void>;
   private awaitingBroadcastText: Set<number>;
   private awaitingBroadcastButtons: Set<number>;
-  private pendingBroadcasts: Map<number, { text: string; buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }> }>;
+  private awaitingBroadcastMedia: Set<number>;
+  private pendingBroadcasts: Map<
+    number,
+    {
+      text: string;
+      buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
+      includeDefaultButton: boolean;
+      media?: { type: 'photo' | 'video'; fileId: string };
+    }
+  >;
   private onBroadcast?: (payload: {
     text: string;
     buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
+    media?: { type: 'photo' | 'video'; fileId: string };
     onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
   }) => Promise<{ sent: number; failed: number; total: number }>;
 
@@ -51,6 +61,7 @@ export class AdminBot {
     this.onBookingConfirmed = onBookingConfirmed;
     this.awaitingBroadcastText = new Set();
     this.awaitingBroadcastButtons = new Set();
+    this.awaitingBroadcastMedia = new Set();
     this.pendingBroadcasts = new Map();
     this.onBroadcast = onBroadcast;
 
@@ -236,6 +247,8 @@ export class AdminBot {
       const telegramId = msg.from?.id;
       if (!telegramId) return;
       this.awaitingBroadcastText.delete(telegramId);
+      this.awaitingBroadcastButtons.delete(telegramId);
+      this.awaitingBroadcastMedia.delete(telegramId);
       this.pendingBroadcasts.delete(telegramId);
       await this.bot.sendMessage(chatId, 'Рассылка отменена.');
     });
@@ -245,39 +258,32 @@ export class AdminBot {
         const chatId = msg.chat.id;
         const telegramId = msg.from?.id;
         if (!telegramId || !this.isAdmin(telegramId)) return;
-        if (!msg.text || msg.text.startsWith('/')) return;
+        const textContent = msg.text?.trim();
 
-        if (this.awaitingBroadcastText.has(telegramId)) {
-          const text = msg.text.trim();
-          if (!text) return;
+        if (textContent && this.awaitingBroadcastText.has(telegramId)) {
+          this.awaitingBroadcastText.delete(telegramId);
+          this.awaitingBroadcastButtons.delete(telegramId);
+          this.awaitingBroadcastMedia.delete(telegramId);
 
           const existing = this.pendingBroadcasts.get(telegramId);
-          this.awaitingBroadcastText.delete(telegramId);
-          this.pendingBroadcasts.set(telegramId, { text, buttons: existing?.buttons ?? [] });
+          const nextDraft = existing
+            ? {
+                ...existing,
+                text: textContent,
+                includeDefaultButton: existing.includeDefaultButton ?? false,
+              }
+            : { text: textContent, buttons: [], includeDefaultButton: false };
+          this.pendingBroadcasts.set(telegramId, nextDraft);
 
-          await this.bot.sendMessage(
-            chatId,
-            `Текст рассылки принят.\n\n${text}\n\nДобавить кнопки?`,
-            {
-              reply_markup: {
-                inline_keyboard: [
-                  [
-                    { text: '➕ Добавить кнопки', callback_data: 'broadcast_buttons_yes' },
-                    { text: '⏭️ Без кнопок', callback_data: 'broadcast_buttons_skip' },
-                  ],
-                  [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
-                ],
-              },
-            }
-          );
+          await this.sendBroadcastPreview(chatId, telegramId);
           return;
         }
 
-        if (this.awaitingBroadcastButtons.has(telegramId)) {
+        if (this.awaitingBroadcastButtons.has(telegramId) && textContent) {
           const draft = this.pendingBroadcasts.get(telegramId);
           if (!draft) return;
 
-          const parsed = this.parseBroadcastButtons(msg.text);
+          const parsed = this.parseBroadcastButtons(textContent);
           if (parsed.buttons.length === 0) {
             await this.bot.sendMessage(
               chatId,
@@ -287,24 +293,40 @@ export class AdminBot {
           }
 
           this.awaitingBroadcastButtons.delete(telegramId);
-          this.pendingBroadcasts.set(telegramId, { text: draft.text, buttons: parsed.buttons });
+          this.pendingBroadcasts.set(telegramId, { ...draft, buttons: parsed.buttons });
 
-          await this.bot.sendMessage(
-            chatId,
-            this.buildBroadcastPreview(draft.text, parsed.buttons),
-            {
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: '🚀 Отправить', callback_data: 'broadcast_send' }],
-                  [
-                    { text: '✏️ Изменить текст', callback_data: 'broadcast_edit_text' },
-                    { text: '🔁 Изменить кнопки', callback_data: 'broadcast_edit_buttons' },
-                  ],
-                  [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
-                ],
-              },
-            }
-          );
+          await this.sendBroadcastPreview(chatId, telegramId);
+          return;
+        }
+
+        if (this.awaitingBroadcastMedia.has(telegramId)) {
+          const draft = this.pendingBroadcasts.get(telegramId);
+          if (!draft) return;
+
+          if (msg.photo?.length) {
+            const fileId = msg.photo[msg.photo.length - 1].file_id;
+            this.awaitingBroadcastMedia.delete(telegramId);
+            this.pendingBroadcasts.set(telegramId, {
+              ...draft,
+              media: { type: 'photo', fileId },
+            });
+            await this.bot.sendMessage(chatId, '📸 Фото прикреплено.');
+            await this.sendBroadcastPreview(chatId, telegramId);
+            return;
+          }
+
+          if (msg.video) {
+            this.awaitingBroadcastMedia.delete(telegramId);
+            this.pendingBroadcasts.set(telegramId, {
+              ...draft,
+              media: { type: 'video', fileId: msg.video.file_id },
+            });
+            await this.bot.sendMessage(chatId, '🎬 Видео прикреплено.');
+            await this.sendBroadcastPreview(chatId, telegramId);
+            return;
+          }
+
+          await this.bot.sendMessage(chatId, 'Пришлите фото или видео для рассылки.');
         }
       } catch (error) {
         logger.error('Error handling broadcast draft message', { error, chatId: msg.chat.id });
@@ -378,30 +400,46 @@ export class AdminBot {
           return;
         }
 
-        if (data === 'broadcast_buttons_skip') {
+        if (data === 'broadcast_toggle_app') {
           const draft = this.pendingBroadcasts.get(telegramId);
           if (!draft) {
             await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
             return;
           }
-          this.awaitingBroadcastButtons.delete(telegramId);
+          this.pendingBroadcasts.set(telegramId, {
+            ...draft,
+            includeDefaultButton: !draft.includeDefaultButton,
+          });
+          await this.bot.answerCallbackQuery(query.id, {
+            text: draft.includeDefaultButton ? 'Кнопка отключена' : 'Кнопка будет добавлена',
+          });
+          await this.sendBroadcastPreview(chatId, telegramId);
+          return;
+        }
+
+        if (data === 'broadcast_media_prompt') {
+          const draft = this.pendingBroadcasts.get(telegramId);
+          if (!draft) {
+            await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
+            return;
+          }
+          this.awaitingBroadcastMedia.add(telegramId);
           await this.bot.answerCallbackQuery(query.id);
-          await this.bot.sendMessage(
-            chatId,
-            this.buildBroadcastPreview(draft.text, draft.buttons),
-            {
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: '🚀 Отправить', callback_data: 'broadcast_send' }],
-                  [
-                    { text: '✏️ Изменить текст', callback_data: 'broadcast_edit_text' },
-                    { text: '🔁 Изменить кнопки', callback_data: 'broadcast_edit_buttons' },
-                  ],
-                  [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
-                ],
-              },
-            }
-          );
+          await this.bot.sendMessage(chatId, 'Пришлите фото или видео для рассылки (одно вложение).');
+          return;
+        }
+
+        if (data === 'broadcast_media_clear') {
+          const draft = this.pendingBroadcasts.get(telegramId);
+          if (!draft) {
+            await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
+            return;
+          }
+          if (draft.media) {
+            this.pendingBroadcasts.set(telegramId, { ...draft, media: undefined });
+          }
+          await this.bot.answerCallbackQuery(query.id, { text: 'Медиа удалено' });
+          await this.sendBroadcastPreview(chatId, telegramId);
           return;
         }
 
@@ -441,6 +479,14 @@ export class AdminBot {
             return;
           }
 
+          const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+          const finalButtons = [
+            ...draft.buttons,
+            ...(draft.includeDefaultButton
+              ? [{ text: 'Открыть приложение', url: miniAppUrl, kind: 'web_app' as const }]
+              : []),
+          ];
+
           await this.bot.answerCallbackQuery(query.id, { text: 'Запускаю рассылку...' });
           this.pendingBroadcasts.delete(telegramId);
 
@@ -471,7 +517,8 @@ export class AdminBot {
           try {
             result = await this.onBroadcast({
               text: draft.text,
-              buttons: draft.buttons,
+              buttons: finalButtons,
+              media: draft.media,
               onProgress: async (progress) => {
                 lastProgress = progress;
                 if (progress.sent === progress.total) {
@@ -544,14 +591,64 @@ export class AdminBot {
     });
   }
 
-  private buildBroadcastPreview(
-    text: string,
-    buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>
-  ): string {
-    const buttonLines = buttons.length
-      ? buttons.map((button) => `• ${button.text} → ${button.url}${button.kind === 'web_app' ? ' (Mini App)' : ''}`)
-      : ['• Открыть приложение (по умолчанию)'];
-    return `Черновик рассылки:\n\n${text}\n\nКнопки:\n${buttonLines.join('\n')}`;
+  private async sendBroadcastPreview(chatId: number, telegramId: number): Promise<void> {
+    const draft = this.pendingBroadcasts.get(telegramId);
+    if (!draft) return;
+
+    await this.bot.sendMessage(
+      chatId,
+      this.buildBroadcastPreview(draft),
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '🚀 Отправить', callback_data: 'broadcast_send' }],
+            [
+              { text: '✏️ Изменить текст', callback_data: 'broadcast_edit_text' },
+              { text: '➕ Кнопки', callback_data: 'broadcast_buttons_yes' },
+            ],
+            [
+              {
+                text: draft.includeDefaultButton ? '📱 Кнопка Mini App: ВКЛ' : '📱 Кнопка Mini App: ВЫКЛ',
+                callback_data: 'broadcast_toggle_app',
+              },
+            ],
+            [
+              {
+                text: draft.media ? '🗑 Удалить медиа' : '🖼 Прикрепить медиа',
+                callback_data: draft.media ? 'broadcast_media_clear' : 'broadcast_media_prompt',
+              },
+            ],
+            [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
+          ],
+        },
+      }
+    );
+  }
+
+  private buildBroadcastPreview(draft: {
+    text: string;
+    buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
+    includeDefaultButton: boolean;
+    media?: { type: 'photo' | 'video'; fileId: string };
+  }): string {
+    const buttonLines: string[] = [];
+    if (draft.buttons.length) {
+      draft.buttons.forEach((button) =>
+        buttonLines.push(`• ${button.text} → ${button.url}${button.kind === 'web_app' ? ' (Mini App)' : ''}`)
+      );
+    }
+    if (draft.includeDefaultButton) {
+      buttonLines.push('• Открыть приложение (Mini App)');
+    }
+    if (buttonLines.length === 0) {
+      buttonLines.push('• — нет');
+    }
+
+    const mediaLine = draft.media
+      ? `📎 Медиа: ${draft.media.type === 'photo' ? 'Фото' : 'Видео'} прикреплено`
+      : '📎 Медиа не прикреплена';
+
+    return `Черновик рассылки:\n\n${draft.text}\n\nКнопки:\n${buttonLines.join('\n')}\n\n${mediaLine}`;
   }
 
   private parseBroadcastButtons(input: string): {

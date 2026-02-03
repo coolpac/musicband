@@ -107,6 +107,7 @@ export class BotManager {
   async broadcastToUsers(payload: {
     text: string;
     buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
+    media?: { type: 'photo' | 'video'; fileId: string };
     onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
   }): Promise<{ sent: number; failed: number; total: number }> {
     if (!this.userBot) {
@@ -121,25 +122,24 @@ export class BotManager {
       .map((user) => Number(user.telegramId))
       .filter((id) => !Number.isNaN(id));
 
-    const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
-    const baseButtons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }> = payload.buttons.length
-      ? payload.buttons
-      : [{ text: 'Открыть приложение', url: miniAppUrl, kind: 'web_app' }];
+    const baseButtons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }> = payload.buttons;
 
     const inlineRows: Array<Array<{ text: string; url: string; kind: 'url' | 'web_app' }>> = [];
     for (let i = 0; i < baseButtons.length; i += 2) {
       inlineRows.push(baseButtons.slice(i, i + 2));
     }
 
-    const replyMarkup = {
-      inline_keyboard: inlineRows.map((row) =>
-        row.map((button) =>
-          button.kind === 'web_app'
-            ? { text: button.text, web_app: { url: button.url } }
-            : { text: button.text, url: button.url }
-        )
-      ),
-    };
+    const replyMarkup = baseButtons.length
+      ? {
+          inline_keyboard: inlineRows.map((row) =>
+            row.map((button) =>
+              button.kind === 'web_app'
+                ? { text: button.text, web_app: { url: button.url } }
+                : { text: button.text, url: button.url }
+            )
+          ),
+        }
+      : undefined;
 
     let sent = 0;
     let failed = 0;
@@ -151,7 +151,23 @@ export class BotManager {
 
     for (const telegramId of telegramIds) {
       try {
-        await this.userBot.getBot().sendMessage(telegramId, payload.text, { reply_markup: replyMarkup });
+        const bot = this.userBot.getBot();
+        if (payload.media) {
+          const caption = payload.text;
+          if (payload.media.type === 'photo') {
+            await bot.sendPhoto(telegramId, payload.media.fileId, {
+              caption,
+              reply_markup: replyMarkup,
+            });
+          } else {
+            await bot.sendVideo(telegramId, payload.media.fileId, {
+              caption,
+              reply_markup: replyMarkup,
+            });
+          }
+        } else {
+          await bot.sendMessage(telegramId, payload.text, replyMarkup ? { reply_markup: replyMarkup } : undefined);
+        }
         sent++;
       } catch (error: unknown) {
         failed++;

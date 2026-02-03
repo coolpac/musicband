@@ -408,9 +408,9 @@ export default function VotingManagementScreen() {
             </div>
           )}
 
-          {activeSession && (
+          {qrDeepLink && (
             <div className="voting-qr-url">
-              {window.location.origin}/voting?session={activeSession.id}
+              {qrDeepLink}
             </div>
           )}
 
