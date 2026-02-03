@@ -25,8 +25,6 @@ export type AdminAuthState = {
   avatarLetter: string;
   /** Загрузка (проверка токена) */
   loading: boolean;
-  /** Функция логина по telegramId + пароль (для входа из браузера) */
-  login: (telegramId: string, password: string) => Promise<void>;
   /** Функция выхода */
   logout: () => void;
 };
@@ -37,7 +35,6 @@ const defaultState: AdminAuthState = {
   avatarUrl: null,
   avatarLetter: 'А',
   loading: true,
-  login: async () => {},
   logout: () => {},
 };
 
@@ -141,21 +138,6 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     };
   }, [applyUserAndToken]);
 
-  const login = useCallback(async (telegramId: string, password: string) => {
-    const response = await apiPost<{ user: AdminUser; token: string }>('/api/auth/admin/login', {
-      telegramId: Number(telegramId),
-      password,
-    });
-
-    if (response.user.role !== 'admin') {
-      throw new Error('Access denied');
-    }
-
-    setAdminToken(response.token);
-    setUser(response.user);
-    setIsAuthenticated(true);
-  }, []);
-
   const logout = useCallback(() => {
     removeAdminToken();
     setUser(null);
@@ -171,9 +153,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     avatarUrl,
     avatarLetter,
     loading,
-    login,
     logout,
-  }), [isAuthenticated, user, avatarUrl, avatarLetter, loading, login, logout]);
+  }), [isAuthenticated, user, avatarUrl, avatarLetter, loading, logout]);
 
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;
 }

@@ -38,25 +38,7 @@ export type BookingsView = 'log' | 'calendar';
 function AdminContent() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [bookingsView, setBookingsView] = useState<BookingsView>('log');
-  const { isAuthenticated, loading, login } = useAdminAuth();
-  const [loginError, setLoginError] = useState<string | null>(null);
-
-  const handleLogin = async (telegramId: string, password: string) => {
-    setLoginError(null);
-    try {
-      await login(telegramId, password);
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes('Invalid credentials') || error.message.includes('Access denied')) {
-          setLoginError('Неверный Telegram ID или пароль');
-        } else {
-          setLoginError(error.message);
-        }
-      } else {
-        setLoginError('Ошибка авторизации');
-      }
-    }
-  };
+  const { isAuthenticated, loading } = useAdminAuth();
 
   // Показываем загрузку пока проверяем токен
   if (loading) {
@@ -65,7 +47,7 @@ function AdminContent() {
 
   // Не авторизован — показываем логин
   if (!isAuthenticated) {
-    return <LoginScreen onLogin={handleLogin} error={loginError} />;
+    return <LoginScreen />;
   }
 
   const goToBookingsLog = () => {

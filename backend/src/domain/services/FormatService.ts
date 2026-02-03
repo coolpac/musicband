@@ -13,7 +13,14 @@ export class FormatService {
    * Форматы, доступные для выбора при бронировании (status = 'available').
    */
   async getFormatsForBooking() {
-    return this.formatRepository.findAllForBooking();
+    try {
+      return await this.formatRepository.findAllForBooking();
+    } catch (error) {
+      // Fallback: если query с фильтром падает, используем полный список и фильтруем в памяти
+      logger.error('Failed to load formats for booking, falling back to all formats', { error });
+      const formats = await this.formatRepository.findAll();
+      return formats.filter((format) => format.status === 'available');
+    }
   }
 
   async getFormatById(id: string) {
