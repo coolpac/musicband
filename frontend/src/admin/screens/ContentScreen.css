@@ -13,7 +13,7 @@
   background: var(--admin-bg);
   border-bottom: 1px solid var(--admin-border);
   position: sticky;
-  top: clamp(64px, 11svh, 107px);
+  top: calc(56px + env(safe-area-inset-top, 0));
   z-index: 90;
 }
 

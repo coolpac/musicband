@@ -247,6 +247,8 @@
   margin: 0 calc(50% - 50vw);
   width: 100vw;
   overflow: hidden;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .posters-promo .section {
@@ -780,6 +782,8 @@
   width: 100vw;
   padding: 20px 15px 30px;
   background: linear-gradient(180deg, #111111 0%, #707070 52.404%, rgba(17, 17, 17, 0) 100%);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .live-slider {
@@ -860,6 +864,8 @@
   gap: 0;
   margin: 0 calc(50% - 50vw);
   width: 100vw;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Переход «Оставить заявку» → Резиденты по SVG: размытая полоса #2B2B2B (filter17: 509×102, blur 22.6) между секциями. */
@@ -900,6 +906,8 @@
   border-radius: 0;
   overflow: visible;
   z-index: 1;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .residents-container::before {
@@ -1127,6 +1135,24 @@ a.social-tile:hover {
   align-items: stretch;
 }
 
+/* Бейдж «Разработчики» над областью партнёров (не перекрывает логотипы) */
+.partners-badge {
+  display: inline-block;
+  margin: -4px 0 12px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(255, 49, 53, 0.35);
+  white-space: nowrap;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 .partner-tile {
   position: relative;
   display: flex;
@@ -1136,26 +1162,8 @@ a.social-tile:hover {
   text-decoration: none;
   color: var(--white);
   transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-/* Бейдж «Разработчики» у первого партнёра — плашка поверх плитки */
-.partner-tile__badge {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  padding: 4px 12px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #fff;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-  border-radius: 9999px;
-  box-shadow: 0 2px 8px rgba(255, 49, 53, 0.35);
-  white-space: nowrap;
-  pointer-events: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 a.partner-tile:hover {
@@ -1198,6 +1206,8 @@ a.partner-tile:hover {
   line-height: 1.2;
   color: var(--white);
   background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .partner-tile--empty {

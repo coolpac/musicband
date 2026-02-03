@@ -813,18 +813,17 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
 
       <section className="section partners" id="partners">
         <h2 className="section-title">Наши партнеры</h2>
+        {partners.length > 0 && (
+          <span className="partners-badge" aria-hidden>
+            Разработчики
+          </span>
+        )}
         <div className="tile-grid tile-grid--multi partners-grid">
           {partners.length > 0
-            ? partners.map((partner, index) => {
+            ? partners.map((partner) => {
                 const logoProps = getOptimizedImageProps(partner.logoUrl);
-                const isFirst = index === 0;
                 const content = (
                   <>
-                    {isFirst && (
-                      <span className="partner-tile__badge" aria-hidden>
-                        Разработчики
-                      </span>
-                    )}
                     <span className="partner-tile__img-wrap">
                       {logoProps ? (
                         <OptimizedImage
