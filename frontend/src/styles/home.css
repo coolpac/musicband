@@ -19,7 +19,7 @@
   padding-bottom: 24px;
 }
 
-/* Появление хиро при загрузке: каскад fade + translateY, только GPU (transform/opacity). */
+/* Хиро: каркас сразу виден, фото проявляется после загрузки. */
 .hero-media {
   position: relative;
   width: 100vw;
@@ -29,41 +29,6 @@
   overflow: visible;
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);
-  opacity: 0;
-  animation: hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: 0.05s;
-}
-
-.hero-copy {
-  opacity: 0;
-  animation: hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: 0.25s;
-}
-
-.hero .btn {
-  opacity: 0;
-  animation: hero-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  animation-delay: 0.45s;
-}
-
-@keyframes hero-in {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-media,
-  .hero-copy,
-  .hero .btn {
-    opacity: 1;
-    animation: none;
-  }
 }
 
 .hero-photo-frame {
@@ -73,6 +38,7 @@
   border-top-left-radius: inherit;
   border-top-right-radius: inherit;
   z-index: 1;
+  background: radial-gradient(120% 140% at 50% 15%, rgba(255, 255, 255, 0.12) 0%, rgba(10, 10, 10, 0.85) 45%, rgba(3, 3, 3, 1) 100%);
 }
 
 .hero-photo {
@@ -80,6 +46,12 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.hero--ready .hero-photo {
+  opacity: 1;
 }
 
 .hero-blur {

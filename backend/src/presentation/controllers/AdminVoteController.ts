@@ -93,6 +93,9 @@ export class AdminVoteController {
       });
 
       // Генерируем QR-код и deep link для сессии
+      // QR ведёт на t.me/bot?start=vote_SESSION — пользователь сначала попадает в бота,
+      // бот сохраняет sessionId в Redis и отправляет web_app кнопку,
+      // Mini App проверяет pending session и открывает голосование
       const botUsername = process.env.TELEGRAM_USER_BOT_USERNAME || 'your_bot';
       const qrData = await generateVotingSessionQR(session.id, botUsername);
 
@@ -127,7 +130,7 @@ export class AdminVoteController {
         return;
       }
 
-      // Генерируем QR-код
+      // Генерируем QR-код (ведёт на бота: t.me/bot?start=vote_SESSION)
       const botUsername = process.env.TELEGRAM_USER_BOT_USERNAME || 'your_bot';
       const qrData = await generateVotingSessionQR(session.id, botUsername);
 

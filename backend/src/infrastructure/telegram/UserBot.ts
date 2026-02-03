@@ -1,6 +1,7 @@
 import TelegramBot, { Message, CallbackQuery } from 'node-telegram-bot-api';
 import { logger } from '../../shared/utils/logger';
 import { ReferralService } from '../../domain/services/ReferralService';
+import { redis } from '../../config/redis';
 
 export class UserBot {
   private bot: TelegramBot;
@@ -104,22 +105,33 @@ export class UserBot {
 
   /**
    * Обработка deep link голосования vote_{sessionId}
+   *
+   * Стратегия: сохраняем pending vote session в Redis, затем отправляем web_app кнопку.
+   * При открытии Mini App фронтенд проверяет pending session через API.
+   *
+   * ВАЖНО: web_app кнопка НЕ поддерживает передачу параметров через URL query string.
+   * Telegram игнорирует ?sessionId=... в URL кнопки web_app.
    */
   private async handleVotingDeepLink(chatId: number, sessionId: string): Promise<void> {
     try {
       const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
-      // startapp параметр передаётся в Mini App как initDataUnsafe.start_param
-      const votingUrl = `${miniAppUrl}?startapp=vote_${sessionId}`;
+
+      // Сохраняем pending vote session в Redis (TTL 1 час)
+      // Ключ по chatId (telegramId), чтобы Mini App мог получить sessionId
+      const redisKey = `pending_vote:${chatId}`;
+      await redis.setex(redisKey, 3600, sessionId); // 1 час TTL
+
+      logger.info('Saved pending vote session', { chatId, sessionId, redisKey });
 
       await this.bot.sendMessage(
         chatId,
-        'Голосование за песню! Нажмите кнопку ниже, чтобы проголосовать:',
+        '🎵 Голосование за песню!\n\nНажмите кнопку ниже, чтобы проголосовать:',
         {
           reply_markup: {
             inline_keyboard: [[
               {
                 text: '🎵 Голосовать',
-                web_app: { url: votingUrl },
+                web_app: { url: miniAppUrl },
               },
             ]],
           },

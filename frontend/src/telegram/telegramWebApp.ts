@@ -103,6 +103,12 @@ export function getStartParam(): string | null {
   return getTelegramWebApp()?.initDataUnsafe?.start_param ?? null;
 }
 
+/** Telegram user ID из initDataUnsafe (для проверки pending vote session). */
+export function getTelegramUserId(): number | null {
+  const user = getTelegramWebApp()?.initDataUnsafe?.user;
+  return user?.id ?? null;
+}
+
 /** Данные пользователя из initDataUnsafe (только для префилла UI; на бэке проверять initData). */
 export function getTelegramUser(): { firstName: string; lastName?: string; username?: string; fullName: string } | null {
   const user = getTelegramWebApp()?.initDataUnsafe?.user;

@@ -48,6 +48,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
   const [partners, setPartners] = useState<Partner[]>([]);
   const [isPromoPlaying, setIsPromoPlaying] = useState(false);
   const [isLivePlaying, setIsLivePlaying] = useState(false);
+  const [heroLoaded, setHeroLoaded] = useState(false);
 
   const whySlider = useSnapSlider({
     itemCount: whyMobileSlides.length,
@@ -75,6 +76,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
   const desktopSwipeStateRef = useRef({ startX: 0, startIndex: 0, active: false });
   const promoVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const liveVideoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const heroImageRef = useRef<HTMLImageElement | null>(null);
 
   const handleWhyScrollWithStrip = useCallback(() => {
     whySlider.handleScroll();
@@ -203,6 +205,31 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
   }, []);
 
   useEffect(() => {
+    const img = heroImageRef.current;
+    if (img?.complete) {
+      setHeroLoaded(true);
+      return;
+    }
+
+    if (!img) return;
+
+    const handleReady = () => setHeroLoaded(true);
+    img.addEventListener('load', handleReady);
+    img.addEventListener('error', handleReady);
+
+    return () => {
+      img.removeEventListener('load', handleReady);
+      img.removeEventListener('error', handleReady);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (heroLoaded) return;
+    const fallback = window.setTimeout(() => setHeroLoaded(true), 900);
+    return () => window.clearTimeout(fallback);
+  }, [heroLoaded]);
+
+  useEffect(() => {
     const controller = new AbortController();
 
     const loadData = async () => {
@@ -247,10 +274,24 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
 
   return (
     <main className="screen screen--home">
-      <header className="hero" id="home">
+      <header className={`hero${heroLoaded ? ' hero--ready' : ''}`} id="home">
         <div className="hero-media">
           <div className="hero-photo-frame">
-            <img alt="Группа" className="hero-photo" src={heroImage} width={1280} height={720} fetchPriority="high" loading="eager" />
+            <img
+              alt="Группа"
+              className="hero-photo"
+              src={heroImage}
+              width={1280}
+              height={720}
+              fetchPriority="high"
+              loading="eager"
+              decoding="async"
+              ref={(node) => {
+                heroImageRef.current = node;
+              }}
+              onLoad={() => setHeroLoaded(true)}
+              onError={() => setHeroLoaded(true)}
+            />
           </div>
           <div aria-hidden="true" className="hero-blur" />
           <img alt="" className="hero-vector-group" src={heroVectorGroup} width={415} height={147} />

@@ -22,5 +22,7 @@ const publicVoteController = new PublicVoteController(voteService, songService);
 // Публичные маршруты (не требуют авторизации) с rate limiting
 router.get('/session/:sessionId', publicApiRateLimiter, publicVoteController.getSessionInfo.bind(publicVoteController));
 router.get('/active', publicApiRateLimiter, publicVoteController.getActiveSession.bind(publicVoteController));
+// Получить pending vote session (сохраняется ботом при /start vote_SESSION)
+router.get('/pending/:telegramId', publicApiRateLimiter, publicVoteController.getPendingSession.bind(publicVoteController));
 
 export default router;

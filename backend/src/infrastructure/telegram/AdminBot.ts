@@ -34,6 +34,21 @@ export class AdminBot {
     media?: { type: 'photo' | 'video'; fileId: string };
     onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
   }) => Promise<{ sent: number; failed: number; total: number }>;
+  private chatsWithKeyboard: Set<number>;
+
+  private static readonly BUTTON_LABELS = {
+    adminPanel: '🔗 Админка',
+    stats: '📊 Статистика',
+    broadcast: '🗣️ Рассылка',
+    refreshAdmins: '🔄 Обновить админов',
+    help: 'ℹ️ Помощь',
+  } as const;
+
+  private static readonly KEYBOARD_LAYOUT: string[][] = [
+    [AdminBot.BUTTON_LABELS.adminPanel, AdminBot.BUTTON_LABELS.stats],
+    [AdminBot.BUTTON_LABELS.broadcast, AdminBot.BUTTON_LABELS.refreshAdmins],
+    [AdminBot.BUTTON_LABELS.help],
+  ];
 
   /** Интервал перезагрузки списка админов из БД (мс). После UPDATE в БД новые админы подхватятся без рестарта. */
   private static readonly ADMIN_RELOAD_INTERVAL_MS = 60_000;
@@ -64,6 +79,7 @@ export class AdminBot {
     this.awaitingBroadcastMedia = new Set();
     this.pendingBroadcasts = new Map();
     this.onBroadcast = onBroadcast;
+    this.chatsWithKeyboard = new Set();
 
     this.loadAdmins();
     setInterval(() => this.loadAdmins(), AdminBot.ADMIN_RELOAD_INTERVAL_MS);
@@ -122,27 +138,8 @@ export class AdminBot {
           return;
         }
 
-        const adminUrl = `${process.env.ADMIN_PANEL_URL || 'https://your-domain.com/admin'}`;
-
-        await this.bot.sendMessage(
-          chatId,
-          '🔐 Админ-панель\n\n' +
-            'Используйте ссылку ниже для входа в админ-панель:\n\n' +
-            `${adminUrl}\n\n` +
-            'Или используйте команду /admin для получения ссылки.',
-          {
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: '🔗 Открыть админ-панель',
-                    web_app: { url: adminUrl },
-                  },
-                ],
-              ],
-            },
-          }
-        );
+        await this.sendAdminMenu(chatId);
+        await this.sendAdminPanelLink(chatId);
       } catch (error) {
         logger.error('Error handling /start command', { error, chatId: msg.chat.id });
       }
@@ -159,20 +156,8 @@ export class AdminBot {
           return;
         }
 
-        const adminUrl = `${process.env.ADMIN_PANEL_URL || 'https://your-domain.com/admin'}`;
-
-        await this.bot.sendMessage(chatId, `🔗 Ссылка на админ-панель:\n\n${adminUrl}`, {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                {
-                  text: '🔗 Открыть админ-панель',
-                  web_app: { url: adminUrl },
-                },
-              ],
-            ],
-          },
-        });
+        await this.sendAdminMenu(chatId);
+        await this.sendAdminPanelLink(chatId, { compact: true });
       } catch (error) {
         logger.error('Error handling /admin command', { error, chatId: msg.chat.id });
       }
@@ -190,18 +175,7 @@ export class AdminBot {
         }
 
         // Получаем статистику
-        const stats = await this.bookingRepository.getStats();
-
-        const message =
-          '📊 Статистика бронирований:\n\n' +
-          `Всего: ${stats.total}\n` +
-          `✅ Подтверждено: ${stats.confirmed}\n` +
-          `⏳ Ожидает: ${stats.pending}\n` +
-          `❌ Отменено: ${stats.cancelled}\n` +
-          `💰 Общий доход: ${stats.totalIncome.toFixed(2)} руб.\n` +
-          `📈 Конверсия: ${stats.conversionRate.toFixed(1)}%`;
-
-        await this.bot.sendMessage(chatId, message);
+        await this.sendStatsMessage(chatId);
       } catch (error) {
         logger.error('Error handling /stats command', { error, chatId: msg.chat.id });
       }
@@ -217,26 +191,7 @@ export class AdminBot {
           return;
         }
 
-        this.awaitingBroadcastText.add(telegramId);
-        this.awaitingBroadcastButtons.delete(telegramId);
-        this.pendingBroadcasts.delete(telegramId);
-        await this.bot.sendMessage(
-          chatId,
-          '🗣️ Рассылка всем пользователям\n\n' +
-            'Отправьте текст сообщения одним сообщением.\n' +
-            'После текста можно добавить кнопки (например, упоминание пользователя).\n\n' +
-            'Формат кнопок:\n' +
-            'Текст | ссылка\n' +
-            'Например:\n' +
-            'Написать @user | https://t.me/user\n' +
-            'Упомянуть по ID | tg://user?id=123456789\n' +
-            'Профиль | user:123456789',
-          {
-            reply_markup: {
-              inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }]],
-            },
-          }
-        );
+        await this.initiateBroadcastFlow(chatId, telegramId);
       } catch (error) {
         logger.error('Error handling /broadcast command', { error, chatId: msg.chat.id });
       }
@@ -328,6 +283,43 @@ export class AdminBot {
 
           await this.bot.sendMessage(chatId, 'Пришлите фото или видео для рассылки.');
         }
+
+        if (!textContent) return;
+        if (textContent.startsWith('/')) return;
+
+        if (textContent === AdminBot.BUTTON_LABELS.adminPanel) {
+          await this.sendAdminPanelLink(chatId, { compact: true });
+          return;
+        }
+
+        if (textContent === AdminBot.BUTTON_LABELS.stats) {
+          await this.sendStatsMessage(chatId);
+          return;
+        }
+
+        if (textContent === AdminBot.BUTTON_LABELS.broadcast) {
+          await this.initiateBroadcastFlow(chatId, telegramId);
+          return;
+        }
+
+        if (textContent === AdminBot.BUTTON_LABELS.refreshAdmins) {
+          try {
+            await this.loadAdmins();
+            await this.bot.sendMessage(
+              chatId,
+              `✅ Список админов обновлён.\nВсего админов: ${this.adminTelegramIds.size}`
+            );
+          } catch (error) {
+            logger.error('Error reloading admins manually', { error });
+            await this.bot.sendMessage(chatId, '⚠️ Не получилось обновить список админов.');
+          }
+          return;
+        }
+
+        if (textContent === AdminBot.BUTTON_LABELS.help) {
+          await this.sendHelpMessage(chatId);
+          return;
+        }
       } catch (error) {
         logger.error('Error handling broadcast draft message', { error, chatId: msg.chat.id });
       }
@@ -336,15 +328,7 @@ export class AdminBot {
     // Команда /help
     this.bot.onText(/\/help/, async (msg) => {
       const chatId = msg.chat.id;
-      await this.bot.sendMessage(
-        chatId,
-        '🔐 Админ-команды:\n\n' +
-          '/start - Получить ссылку на админ-панель\n' +
-          '/admin - Открыть админ-панель\n' +
-          '/stats - Статистика бронирований\n' +
-          '/broadcast - Рассылка всем пользователям\n' +
-          '/help - Показать это сообщение'
-      );
+      await this.sendHelpMessage(chatId);
     });
   }
 
@@ -366,7 +350,7 @@ export class AdminBot {
         const data = query.data;
 
         if (data === 'open_admin_panel') {
-          const adminUrl = `${process.env.ADMIN_PANEL_URL || 'https://your-domain.com/admin'}`;
+          const adminUrl = this.getAdminPanelUrl();
           await this.bot.answerCallbackQuery(query.id);
           await this.bot.sendMessage(chatId, `🔗 ${adminUrl}`);
         }
@@ -479,7 +463,7 @@ export class AdminBot {
             return;
           }
 
-          const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+          const miniAppUrl = this.getMiniAppUrl();
           const finalButtons = [
             ...draft.buttons,
             ...(draft.includeDefaultButton
@@ -678,7 +662,7 @@ export class AdminBot {
     const value = rawUrl.trim();
     if (!value) return null;
 
-    const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+    const miniAppUrl = this.getMiniAppUrl();
 
     if (value.startsWith('app:') || value.startsWith('webapp:')) {
       const suffix = value.replace(/^app:|^webapp:/, '').trim();
@@ -716,6 +700,126 @@ export class AdminBot {
     }
 
     return null;
+  }
+
+  private getAdminPanelUrl(): string {
+    return process.env.ADMIN_PANEL_URL || 'https://your-domain.com/admin';
+  }
+
+  private buildAdminBookingUrl(bookingId: string): string {
+    const base = this.getAdminPanelUrl().replace(/\/$/, '');
+    return `${base}/bookings/${bookingId}`;
+  }
+
+  private getMiniAppUrl(): string {
+    return process.env.MINI_APP_URL || 'https://your-domain.com';
+  }
+
+  private getAdminKeyboardMarkup(): TelegramBot.ReplyKeyboardMarkup {
+    const keyboard: TelegramBot.KeyboardButton[][] = AdminBot.KEYBOARD_LAYOUT.map((row) =>
+      row.map((text) => ({ text }))
+    );
+    return {
+      keyboard,
+      resize_keyboard: true,
+      input_field_placeholder: 'Выберите действие…',
+    };
+  }
+
+  private async sendAdminMenu(chatId: number, { force = false } = {}): Promise<void> {
+    if (!force && this.chatsWithKeyboard.has(chatId)) return;
+    await this.bot.sendMessage(
+      chatId,
+      '📋 Главное меню доступно. Выберите действие на клавиатуре ниже.',
+      {
+        reply_markup: this.getAdminKeyboardMarkup(),
+        disable_web_page_preview: true,
+      }
+    );
+    this.chatsWithKeyboard.add(chatId);
+  }
+
+  private async sendAdminPanelLink(chatId: number, { compact = false } = {}): Promise<void> {
+    const adminUrl = this.getAdminPanelUrl();
+    const message = compact
+      ? `🔗 Ссылка на админ-панель:\n${adminUrl}`
+      : '🔐 Админ-панель\n\n' +
+        'Используйте ссылку ниже для входа в админ-панель:\n\n' +
+        `${adminUrl}\n\n` +
+        'Или используйте команду /admin для получения ссылки.';
+
+    await this.bot.sendMessage(chatId, message, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: '🔗 Открыть админ-панель',
+              web_app: { url: adminUrl },
+            },
+          ],
+        ],
+      },
+      disable_web_page_preview: true,
+    });
+  }
+
+  private async sendStatsMessage(chatId: number): Promise<void> {
+    const stats = await this.bookingRepository.getStats();
+
+    const message =
+      '📊 Статистика бронирований:\n\n' +
+      `Всего: ${stats.total}\n` +
+      `✅ Подтверждено: ${stats.confirmed}\n` +
+      `⏳ Ожидает: ${stats.pending}\n` +
+      `❌ Отменено: ${stats.cancelled}\n` +
+      `💰 Общий доход: ${stats.totalIncome.toFixed(2)} руб.\n` +
+      `📈 Конверсия: ${stats.conversionRate.toFixed(1)}%`;
+
+    await this.bot.sendMessage(chatId, message, {
+      reply_markup: this.getAdminKeyboardMarkup(),
+    });
+    this.chatsWithKeyboard.add(chatId);
+  }
+
+  private async initiateBroadcastFlow(chatId: number, telegramId: number): Promise<void> {
+    this.awaitingBroadcastText.add(telegramId);
+    this.awaitingBroadcastButtons.delete(telegramId);
+    this.awaitingBroadcastMedia.delete(telegramId);
+    this.pendingBroadcasts.delete(telegramId);
+
+    await this.bot.sendMessage(
+      chatId,
+      '🗣️ Рассылка всем пользователям\n\n' +
+        'Отправьте текст сообщения одним сообщением.\n' +
+        'После текста можно добавить кнопки (например, упоминание пользователя).\n\n' +
+        'Формат кнопок:\n' +
+        'Текст | ссылка\n' +
+        'Например:\n' +
+        'Написать @user | https://t.me/user\n' +
+        'Упомянуть по ID | tg://user?id=123456789\n' +
+        'Профиль | user:123456789',
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }]],
+        },
+      }
+    );
+  }
+
+  private async sendHelpMessage(chatId: number): Promise<void> {
+    await this.bot.sendMessage(
+      chatId,
+      '🔐 Админ-команды:\n\n' +
+        '/start - Получить ссылку на админ-панель\n' +
+        '/admin - Открыть админ-панель\n' +
+        '/stats - Статистика бронирований\n' +
+        '/broadcast - Рассылка всем пользователям\n' +
+        '/help - Показать это сообщение',
+      {
+        reply_markup: this.getAdminKeyboardMarkup(),
+      }
+    );
+    this.chatsWithKeyboard.add(chatId);
   }
 
   /**
@@ -801,7 +905,7 @@ export class AdminBot {
                   {
                     text: '🔗 Открыть админ-панель',
                     web_app: {
-                      url: `${process.env.ADMIN_PANEL_URL || 'https://your-domain.com/admin'}/bookings/${bookingData.id}`,
+                      url: this.buildAdminBookingUrl(bookingData.id),
                     },
                   },
                 ],

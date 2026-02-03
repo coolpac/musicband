@@ -61,30 +61,56 @@ export async function generateQRCodeBuffer(
 }
 
 /**
- * Генерация deep link для Telegram Mini App
+ * Генерация deep link для Telegram бота (команда /start)
+ * Формат: https://t.me/{bot_username}?start={start_param}
  */
-export function generateTelegramDeepLink(
+export function generateTelegramBotDeepLink(
   botUsername: string,
   startParam: string
 ): string {
-  // Формат: https://t.me/{bot_username}?start={start_param}
   return `https://t.me/${botUsername}?start=${startParam}`;
 }
 
 /**
+ * Генерация direct link для Telegram Mini App с параметрами
+ * Формат: https://t.me/{bot_username}/{app_name}?startapp={start_param}
+ *
+ * ВАЖНО: Только этот формат передаёт параметры в Mini App через start_param!
+ * web_app кнопки НЕ поддерживают передачу параметров через URL query string.
+ */
+export function generateTelegramMiniAppDirectLink(
+  botUsername: string,
+  appName: string,
+  startParam: string
+): string {
+  return `https://t.me/${botUsername}/${appName}?startapp=${startParam}`;
+}
+
+/**
  * Генерация QR-кода для сессии голосования
+ *
+ * Если указан miniAppName — генерирует direct link (t.me/bot/app?startapp=...)
+ * который сразу открывает Mini App с параметрами.
+ *
+ * Если miniAppName не указан — генерирует bot deep link (t.me/bot?start=...)
+ * который открывает чат с ботом и отправляет команду /start.
  */
 export async function generateVotingSessionQR(
   sessionId: string,
   botUsername: string,
-  options: QRCodeOptions = {}
+  options: QRCodeOptions = {},
+  miniAppName?: string
 ): Promise<{
   qrCodeDataURL: string;
   deepLink: string;
   qrCodeBuffer?: Buffer;
 }> {
   const startParam = `vote_${sessionId}`;
-  const deepLink = generateTelegramDeepLink(botUsername, startParam);
+
+  // Предпочитаем direct link если есть имя Mini App
+  const deepLink = miniAppName
+    ? generateTelegramMiniAppDirectLink(botUsername, miniAppName, startParam)
+    : generateTelegramBotDeepLink(botUsername, startParam);
 
   const qrCodeDataURL = await generateQRCodeDataURL(deepLink, options);
   const qrCodeBuffer = await generateQRCodeBuffer(deepLink, options);

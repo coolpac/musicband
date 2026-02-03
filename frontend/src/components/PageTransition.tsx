@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 
 interface PageTransitionProps {
   children: ReactNode;
@@ -32,11 +32,18 @@ const variants = {
   },
 };
 
+let hasShownInitial = false;
+
 export const PageTransition = ({ children, id }: PageTransitionProps) => {
+  const initialState = hasShownInitial ? 'initial' : false;
+  useEffect(() => {
+    hasShownInitial = true;
+  }, []);
+
   return (
     <motion.div
       key={id}
-      initial="initial"
+      initial={initialState}
       animate="animate"
       exit="exit"
       variants={variants}

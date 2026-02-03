@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
-import { hapticImpact, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam } from './telegram/telegramWebApp';
+import { hapticImpact, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
 import { castVote } from './services/voteService';
 import { submitReview } from './services/reviewService';
@@ -142,20 +142,8 @@ export default function App() {
     };
   }, []);
 
-  // Deep link vote_{sessionId}: парсим start_param или URL и запрашиваем статус сессии
-  useEffect(() => {
-    const startParam = getStartParam();
-    const urlSessionId = new URLSearchParams(window.location.search).get('sessionId');
-
-    let sessionId: string | null = null;
-    if (startParam && startParam.startsWith('vote_')) {
-      sessionId = startParam.substring(5);
-    } else if (urlSessionId) {
-      sessionId = urlSessionId;
-    }
-
-    if (!sessionId) return;
-
+  // Загрузить сессию голосования по sessionId и перейти на нужный экран
+  const loadVotingSession = (sessionId: string) => {
     setVotingSessionId(sessionId);
 
     const base = import.meta.env.VITE_API_URL || '';
@@ -183,6 +171,42 @@ export default function App() {
       .catch((err) => {
         console.error('Failed to load voting session:', err);
       });
+  };
+
+  // Deep link vote_{sessionId}: парсим start_param, URL или pending session из Redis
+  useEffect(() => {
+    const startParam = getStartParam();
+    const urlSessionId = new URLSearchParams(window.location.search).get('sessionId');
+
+    // 1. Проверяем start_param (direct link t.me/bot/app?startapp=vote_SESSION)
+    if (startParam && startParam.startsWith('vote_')) {
+      const sessionId = startParam.substring(5);
+      loadVotingSession(sessionId);
+      return;
+    }
+
+    // 2. Проверяем URL параметр sessionId
+    if (urlSessionId) {
+      loadVotingSession(urlSessionId);
+      return;
+    }
+
+    // 3. Проверяем pending session в Redis (сохраняется ботом при /start vote_SESSION)
+    const telegramId = getTelegramUserId();
+    if (telegramId) {
+      const base = import.meta.env.VITE_API_URL || '';
+      fetch(`${base}/api/public/vote/pending/${telegramId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.data.sessionId) {
+            console.log('Found pending vote session:', data.data.sessionId);
+            loadVotingSession(data.data.sessionId);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to check pending vote session:', err);
+        });
+    }
   }, []);
 
   // Socket.io: live-обновления результатов и реакция на завершение голосования (только на экранах voting / voting-results)

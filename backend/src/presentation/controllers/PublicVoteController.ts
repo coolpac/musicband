@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { VoteService } from '../../domain/services/VoteService';
 import { SongService } from '../../domain/services/SongService';
+import { redis } from '../../config/redis';
+import { logger } from '../../shared/utils/logger';
 
 /**
  * Публичный контроллер для страницы голосования в Mini App
@@ -136,6 +138,48 @@ export class PublicVoteController {
             totalVotes: results.totalVotes,
           },
         },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/public/vote/pending/:telegramId
+   * Получить pending vote session для пользователя (сохраняется ботом при /start vote_SESSION).
+   * Используется для передачи sessionId в Mini App, т.к. web_app кнопка не поддерживает параметры.
+   */
+  async getPendingSession(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { telegramId } = req.params;
+
+      if (!telegramId) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'telegramId is required', code: 'BAD_REQUEST' },
+        });
+        return;
+      }
+
+      const redisKey = `pending_vote:${telegramId}`;
+      const sessionId = await redis.get(redisKey);
+
+      if (!sessionId) {
+        res.json({
+          success: true,
+          data: { sessionId: null },
+        });
+        return;
+      }
+
+      // Удаляем pending session после получения (one-time use)
+      await redis.del(redisKey);
+
+      logger.info('Pending vote session retrieved and cleared', { telegramId, sessionId });
+
+      res.json({
+        success: true,
+        data: { sessionId },
       });
     } catch (error) {
       next(error);
