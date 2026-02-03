@@ -58,7 +58,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-musicians}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-musicians_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-musicians}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-musicians_db}?connection_limit=10&connect_timeout=15
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}

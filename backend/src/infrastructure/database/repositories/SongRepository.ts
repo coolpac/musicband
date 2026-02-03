@@ -84,31 +84,42 @@ export class PrismaSongRepository implements ISongRepository {
   }
 
   async create(data: CreateSongData): Promise<Song> {
+    const createData: Record<string, unknown> = {
+      title: data.title,
+      artist: data.artist,
+      isActive: data.isActive || false,
+      orderIndex: data.orderIndex || 0,
+    };
+    
+    if (data.coverUrl !== undefined && data.coverUrl !== '') {
+      createData.coverUrl = data.coverUrl;
+    }
+    if (data.artistImageUrl !== undefined && data.artistImageUrl !== '') {
+      createData.artistImageUrl = data.artistImageUrl;
+    }
+    if (data.lyrics !== undefined) {
+      createData.lyrics = data.lyrics;
+    }
+
     return this.client.song.create({
-      data: {
-        title: data.title,
-        artist: data.artist,
-        coverUrl: data.coverUrl,
-        artistImageUrl: data.artistImageUrl,
-        lyrics: data.lyrics,
-        isActive: data.isActive || false,
-        orderIndex: data.orderIndex || 0,
-      },
+      data: createData as any,
     });
   }
 
   async update(id: string, data: UpdateSongData): Promise<Song> {
+    const updateData: Record<string, unknown> = {};
+    
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.artist !== undefined) updateData.artist = data.artist;
+    if (data.coverUrl !== undefined) updateData.coverUrl = data.coverUrl;
+    if (data.artistImageUrl !== undefined) updateData.artistImageUrl = data.artistImageUrl;
+    if (data.lyrics !== undefined) updateData.lyrics = data.lyrics;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.orderIndex !== undefined) updateData.orderIndex = data.orderIndex;
+
     return this.client.song.update({
       where: { id },
-      data: {
-        title: data.title,
-        artist: data.artist,
-        coverUrl: data.coverUrl,
-        artistImageUrl: data.artistImageUrl,
-        lyrics: data.lyrics,
-        isActive: data.isActive,
-        orderIndex: data.orderIndex,
-      },
+      data: updateData,
     });
   }
 
@@ -121,19 +132,21 @@ export class PrismaSongRepository implements ISongRepository {
       return;
     }
 
+    const updateData: Record<string, unknown> = {};
+    
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.artist !== undefined) updateData.artist = data.artist;
+    if (data.coverUrl !== undefined) updateData.coverUrl = data.coverUrl;
+    if (data.artistImageUrl !== undefined) updateData.artistImageUrl = data.artistImageUrl;
+    if (data.lyrics !== undefined) updateData.lyrics = data.lyrics;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.orderIndex !== undefined) updateData.orderIndex = data.orderIndex;
+
     await this.client.song.updateMany({
       where: {
         id: { in: ids },
       },
-      data: {
-        title: data.title,
-        artist: data.artist,
-        coverUrl: data.coverUrl,
-        artistImageUrl: data.artistImageUrl,
-        lyrics: data.lyrics,
-        isActive: data.isActive,
-        orderIndex: data.orderIndex,
-      },
+      data: updateData,
     });
   }
 

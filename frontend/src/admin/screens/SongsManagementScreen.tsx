@@ -173,12 +173,20 @@ export default function SongsManagementScreen() {
     setIsLoading(true);
     try {
       const data = await getTracks();
-      // Сортируем по orderIndex
-      const sorted = [...data].sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+      // Сортируем по orderIndex и нормализуем данные (на случай если artistImageUrl отсутствует)
+      const sorted = [...data]
+        .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
+        .map((song) => ({
+          ...song,
+          artistImageUrl: song.artistImageUrl || undefined,
+          coverUrl: song.coverUrl || undefined,
+          lyrics: song.lyrics || '',
+        }));
       setSongs(sorted);
     } catch (error) {
       console.error('Error loading songs:', error);
-      toast.error('Не удалось загрузить песни');
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      toast.error(`Не удалось загрузить песни: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -243,11 +251,11 @@ export default function SongsManagementScreen() {
     setFormData({
       title: song.title,
       artist: song.artist,
-      coverUrl: song.coverUrl,
-      artistImageUrl: song.artistImageUrl,
-      lyrics: song.lyrics,
+      coverUrl: song.coverUrl || '',
+      artistImageUrl: song.artistImageUrl || '',
+      lyrics: song.lyrics || '',
       isActive: song.isActive,
-      orderIndex: song.orderIndex,
+      orderIndex: song.orderIndex || 0,
     });
     setShowModal(true);
   };
@@ -297,11 +305,27 @@ export default function SongsManagementScreen() {
 
     setIsSaving(true);
     try {
+      // Подготавливаем данные для отправки (убираем пустые строки)
+      const submitData: TrackInput = {
+        title: formData.title,
+        artist: formData.artist,
+        lyrics: formData.lyrics || undefined,
+        isActive: formData.isActive,
+        orderIndex: formData.orderIndex,
+      };
+      
+      if (formData.coverUrl) {
+        submitData.coverUrl = formData.coverUrl;
+      }
+      if (formData.artistImageUrl) {
+        submitData.artistImageUrl = formData.artistImageUrl;
+      }
+
       if (editingSong) {
-        await updateTrack(editingSong.id, formData);
+        await updateTrack(editingSong.id, submitData);
         toast.success('Песня обновлена');
       } else {
-        await createTrack(formData);
+        await createTrack(submitData);
         toast.success('Песня добавлена');
       }
 
@@ -309,7 +333,8 @@ export default function SongsManagementScreen() {
       await loadSongs();
     } catch (error) {
       console.error('Error saving song:', error);
-      toast.error('Не удалось сохранить песню');
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      toast.error(`Не удалось сохранить песню: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
