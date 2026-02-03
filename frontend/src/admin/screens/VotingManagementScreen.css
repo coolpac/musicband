@@ -173,8 +173,8 @@
 }
 
 .status-badge--completed {
-  background: rgba(52, 199, 89, 0.2);
-  color: var(--admin-success);
+  background: rgba(142, 142, 147, 0.2);
+  color: var(--admin-text-secondary);
 }
 
 /* Start Modal */

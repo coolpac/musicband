@@ -44,6 +44,12 @@ const IconStar = () => (
     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
   </svg>
 );
+const IconChartLine = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M3 3v18h18" />
+    <path d="M7 14l4-4 4 4 5-5" />
+  </svg>
+);
 
 type DashboardStats = {
   totalBookings: number;
@@ -59,9 +65,10 @@ type DashboardScreenProps = {
   onGoToBookings?: () => void;
   onGoToAgents?: () => void;
   onGoToReviews?: () => void;
+  onGoToAnalytics?: () => void;
 };
 
-export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToReviews }: DashboardScreenProps) {
+export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToReviews, onGoToAnalytics }: DashboardScreenProps) {
   useAdminAuth(); // для шапки (аватар там)
   const [stats, setStats] = useState<DashboardStats>({
     totalBookings: 28,
@@ -200,6 +207,18 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
                 <div className="admin-card__icon admin-card__icon--muted"><IconStar /></div>
                 <div className="admin-card__label">Отзывы</div>
                 <span className="admin-card__action">Модерация отзывов →</span>
+              </button>
+            )}
+            {onGoToAnalytics && (
+              <button
+                type="button"
+                className="admin-card admin-card--clickable admin-card--quick"
+                onClick={() => { hapticImpact('light'); onGoToAnalytics(); }}
+                aria-label="Перейти к расширенной аналитике"
+              >
+                <div className="admin-card__icon admin-card__icon--muted"><IconChartLine /></div>
+                <div className="admin-card__label">Расширенная аналитика</div>
+                <span className="admin-card__action">В разработке →</span>
               </button>
             )}
           </div>

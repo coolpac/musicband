@@ -1138,6 +1138,8 @@ a.social-tile:hover {
 /* Бейдж «Разработчики» над областью партнёров (не перекрывает логотипы) */
 .partners-badge {
   display: inline-block;
+  width: fit-content;
+  align-self: center;
   margin: -4px 0 12px;
   padding: 6px 14px;
   font-size: 11px;

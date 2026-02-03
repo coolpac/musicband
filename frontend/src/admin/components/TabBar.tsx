@@ -2,7 +2,7 @@ import { hapticSelection } from '../../telegram/telegramWebApp';
 import { HomeIcon, BarChartIcon, MusicIcon, CalendarIcon, ImageIcon } from '../assets/icons';
 import '../../styles/admin-tabbar.css';
 
-export type AdminTab = 'dashboard' | 'voting' | 'songs' | 'bookings' | 'content' | 'agents' | 'reviews';
+export type AdminTab = 'dashboard' | 'voting' | 'songs' | 'bookings' | 'content' | 'agents' | 'reviews' | 'analytics';
 
 type TabBarProps = {
   activeTab: AdminTab;

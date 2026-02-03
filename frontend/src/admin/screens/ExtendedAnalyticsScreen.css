@@ -1,0 +1,28 @@
+/* Экран «Расширенная аналитика» — заглушка «В разработке» */
+
+.extended-analytics-screen .admin-title {
+  margin-bottom: 8px;
+}
+
+.analytics-placeholder {
+  padding: 48px 24px;
+  text-align: center;
+  font-size: 16px;
+  color: var(--admin-text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--admin-border);
+  border-radius: var(--admin-radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 200px;
+}
+
+.analytics-placeholder__text {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--admin-text-secondary);
+}

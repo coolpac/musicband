@@ -39,6 +39,7 @@ const BookingsLogScreen = lazy(() => import('./screens/BookingsLogScreen'));
 const ContentScreen = lazy(() => import('./screens/ContentScreen'));
 const AgentsManagementScreen = lazy(() => import('./screens/AgentsManagementScreen'));
 const ReviewsManagementScreen = lazy(() => import('./screens/ReviewsManagementScreen'));
+const ExtendedAnalyticsScreen = lazy(() => import('./screens/ExtendedAnalyticsScreen'));
 
 export type BookingsView = 'log' | 'calendar';
 
@@ -95,6 +96,7 @@ function AdminContent() {
                 onGoToBookings={goToBookingsLog}
                 onGoToAgents={() => setActiveTab('agents')}
                 onGoToReviews={() => setActiveTab('reviews')}
+                onGoToAnalytics={() => setActiveTab('analytics')}
               />
             </Suspense>
           </ErrorBoundary>
@@ -156,6 +158,15 @@ function AdminContent() {
           <ErrorBoundary>
             <Suspense fallback={fallback}>
               <ReviewsManagementScreen />
+            </Suspense>
+          </ErrorBoundary>
+        );
+
+      case 'analytics':
+        return (
+          <ErrorBoundary>
+            <Suspense fallback={fallback}>
+              <ExtendedAnalyticsScreen />
             </Suspense>
           </ErrorBoundary>
         );
