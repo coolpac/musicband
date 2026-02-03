@@ -143,7 +143,8 @@ export default function FormatDetailScreen({
                 </motion.p>
               )}
 
-              {format.performers && format.performers.length > 0 && (
+              {/* Показываем performers только если есть реальные данные (name и role заполнены) */}
+              {format.performers && format.performers.filter(p => p.name && p.role).length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -151,11 +152,13 @@ export default function FormatDetailScreen({
                   className="format-detail-card glass"
                 >
                   <div className="format-detail-performers">
-                    {format.performers.map((performer, index) => (
-                      <div key={index} className="format-detail-performer">
-                        <strong>{performer.name}</strong> — {performer.role}
-                      </div>
-                    ))}
+                    {format.performers
+                      .filter(p => p.name && p.role)
+                      .map((performer, index) => (
+                        <div key={index} className="format-detail-performer">
+                          <strong>{performer.name}</strong> — {performer.role}
+                        </div>
+                      ))}
                   </div>
                 </motion.div>
               )}

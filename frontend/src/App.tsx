@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
-import { hapticImpact, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId } from './telegram/telegramWebApp';
+import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
 import { castVote } from './services/voteService';
 import { submitReview } from './services/reviewService';
@@ -344,12 +344,14 @@ export default function App() {
             bookingDraft={bookingDraft}
             initialFullName={getTelegramUser()?.fullName}
             onSubmit={() => {
+              hapticNotification('success');
               setCurrentScreen('success');
               setBookingDraft(null);
               clearAllBookingFromCloud();
               window.history.pushState({}, '', '?screen=success');
             }}
             onSubmitError={(message) => {
+              hapticNotification('error');
               showAlert(message);
             }}
           />
@@ -389,10 +391,12 @@ export default function App() {
             onSubmit={async (rating, text) => {
               try {
                 await submitReview({ rating, text });
+                hapticNotification('success');
                 setCurrentScreen('review-success');
                 window.history.pushState({}, '', '?screen=review-success');
               } catch (error) {
                 console.error('Failed to submit review:', error);
+                hapticNotification('error');
                 showAlert('Не удалось отправить отзыв. Попробуйте позже.');
               }
             }}
@@ -417,11 +421,12 @@ export default function App() {
             onSubmit={async (songId) => {
               try {
                 await castVote(songId);
-                // После успешного голосования переходим на экран результатов
+                hapticNotification('success');
                 setCurrentScreen('voting-results');
                 window.history.pushState({}, '', '?screen=voting-results');
               } catch (error) {
                 console.error('Failed to submit vote:', error);
+                hapticNotification('error');
               }
             }}
           />
@@ -513,7 +518,7 @@ export default function App() {
               <button
                 type="button"
                 className="socket-status-banner__btn"
-                onClick={handleRetryConnection}
+                onClick={() => { hapticImpact('light'); handleRetryConnection(); }}
               >
                 Обновить
               </button>
@@ -549,31 +554,31 @@ export default function App() {
           }}
         >
           <button
-            onClick={() => setCurrentScreen('home')}
+            onClick={() => { hapticImpact('light'); setCurrentScreen('home'); }}
             style={{ padding: '5px 10px', fontSize: '12px' }}
           >
             Home
           </button>
           <button
-            onClick={() => setCurrentScreen('nav')}
+            onClick={() => { hapticImpact('light'); setCurrentScreen('nav'); }}
             style={{ padding: '5px 10px', fontSize: '12px' }}
           >
             Nav
           </button>
           <button
-            onClick={() => setCurrentScreen('calendar')}
+            onClick={() => { hapticImpact('light'); setCurrentScreen('calendar'); }}
             style={{ padding: '5px 10px', fontSize: '12px' }}
           >
             Calendar
           </button>
           <button
-            onClick={() => setCurrentScreen('form')}
+            onClick={() => { hapticImpact('light'); setCurrentScreen('form'); }}
             style={{ padding: '5px 10px', fontSize: '12px' }}
           >
             Form
           </button>
           <button
-            onClick={() => setCurrentScreen('success')}
+            onClick={() => { hapticImpact('light'); setCurrentScreen('success'); }}
             style={{ padding: '5px 10px', fontSize: '12px' }}
           >
             Success

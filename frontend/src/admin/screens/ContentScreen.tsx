@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { hapticSelection } from '../../telegram/telegramWebApp';
 import AdminHeader from '../components/AdminHeader';
 import FormatsManagementScreen from './FormatsManagementScreen';
 import PostersManagementScreen from './PostersManagementScreen';
@@ -31,19 +32,19 @@ export default function ContentScreen() {
       <div className="content-tabs">
         <button
           className={`content-tab ${activeTab === 'formats' ? 'content-tab--active' : ''}`}
-          onClick={() => setActiveTab('formats')}
+          onClick={() => { hapticSelection(); setActiveTab('formats'); }}
         >
           🎭 Форматы
         </button>
         <button
           className={`content-tab ${activeTab === 'posters' ? 'content-tab--active' : ''}`}
-          onClick={() => setActiveTab('posters')}
+          onClick={() => { hapticSelection(); setActiveTab('posters'); }}
         >
           📋 Афиши
         </button>
         <button
           className={`content-tab ${activeTab === 'partners' ? 'content-tab--active' : ''}`}
-          onClick={() => setActiveTab('partners')}
+          onClick={() => { hapticSelection(); setActiveTab('partners'); }}
         >
           🤝 Партнеры
         </button>

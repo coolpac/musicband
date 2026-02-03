@@ -40,14 +40,17 @@ export default function WinningSongScreen({ onBack, onViewLyrics, songId }: Winn
   }, [loadSong]);
 
   const handlePlayPause = () => {
+    hapticImpact('light');
     setIsPlaying((prev) => !prev);
   };
 
   const handlePrevious = () => {
+    hapticImpact('light');
     // TODO: Переключить на предыдущий трек
   };
 
   const handleNext = () => {
+    hapticImpact('light');
     // TODO: Переключить на следующий трек
   };
 

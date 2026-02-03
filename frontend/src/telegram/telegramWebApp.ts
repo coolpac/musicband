@@ -42,17 +42,28 @@ export function initTelegramWebApp(): void {
   applyTelegramViewportAndSafeArea();
 }
 
-/** Хаптик: лёгкий удар (кнопки, тапы). */
+/**
+ * Хаптик: impact — столкновение UI (кнопки, тапы).
+ * Стили: light — лёгкие действия, medium — подтверждение, heavy — важные/деструктивные.
+ * Вне Telegram вызов игнорируется. Не вызывать слишком часто — влияет на батарею.
+ * @see https://docs.telegram-mini-apps.com/platform/haptic-feedback
+ */
 export function hapticImpact(style: 'light' | 'medium' | 'heavy' = 'light'): void {
   getTelegramWebApp()?.HapticFeedback?.impactOccurred(style);
 }
 
-/** Хаптик: смена выбора (селекторы, переключатели). */
+/**
+ * Хаптик: selectionChanged — смена выбора (слайдеры, табы, переключатели).
+ * Только при изменении выбора, не при подтверждении.
+ */
 export function hapticSelection(): void {
   getTelegramWebApp()?.HapticFeedback?.selectionChanged();
 }
 
-/** Хаптик: уведомление (успех / ошибка / предупреждение). */
+/**
+ * Хаптик: notification — результат действия (success / error / warning).
+ * success — действие выполнено, error — ошибка, warning — предупреждение.
+ */
 export function hapticNotification(type: 'success' | 'warning' | 'error'): void {
   getTelegramWebApp()?.HapticFeedback?.notificationOccurred(type);
 }

@@ -1,3 +1,4 @@
+import { hapticSelection } from '../../telegram/telegramWebApp';
 import { HomeIcon, BarChartIcon, MusicIcon, CalendarIcon, ImageIcon } from '../assets/icons';
 import '../../styles/admin-tabbar.css';
 
@@ -28,7 +29,7 @@ export default function TabBar({ activeTab, onTabChange }: TabBarProps) {
             key={tab.id}
             type="button"
             className={`admin-tabbar__item ${isActive ? 'admin-tabbar__item--active' : ''}`}
-            onClick={() => onTabChange(tab.id)}
+            onClick={() => { hapticSelection(); onTabChange(tab.id); }}
             aria-label={tab.label}
             aria-selected={isActive}
           >

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { hapticImpact } from '../../telegram/telegramWebApp';
 import AdminHeader from '../components/AdminHeader';
 import Modal from '../components/Modal';
 import { getTracks, type Track } from '../../services/adminService';
@@ -269,13 +270,13 @@ export default function VotingManagementScreen() {
               </div>
 
               <div className="voting-actions">
-                <button className="admin-btn admin-btn--secondary" onClick={handleShowQR}>
+                <button className="admin-btn admin-btn--secondary" onClick={() => { hapticImpact('light'); handleShowQR(); }}>
                   Показать QR-код
                 </button>
-                <button className="admin-btn admin-btn--secondary" onClick={handleCopyLink}>
+                <button className="admin-btn admin-btn--secondary" onClick={() => { hapticImpact('light'); handleCopyLink(); }}>
                   Копировать ссылку
                 </button>
-                <button className="admin-btn admin-btn--danger" onClick={handleEndVoting}>
+                <button className="admin-btn admin-btn--danger" onClick={() => { hapticImpact('light'); handleEndVoting(); }}>
                   Завершить голосование
                 </button>
               </div>
@@ -314,7 +315,7 @@ export default function VotingManagementScreen() {
               <div className="admin-empty__icon">🗳️</div>
               <h3 className="admin-empty__title">Нет активного голосования</h3>
               <p className="admin-empty__text">Запустите новую сессию голосования</p>
-              <button className="admin-btn admin-btn--glass-green" onClick={handleStartVoting}>
+              <button className="admin-btn admin-btn--glass-green" onClick={() => { hapticImpact('light'); handleStartVoting(); }}>
                 Запустить голосование
               </button>
             </div>
@@ -379,14 +380,14 @@ export default function VotingManagementScreen() {
           <div className="admin-form">
             <button
               className="admin-btn admin-btn--full"
-              onClick={handleConfirmStart}
+              onClick={() => { hapticImpact('medium'); handleConfirmStart(); }}
               disabled={selectedSongs.size < 2}
             >
               Начать голосование
             </button>
             <button
               className="admin-btn admin-btn--secondary admin-btn--full"
-              onClick={() => setShowStartModal(false)}
+              onClick={() => { hapticImpact('light'); setShowStartModal(false); }}
             >
               Отмена
             </button>
@@ -415,10 +416,10 @@ export default function VotingManagementScreen() {
           )}
 
           <div className="admin-form">
-            <button className="admin-btn admin-btn--full" onClick={handleDownloadQR}>
+            <button className="admin-btn admin-btn--full" onClick={() => { hapticImpact('light'); handleDownloadQR(); }}>
               Скачать PNG
             </button>
-            <button className="admin-btn admin-btn--secondary admin-btn--full" onClick={handleCopyLink}>
+            <button className="admin-btn admin-btn--secondary admin-btn--full" onClick={() => { hapticImpact('light'); handleCopyLink(); }}>
               Копировать ссылку
             </button>
           </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { hapticImpact } from '../../telegram/telegramWebApp';
 import { getAdminStats } from '../../services/adminService';
 import AdminHeader from '../components/AdminHeader';
 import FlexGuardLogo from '../components/FlexGuardLogo';
@@ -113,7 +114,7 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
           <button
             type="button"
             className="admin-card admin-card--clickable"
-            onClick={onGoToBookings}
+            onClick={() => { hapticImpact('light'); onGoToBookings?.(); }}
             aria-label="Перейти к заявкам"
           >
             <div className="admin-card__icon"><IconBarChart /></div>
@@ -181,7 +182,7 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
               <button
                 type="button"
                 className="admin-card admin-card--clickable admin-card--quick"
-                onClick={onGoToAgents}
+                onClick={() => { hapticImpact('light'); onGoToAgents(); }}
                 aria-label="Перейти к агентам"
               >
                 <div className="admin-card__icon admin-card__icon--muted"><IconUsers /></div>
@@ -193,7 +194,7 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
               <button
                 type="button"
                 className="admin-card admin-card--clickable admin-card--quick"
-                onClick={onGoToReviews}
+                onClick={() => { hapticImpact('light'); onGoToReviews(); }}
                 aria-label="Перейти к отзывам"
               >
                 <div className="admin-card__icon admin-card__icon--muted"><IconStar /></div>

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useCallback } from 'react';
-import { hapticSelection } from '../telegram/telegramWebApp';
+import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import { residents } from '../data/residents';
 import '../styles/residents.css';
 
@@ -81,7 +81,7 @@ export default function ResidentsScreen() {
                         <button
                           type="button"
                           className="residents-card__panel-close"
-                          onClick={() => setOpenId(null)}
+                          onClick={() => { hapticImpact('light'); setOpenId(null); }}
                           aria-label="Закрыть"
                         >
                           ×

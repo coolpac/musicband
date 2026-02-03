@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { hapticImpact } from '../telegram/telegramWebApp';
 import { getSongs } from '../services/songService';
 import { getSongLyrics } from '../services/songService';
 import { Song } from '../types/vote';
@@ -51,6 +52,11 @@ export default function LyricsOverlay({ isOpen, onClose, songId }: LyricsOverlay
 
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    hapticImpact('light');
+    onClose();
+  };
+
   return (
     <aside
       ref={overlayRef}
@@ -59,7 +65,7 @@ export default function LyricsOverlay({ isOpen, onClose, songId }: LyricsOverlay
       aria-modal="true"
       aria-label={ariaLabel}
     >
-      <div className="lyrics-overlay__backdrop" onClick={onClose} aria-hidden />
+      <div className="lyrics-overlay__backdrop" onClick={handleClose} aria-hidden />
       <div className="lyrics-overlay__panel">
         <div className="lyrics-overlay__bg" aria-hidden>
           <img alt="" className="lyrics-overlay__bg-image" src={votingBg} />
@@ -68,7 +74,7 @@ export default function LyricsOverlay({ isOpen, onClose, songId }: LyricsOverlay
         <button
           type="button"
           className="lyrics-overlay__close"
-          onClick={onClose}
+          onClick={handleClose}
           aria-label="Свернуть"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

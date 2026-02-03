@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { hapticImpact } from '../telegram/telegramWebApp';
 import './ErrorBoundary.css';
 
 interface ErrorBoundaryProps {
@@ -32,6 +33,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   handleReload = (): void => {
+    hapticImpact('light');
     window.location.reload();
   };
 

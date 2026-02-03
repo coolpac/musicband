@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { hapticImpact } from '../../telegram/telegramWebApp';
 import '../../styles/admin.css';
 
 interface ModalProps {
@@ -42,9 +43,14 @@ export default function Modal({
 
   if (!isOpen) return null;
 
+  const handleClose = () => {
+    hapticImpact('light');
+    onClose();
+  };
+
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
-      onClose();
+      handleClose();
     }
   };
 
@@ -55,7 +61,7 @@ export default function Modal({
           <h2 className="admin-modal__title">{title}</h2>
           <button
             className="admin-modal__close"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Закрыть"
             type="button"
           >

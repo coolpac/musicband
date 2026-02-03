@@ -1,3 +1,4 @@
+import { hapticImpact } from '../telegram/telegramWebApp';
 import './NetworkError.css';
 
 type NetworkErrorProps = {
@@ -12,6 +13,11 @@ export default function NetworkError({
   message = 'Не удалось загрузить данные. Проверьте подключение к интернету.',
   onRetry,
 }: NetworkErrorProps) {
+  const handleRetry = () => {
+    hapticImpact('light');
+    onRetry?.();
+  };
+
   return (
     <div className="network-error">
       <div className="network-error__glass">
@@ -36,7 +42,7 @@ export default function NetworkError({
         </svg>
         <p className="network-error__message">{message}</p>
         {onRetry && (
-          <button type="button" className="network-error__btn" onClick={onRetry}>
+          <button type="button" className="network-error__btn" onClick={handleRetry}>
             Попробовать снова
           </button>
         )}

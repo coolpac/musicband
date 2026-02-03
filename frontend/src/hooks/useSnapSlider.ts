@@ -124,6 +124,18 @@ export function useSnapSlider(options: UseSnapSliderOptions): UseSnapSliderRetur
   }, [direction, itemCount, measure]);
 
   useEffect(() => {
+    // Initial measure after mount and when itemCount changes
+    if (itemCount > 0) {
+      // Small delay to ensure DOM is rendered
+      const timer = setTimeout(() => {
+        measure();
+        updateActiveIndex();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [itemCount, measure, updateActiveIndex]);
+
+  useEffect(() => {
     const onResize = () => {
       measure();
       updateActiveIndex();

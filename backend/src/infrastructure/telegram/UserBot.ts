@@ -106,22 +106,24 @@ export class UserBot {
   /**
    * Обработка deep link голосования vote_{sessionId}
    *
-   * Стратегия: сохраняем pending vote session в Redis, затем отправляем web_app кнопку.
-   * При открытии Mini App фронтенд проверяет pending session через API.
+   * URL в web_app кнопке открывается КАК ЕСТЬ в WebView.
+   * Query параметры (?screen=voting&sessionId=xxx) доступны через window.location.search.
    *
-   * ВАЖНО: web_app кнопка НЕ поддерживает передачу параметров через URL query string.
-   * Telegram игнорирует ?sessionId=... в URL кнопки web_app.
+   * Дополнительно сохраняем в Redis как fallback.
    */
   private async handleVotingDeepLink(chatId: number, sessionId: string): Promise<void> {
     try {
       const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
 
-      // Сохраняем pending vote session в Redis (TTL 1 час)
-      // Ключ по chatId (telegramId), чтобы Mini App мог получить sessionId
-      const redisKey = `pending_vote:${chatId}`;
-      await redis.setex(redisKey, 3600, sessionId); // 1 час TTL
+      // URL с параметрами — Mini App сразу откроется на экране голосования
+      // Query параметры доступны через window.location.search на фронте
+      const votingUrl = `${miniAppUrl}?screen=voting&sessionId=${sessionId}`;
 
-      logger.info('Saved pending vote session', { chatId, sessionId, redisKey });
+      // Также сохраняем в Redis как fallback (если URL параметры не сработают)
+      const redisKey = `pending_vote:${chatId}`;
+      await redis.setex(redisKey, 3600, sessionId);
+
+      logger.info('Sending voting web_app button', { chatId, sessionId, votingUrl });
 
       await this.bot.sendMessage(
         chatId,
@@ -131,7 +133,7 @@ export class UserBot {
             inline_keyboard: [[
               {
                 text: '🎵 Голосовать',
-                web_app: { url: miniAppUrl },
+                web_app: { url: votingUrl },
               },
             ]],
           },

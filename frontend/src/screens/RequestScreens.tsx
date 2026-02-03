@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
+import { hapticImpact, hapticNotification, hapticSelection } from '../telegram/telegramWebApp';
 import { getBookingFormFromCloud, setBookingFormToCloud, clearBookingFormFromCloud, type BookingFormStorage } from '../telegram/cloudStorage';
 import '../styles/date.css';
 import '../styles/request.css';
@@ -85,7 +85,7 @@ function RequestSelect({
         className="request-select"
         type="button"
         aria-expanded={isOpen}
-        onClick={onToggle}
+        onClick={() => { hapticImpact('light'); onToggle(); }}
       >
         <span className={`request-select__value${value ? ' is-selected' : ''}`}>
           {currentLabel}
@@ -97,7 +97,7 @@ function RequestSelect({
           <button
             className="request-select-menu__header"
             type="button"
-            onClick={onToggle}
+            onClick={() => { hapticImpact('light'); onToggle(); }}
           >
             <span className={`request-select__value${value ? ' is-selected' : ''}`}>
               {currentLabel}
@@ -272,7 +272,7 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
 
   const handleContinue = () => {
     if (!onContinue || !selectedFormatId) return;
-    hapticImpact('light');
+    hapticImpact('medium');
     const bookingDate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
     onContinue({ formatId: selectedFormatId, bookingDate });
   };
@@ -431,37 +431,45 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
 
   const handleSubmit = async () => {
     if (!bookingDraft) {
+      hapticNotification('error');
       onSubmitError?.('Не выбраны дата и формат. Вернитесь на предыдущий шаг.');
       return;
     }
     const trimmedName = fullName.trim();
     if (!trimmedName) {
+      hapticNotification('error');
       onSubmitError?.('Введите ФИО');
       return;
     }
     if (trimmedName.length < 2) {
+      hapticNotification('error');
       onSubmitError?.('ФИО должно быть не короче 2 символов');
       return;
     }
     const trimmedPhone = phoneNumber.trim();
     if (!trimmedPhone) {
+      hapticNotification('error');
       onSubmitError?.('Введите номер телефона');
       return;
     }
     const digitsOnly = trimmedPhone.replace(/\D/g, '');
     if (digitsOnly.length < 10) {
+      hapticNotification('error');
       onSubmitError?.('Введите корректный российский номер: минимум 10 цифр');
       return;
     }
     if (digitsOnly.length > 11) {
+      hapticNotification('error');
       onSubmitError?.('Слишком длинный номер. Формат: 9XXXXXXXXX или 79XXXXXXXXX');
       return;
     }
     if (digitsOnly.length === 10 && digitsOnly[0] !== '9') {
+      hapticNotification('error');
       onSubmitError?.('Мобильный номер должен начинаться с 9 (например 9XX XXX XX XX)');
       return;
     }
     if (digitsOnly.length === 11 && digitsOnly[0] !== '7' && digitsOnly[0] !== '8') {
+      hapticNotification('error');
       onSubmitError?.('Номер с кодом страны должен начинаться с 7 или 8 (например 79XXXXXXXXX)');
       return;
     }
@@ -469,7 +477,7 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
       digitsOnly.length === 10
         ? `+7${digitsOnly}`
         : `+7${digitsOnly[0] === '7' || digitsOnly[0] === '8' ? digitsOnly.slice(1) : digitsOnly}`;
-    hapticImpact('light');
+    hapticImpact('medium');
     setIsSubmitting(true);
     try {
       const { createBooking } = await import('../services/bookingService');
@@ -485,6 +493,7 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
       onSubmit?.();
     } catch (e) {
       console.error('Booking submit failed', e);
+      hapticNotification('error');
       onSubmitError?.(
         e instanceof Error ? e.message : 'Не удалось отправить заявку. Попробуйте позже.'
       );

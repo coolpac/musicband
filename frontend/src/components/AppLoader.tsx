@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import heroLogo from '../assets/figma/downloaded/hero-logo.svg';
 import './AppLoader.css';
 
+// Критичные изображения для preload во время загрузочного экрана
+import heroImage from '../assets/figma/hero-image.webp';
+
 /** Минимальное время показа лоадера (чтобы был виден, а не только сплэш Telegram). */
 const MIN_DISPLAY_MS = 1600;
 const MAX_WAIT_MS = 3500;
@@ -9,19 +12,42 @@ const EXIT_ANIMATION_MS = 320;
 const EQUALIZER_BAR_COUNT = 5;
 const EQUALIZER_STAGGER_S = 0.15;
 
+/** Preload критичных изображений */
+function preloadImages(urls: string[]): Promise<void[]> {
+  return Promise.all(
+    urls.map(
+      (url) =>
+        new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => resolve(); // Не блокируем если ошибка
+          img.src = url;
+        })
+    )
+  );
+}
+
 export default function AppLoader({ onReady }: { onReady: () => void }) {
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
     const start = performance.now();
     let done = false;
+    let imagesPreloaded = false;
+
+    // Запускаем preload изображений сразу
+    preloadImages([heroImage]).then(() => {
+      imagesPreloaded = true;
+      tryFinish();
+    });
 
     const tryFinish = () => {
       if (done) return;
       const elapsed = performance.now() - start;
       const ready = document.readyState === 'complete';
       const minElapsed = elapsed >= MIN_DISPLAY_MS;
-      if (ready && minElapsed) {
+      // Ждём: минимальное время + документ готов + изображения загружены
+      if (ready && minElapsed && imagesPreloaded) {
         done = true;
         setIsExiting(true);
       }

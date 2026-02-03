@@ -55,7 +55,7 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
 
   const handleConfirm = () => {
     if (selectedSongId) {
-      hapticImpact('light');
+      hapticImpact('medium');
       onSubmit?.(selectedSongId);
     }
   };

@@ -1,10 +1,12 @@
 import { useTelegramWebApp } from '../../telegram/useTelegramWebApp';
+import { hapticImpact } from '../../telegram/telegramWebApp';
 import './LoginScreen.css';
 
 export default function LoginScreen() {
   useTelegramWebApp({ initOnMount: true });
 
   const handleRefresh = () => {
+    hapticImpact('light');
     window.location.reload();
   };
 

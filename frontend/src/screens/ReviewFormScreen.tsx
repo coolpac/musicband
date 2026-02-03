@@ -20,7 +20,7 @@ export default function ReviewFormScreen({ onSubmit, onBack }: ReviewFormScreenP
 
   const handleSubmit = () => {
     if (rating > 0) {
-      hapticImpact('light');
+      hapticImpact('medium');
       onSubmit?.(rating, text);
     }
   };

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { hapticImpact } from '../../telegram/telegramWebApp';
 import AdminHeader from '../components/AdminHeader';
 import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
@@ -68,6 +69,7 @@ export default function PostersManagementScreen() {
   };
 
   const handleAdd = () => {
+    hapticImpact('light');
     setEditingPoster(null);
     setFormData({
       title: '',
@@ -80,12 +82,14 @@ export default function PostersManagementScreen() {
   };
 
   const handleEdit = (poster: Poster) => {
+    hapticImpact('light');
     setEditingPoster(poster);
     setFormData({ ...poster });
     setShowModal(true);
   };
 
   const handleDelete = async (id: string) => {
+    hapticImpact('light');
     const poster = posters.find((p) => p.id === id);
     if (!poster) return;
 
@@ -285,7 +289,7 @@ export default function PostersManagementScreen() {
             <button
               type="button"
               className="admin-btn admin-btn--secondary admin-btn--full"
-              onClick={() => setShowModal(false)}
+              onClick={() => { hapticImpact('light'); setShowModal(false); }}
               disabled={isSaving}
             >
               Отмена

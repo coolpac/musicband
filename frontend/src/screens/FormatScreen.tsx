@@ -131,11 +131,21 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
   }, [loadFormats]);
 
   useEffect(() => {
-    updateSlideStep();
+    // Ждём когда форматы загрузятся и DOM отрендерится
+    if (formats.length === 0 || loading) return;
+
+    // Небольшая задержка чтобы DOM успел отрендериться
+    const timer = setTimeout(() => {
+      updateSlideStep();
+    }, 50);
+
     const handleResize = () => updateSlideStep();
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [updateSlideStep]);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [updateSlideStep, formats.length, loading]);
 
   const activeFormat = formats[activeIndex];
 
