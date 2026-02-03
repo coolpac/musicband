@@ -97,7 +97,7 @@
 .hero-vector-group {
   position: absolute;
   left: 0;
-  top: 76.8%; /* ещё на 3% ниже (было 73.8%) */
+  top: 73.8%; /* поднято на 3% (было 76.8%) */
   width: 100%;
   height: auto;
   display: block;
@@ -110,7 +110,7 @@
 .hero-cover-band {
   position: absolute;
   left: 84.5%;
-  top: 25.62%;
+  top: 22.62%; /* поднято на 3% (было 25.62%) */
   width: 9.34%;
   height: 3.72%;
   display: block;
