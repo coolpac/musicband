@@ -185,9 +185,9 @@
   border-radius: 2.5px;
 }
 
-/* Блок текста и кнопки — поднят на 4% высоты экрана */
+/* Блок текста и кнопки — поднят на 3% высоты экрана (опущен на 1% от исходных 4%) */
 .hero-text-block {
-  transform: translateY(-4vh);
+  transform: translateY(-3vh);
 }
 
 .hero-copy {
