@@ -26,7 +26,9 @@ export type PromoVideoItem = {
   title: string;
 };
 
-export const promoVideos: PromoVideoItem[] = [
+export type LiveVideoItem = PromoVideoItem;
+
+export const liveVideos: LiveVideoItem[] = [
   {
     id: 'live-1',
     src: '/videos/7 лепесток с вами_optimized.mp4',
@@ -45,6 +47,9 @@ export const promoVideos: PromoVideoItem[] = [
     poster: '/videos/thumbs/Январская въюга_thumb.jpg',
     title: '',
   },
+];
+
+export const promoVideos: PromoVideoItem[] = [
   {
     id: 'promo-main',
     src: 'https://rutube.ru/video/56fd172a86aff0d705834ea2bab83d2d',

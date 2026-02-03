@@ -34,7 +34,7 @@ import { getPartners, Partner } from '../services/partnerService';
 import { useSnapSlider } from '../hooks/useSnapSlider';
 import { OptimizedImage } from '../components/OptimizedImage';
 import { getOptimizedImageProps } from '../types/image';
-import { whyMobileSlides, whyDesktopSlides, promoVideos } from '../data/homeData';
+import { liveVideos, promoVideos, whyDesktopSlides, whyMobileSlides } from '../data/homeData';
 
 
 type HomeScreenProps = {
@@ -66,7 +66,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
     slideSelector: '.promo-slide',
   });
   const liveSlider = useSnapSlider({
-    itemCount: promoVideos.length,
+    itemCount: liveVideos.length,
     slideSelector: '.live-slide',
   });
 
@@ -176,7 +176,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
   }, [promoSlider.activeIndex]);
 
   const handleLiveToggle = useCallback(() => {
-    const item = promoVideos[liveSlider.activeIndex];
+    const item = liveVideos[liveSlider.activeIndex];
     if (!item || isRutubeUrl(item.src)) return;
     const video = liveVideoRefs.current[liveSlider.activeIndex];
     if (!video) return;
@@ -680,7 +680,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
           onScroll={liveSlider.handleScroll}
           ref={liveSlider.sliderRef}
         >
-          {promoVideos.map((item, index) => (
+          {liveVideos.map((item, index) => (
             <article
               key={item.id}
               className={`live-slide ${liveSlider.activeIndex === index && isLivePlaying ? 'is-playing' : ''}`}
@@ -722,7 +722,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
           ))}
         </div>
         <div className="dots live-dots">
-          {promoVideos.map((item, index) => (
+          {liveVideos.map((item, index) => (
             <button
               key={item.id}
               type="button"

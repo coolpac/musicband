@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import reviewFormBg from '../assets/figma/review-form-bg.webp';
@@ -49,7 +50,12 @@ export default function ReviewFormScreen({ onSubmit, onBack }: ReviewFormScreenP
         <img alt="" className="review-form-bg-image" src={reviewFormBg} />
       </div>
       <div className="review-form-container">
-        <div className="review-form-card">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="review-form-card"
+        >
           <h1 className="review-form-title">Оставить отзыв</h1>
           <textarea
             className="review-form-textarea"
@@ -61,15 +67,18 @@ export default function ReviewFormScreen({ onSubmit, onBack }: ReviewFormScreenP
           <div className="review-form-rating">
             {renderStars()}
           </div>
-        </div>
-        <button
+        </motion.div>
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
           className="btn btn-primary review-form-submit"
           onClick={handleSubmit}
           type="button"
           disabled={rating === 0}
         >
           Отправить
-        </button>
+        </motion.button>
       </div>
     </main>
   );

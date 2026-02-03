@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
 import { hapticImpact, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
@@ -8,6 +9,7 @@ import { submitReview } from './services/reviewService';
 import HomeScreen from './screens/HomeScreen';
 import Header from './components/Header';
 import MenuOverlay from './components/MenuOverlay';
+import { PageTransition } from './components/PageTransition';
 import {
   type BookingDraft,
   NavigationScreen,
@@ -495,7 +497,13 @@ export default function App() {
           )}
         </div>
       )}
-      {renderScreen()}
+      
+      <AnimatePresence mode="wait">
+        <PageTransition key={currentScreen + (currentFormatId || '')} id={currentScreen + (currentFormatId || '')}>
+          {renderScreen()}
+        </PageTransition>
+      </AnimatePresence>
+
       <MenuOverlay
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}

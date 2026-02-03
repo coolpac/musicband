@@ -41,6 +41,7 @@ export default function VotingManagementScreen() {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [qrDeepLink, setQrDeepLink] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -163,6 +164,7 @@ export default function VotingManagementScreen() {
     try {
       const data = await adminVoteService.getSessionQR(activeSession.id);
       setQrCodeDataUrl(data.qrCode?.dataURL ?? '');
+      setQrDeepLink(data.qrCode?.deepLink ?? '');
       setShowQRModal(true);
     } catch (error) {
       console.error('Error loading QR:', error);
@@ -184,9 +186,18 @@ export default function VotingManagementScreen() {
   const handleCopyLink = () => {
     if (!activeSession) return;
 
-    const votingUrl = `${window.location.origin}/voting?session=${activeSession.id}`;
-    navigator.clipboard.writeText(votingUrl);
-    toast.success('Ссылка скопирована');
+    try {
+      const data = await adminVoteService.getSessionQR(activeSession.id);
+      const deepLink = data.qrCode?.deepLink;
+      if (!deepLink) {
+        throw new Error('no deeplink');
+      }
+      navigator.clipboard.writeText(deepLink);
+      toast.success('Ссылка Telegram скопирована');
+    } catch (error) {
+      console.error('Error copying voting link:', error);
+      toast.error('Не удалось получить ссылку');
+    }
   };
 
   const formatDate = (dateString: string) => {

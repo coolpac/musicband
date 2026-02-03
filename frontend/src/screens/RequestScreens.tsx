@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import { getBookingFormFromCloud, setBookingFormToCloud, clearBookingFormFromCloud, type BookingFormStorage } from '../telegram/cloudStorage';
@@ -242,6 +243,13 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
     }
   }, [daysInMonth, selectedDay]);
 
+  useEffect(() => {
+    if (availableDates.length === 0) return;
+    if (availableDates.includes(selectedDay)) return;
+    const nextAvailable = Math.min(...availableDates);
+    setSelectedDay(nextAvailable);
+  }, [availableDates, selectedDay]);
+
   const handlePrevMonth = () => {
     setMonthIndex((prev) => {
       if (prev === 0) {
@@ -295,7 +303,12 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
             onRetry={loadAvailableDates}
           />
         ) : (
-        <div className="request-calendar-block">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="request-calendar-block"
+        >
           <div className="request-calendar-head">
             <button
               className="request-icon-button request-icon-button--prev"
@@ -314,8 +327,11 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
             </button>
           </div>
           <div className="request-calendar-grid">
-            {days.map((day) => (
-              <button
+            {days.map((day, index) => (
+              <motion.button
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: 0.1 + index * 0.01 }}
                 className={`request-day${day === selectedDay ? ' is-selected' : ''}${
                   disabledDays.has(day) ? ' is-muted' : ''
                 }`}
@@ -329,10 +345,10 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
                 }}
               >
                 {day}
-              </button>
+              </motion.button>
             ))}
           </div>
-        </div>
+        </motion.div>
         )}
         <RequestSelect
           className="request-select--calendar"
@@ -483,9 +499,21 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
         <img alt="Лого" className="request-logo" src={requestLogo} />
         <div className="request-body__scroll">
         <div className="request-form-card">
-          <h1 className="request-form-title request-form-appear">Форма для заявки</h1>
+          <motion.h1
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="request-form-title request-form-appear"
+          >
+            Форма для заявки
+          </motion.h1>
           <div className="request-fields">
-            <div className="request-field request-form-appear">
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="request-field request-form-appear"
+            >
               <label htmlFor="request-full-name">ФИО</label>
               <input
                 className="request-input"
@@ -496,8 +524,13 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
               />
-            </div>
-            <div className="request-field request-form-appear">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="request-field request-form-appear"
+            >
               <label>Тип контакта</label>
               <RequestSelect
                 isOpen={openSelect === 'contact'}
@@ -511,8 +544,13 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 size="contact"
                 value={contactType}
               />
-            </div>
-            <div className="request-field request-form-appear">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+              className="request-field request-form-appear"
+            >
               <label htmlFor="request-phone">Номер телефона</label>
               <input
                 className="request-input"
@@ -523,8 +561,13 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 value={phoneNumber}
                 onChange={(event) => setPhoneNumber(event.target.value)}
               />
-            </div>
-            <div className="request-field request-form-appear">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.4 }}
+              className="request-field request-form-appear"
+            >
               <label htmlFor="request-city">Город проведения мероприятия</label>
               <input
                 className="request-input"
@@ -535,8 +578,13 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
               />
-            </div>
-            <div className="request-field request-form-appear">
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.5 }}
+              className="request-field request-form-appear"
+            >
               <label>Откуда узнали?</label>
               <RequestSelect
                 isOpen={openSelect === 'source'}
@@ -550,7 +598,7 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 size="source"
                 value={source}
               />
-            </div>
+            </motion.div>
           </div>
         </div>
         <button
@@ -576,17 +624,34 @@ export function RequestSuccessScreen({ onBackHome }: RequestSuccessScreenProps) 
     <main className="request-screen request-screen--success">
       <div className="request-body request-body--pattern request-success-body">
         <img alt="ВГУП" className="request-logo" src={requestLogo} />
-        <div className="request-success-photo request-success-in">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, type: 'spring', damping: 12 }}
+          className="request-success-photo request-success-in"
+        >
           <img alt="Анна" src={requestAnna} />
-        </div>
-        <div className="request-success-card request-success-in">
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="request-success-card request-success-in"
+        >
           <h2>Заявка принята!</h2>
           <p>С вами свяжется руководитель</p>
           <p>группы Анна Кобякова</p>
-        </div>
-        <button className="request-primary request-success-button request-success-in" type="button" onClick={() => { hapticImpact('light'); onBackHome?.(); }}>
+        </motion.div>
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.5 }}
+          className="request-primary request-success-button request-success-in"
+          type="button"
+          onClick={() => { hapticImpact('light'); onBackHome?.(); }}
+        >
           Вернуться на главную
-        </button>
+        </motion.button>
       </div>
     </main>
   );

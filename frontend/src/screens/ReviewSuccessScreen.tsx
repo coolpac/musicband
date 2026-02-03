@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { hapticImpact } from '../telegram/telegramWebApp';
 import reviewSuccessImage from '../assets/figma/review-success-image.webp';
 import '../styles/review.css';
@@ -10,8 +11,20 @@ export default function ReviewSuccessScreen({ onBackHome }: ReviewSuccessScreenP
   return (
     <main className="screen screen--review-success">
       <div className="review-success-container">
-        <h1 className="review-success-title">Уууася, грацие!*</h1>
-        <div className="review-success-image-wrapper">
+        <motion.h1
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, type: 'spring' }}
+          className="review-success-title"
+        >
+          Уууася, грацие!*
+        </motion.h1>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="review-success-image-wrapper"
+        >
           <div className="review-success-image-gradient review-success-image-gradient--top"></div>
           <img
             alt="Благодарность"
@@ -19,11 +32,25 @@ export default function ReviewSuccessScreen({ onBackHome }: ReviewSuccessScreenP
             src={reviewSuccessImage}
           />
           <div className="review-success-image-gradient review-success-image-gradient--bottom"></div>
-        </div>
-        <p className="review-success-note">*благодарим за ваше внимание и отзыв</p>
-        <button className="btn btn-primary review-success-button" onClick={() => { hapticImpact('light'); onBackHome?.(); }} type="button">
+        </motion.div>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.5 }}
+          className="review-success-note"
+        >
+          *благодарим за ваше внимание и отзыв
+        </motion.p>
+        <motion.button
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.7 }}
+          className="btn btn-primary review-success-button"
+          onClick={() => { hapticImpact('light'); onBackHome?.(); }}
+          type="button"
+        >
           На главную
-        </button>
+        </motion.button>
       </div>
     </main>
   );

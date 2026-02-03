@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import { Song } from '../types/vote';
@@ -98,11 +99,14 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
           <div className="voting-loading">Загрузка...</div>
         ) : (
           <div className="voting-songs-list">
-          {songs.map((song) => {
+          {songs.map((song, index) => {
             const coverProps = getOptimizedImageProps(song.coverUrl);
             return (
-            <button
+            <motion.button
               key={song.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
               type="button"
               className={`voting-song-card ${selectedSongId === song.id ? 'voting-song-card--selected' : ''}`}
               onClick={() => handleSongSelect(song.id)}
@@ -144,19 +148,22 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
                   </svg>
                 )}
               </div>
-            </button>
+            </motion.button>
             );
           })}
         </div>
         )}
-        <button
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
           className="btn btn-primary voting-confirm-btn"
           onClick={handleConfirm}
           type="button"
           disabled={!selectedSongId}
         >
           Подтвердить выбор
-        </button>
+        </motion.button>
       </div>
     </main>
   );

@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import '../styles/format.css';
@@ -193,24 +194,33 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
                       ) : null
                     )}
                     <div className="format-overlay">
-                      <div className="format-content">
-                        <h1 className="format-title">{format.name}</h1>
-                        <p className="format-short-description">{format.shortDescription}</p>
-                        <div className="format-pagination-inline">
-                          {formats.map((_, index) => (
-                            <button
-                              key={index}
-                              aria-label={`Формат ${index + 1}`}
-                              aria-selected={activeIndex === index}
-                              className={`format-dot-inline${
-                                activeIndex === index ? ' format-dot-inline--active' : ''
-                              }`}
-                              onClick={() => handleDotClick(index)}
-                              type="button"
-                            />
-                          ))}
-                        </div>
-                      </div>
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={format.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                          className="format-content"
+                        >
+                          <h1 className="format-title">{format.name}</h1>
+                          <p className="format-short-description">{format.shortDescription}</p>
+                          <div className="format-pagination-inline">
+                            {formats.map((_, index) => (
+                              <button
+                                key={index}
+                                aria-label={`Формат ${index + 1}`}
+                                aria-selected={activeIndex === index}
+                                className={`format-dot-inline${
+                                  activeIndex === index ? ' format-dot-inline--active' : ''
+                                }`}
+                                onClick={() => handleDotClick(index)}
+                                type="button"
+                              />
+                            ))}
+                          </div>
+                        </motion.div>
+                      </AnimatePresence>
                     </div>
                   </div>
                 </div>

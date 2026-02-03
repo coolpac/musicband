@@ -5,6 +5,7 @@ import { BookingService } from '../../domain/services/BookingService';
 import { IUserRepository } from '../database/repositories/UserRepository';
 import { IBookingRepository, BookingWithUserAndFormat } from '../database/repositories/BookingRepository';
 import { logger } from '../../shared/utils/logger';
+import { prisma } from '../../config/database';
 
 export class BotManager {
   private userBot: UserBot | null = null;
@@ -38,7 +39,15 @@ export class BotManager {
     this.userBot = new UserBot(userBotToken, this.referralService);
 
       // Инициализируем Admin Bot
-      this.adminBot = new AdminBot(adminBotToken, this.userRepository, this.bookingRepository);
+      this.adminBot = new AdminBot(
+        adminBotToken,
+        this.userRepository,
+        this.bookingRepository,
+        async (payload) => {
+          await this.notifyBookingConfirmed(payload);
+        },
+        async (payload) => this.broadcastToUsers(payload)
+      );
 
       logger.info('Telegram bots initialized successfully');
     } catch (error) {
@@ -93,6 +102,82 @@ export class BotManager {
     if (this.adminBot) {
       await this.adminBot.notifyNewBooking(bookingData);
     }
+  }
+
+  async broadcastToUsers(payload: {
+    text: string;
+    buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
+    onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
+  }): Promise<{ sent: number; failed: number; total: number }> {
+    if (!this.userBot) {
+      logger.warn('UserBot not initialized, broadcast skipped');
+      return { sent: 0, failed: 0, total: 0 };
+    }
+
+    const users = await prisma.user.findMany({
+      select: { telegramId: true },
+    });
+    const telegramIds = users
+      .map((user) => Number(user.telegramId))
+      .filter((id) => !Number.isNaN(id));
+
+    const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+    const baseButtons = payload.buttons.length
+      ? payload.buttons
+      : [{ text: 'Открыть приложение', url: miniAppUrl, kind: 'web_app' }];
+
+    const inlineRows: Array<Array<{ text: string; url: string }>> = [];
+    for (let i = 0; i < baseButtons.length; i += 2) {
+      inlineRows.push(baseButtons.slice(i, i + 2));
+    }
+
+    const replyMarkup = {
+      inline_keyboard: inlineRows.map((row) =>
+        row.map((button) =>
+          button.kind === 'web_app'
+            ? { text: button.text, web_app: { url: button.url } }
+            : { text: button.text, url: button.url }
+        )
+      ),
+    };
+
+    let sent = 0;
+    let failed = 0;
+    const total = telegramIds.length;
+
+    if (payload.onProgress) {
+      await payload.onProgress({ sent, failed, total });
+    }
+
+    for (const telegramId of telegramIds) {
+      try {
+        await this.userBot.getBot().sendMessage(telegramId, payload.text, { reply_markup: replyMarkup });
+        sent++;
+      } catch (error: unknown) {
+        failed++;
+        const code = error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { error_code?: number } }).response?.error_code
+          : undefined;
+        if (code !== 403) {
+          logger.error('Broadcast failed', { telegramId, error });
+        }
+      }
+
+      if (payload.onProgress && sent % 25 === 0) {
+        await payload.onProgress({ sent, failed, total });
+      }
+
+      if (sent % 25 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    if (payload.onProgress) {
+      await payload.onProgress({ sent, failed, total });
+    }
+
+    logger.info('Broadcast finished', { sent, failed, total });
+    return { sent, failed, total };
   }
 
   /**

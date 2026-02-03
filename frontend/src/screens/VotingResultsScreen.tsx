@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
 import { hapticImpact } from '../telegram/telegramWebApp';
 import { Song } from '../types/vote';
@@ -141,14 +142,21 @@ export default function VotingResultsScreen({
             const percentage = getSongPercentage(song.id);
             const coverProps = getOptimizedImageProps(song.coverUrl);
             return (
-              <button
+              <motion.button
                 key={song.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
                 type="button"
                 className="voting-result-card voting-result-card--clickable"
-                style={{ animationDelay: `${index * 0.06}s` }}
                 onClick={() => { hapticImpact('light'); onSongClick?.(song.id); }}
               >
-                <div className="voting-result-progress" style={{ width: `${percentage}%` }}></div>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${percentage}%` }}
+                  transition={{ duration: 0.8, delay: 0.2 + index * 0.05, ease: "easeOut" }}
+                  className="voting-result-progress"
+                ></motion.div>
                 <div className="voting-result-content">
                   <div className="voting-song-cover">
                     {coverProps ? (
@@ -174,7 +182,7 @@ export default function VotingResultsScreen({
                     </span>
                   </div>
                 </div>
-              </button>
+              </motion.button>
             );
           })}
         </div>
