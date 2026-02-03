@@ -42,7 +42,13 @@ export async function getPosters(): Promise<Poster[]> {
   }
 
   try {
-    return await apiGet<Poster[]>('/api/posters');
+    const posters = await apiGet<Poster[]>('/api/posters');
+    // Если API вернул пустой массив, используем mock данные для демонстрации
+    if (posters.length === 0) {
+      console.warn('API returned empty posters array, using mock data for demo');
+      return posterMocks;
+    }
+    return posters;
   } catch (error) {
     console.warn('Failed to fetch posters from API, falling back to mock data', error);
     return posterMocks;

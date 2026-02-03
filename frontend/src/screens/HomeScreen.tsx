@@ -201,9 +201,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
         ]);
 
         if (!controller.signal.aborted) {
-          if (postersData.length > 0) {
-            setPosters(postersData);
-          }
+          setPosters(postersData);
           setPartners(partnersData);
         }
       } catch (error) {

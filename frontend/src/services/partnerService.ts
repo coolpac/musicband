@@ -27,10 +27,13 @@ export async function getPartners(): Promise<Partner[]> {
   }
 
   try {
-    const res = await apiGet<{ success: boolean; data: Partner[] }>('/api/partners');
-    const list = res?.data ?? [];
-    if (list.length === 0) return MOCK_PARTNERS;
-    return list;
+    const partners = await apiGet<Partner[]>('/api/partners');
+    // Если API вернул пустой массив, используем mock данные для демонстрации
+    if (partners.length === 0) {
+      console.warn('API returned empty partners array, using mock data for demo');
+      return MOCK_PARTNERS;
+    }
+    return partners;
   } catch (error) {
     console.warn('Failed to fetch partners from API, using mocks', error);
     return MOCK_PARTNERS;
