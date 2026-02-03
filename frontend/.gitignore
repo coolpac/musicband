@@ -39,8 +39,8 @@ Thumbs.db
 .vite/
 vite.config.js.timestamp-*
 
-# Videos (large files - served from public but not committed)
-public/videos/*.mp4
-public/videos/*.mov
-public/videos/thumbs/*.jpg
+# Videos - теперь коммитим оптимизированные версии
+# public/videos/*.mp4
+# public/videos/*.mov
+# public/videos/thumbs/*.jpg
 !public/videos/.gitkeep

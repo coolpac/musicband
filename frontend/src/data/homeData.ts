@@ -31,25 +31,25 @@ export const promoVideos: PromoVideoItem[] = [
     id: 'live-1',
     src: '/videos/7 лепесток с вами_optimized.mp4',
     poster: '/videos/thumbs/7 лепесток с вами_thumb.jpg',
-    title: '7 лепесток с вами',
+    title: '',
   },
   {
     id: 'live-2',
     src: '/videos/Не удержались_optimized.mp4',
     poster: '/videos/thumbs/Не удержались_thumb.jpg',
-    title: 'Не удержались',
+    title: '',
   },
   {
     id: 'live-3',
     src: '/videos/Январская въюга_optimized.mp4',
     poster: '/videos/thumbs/Январская въюга_thumb.jpg',
-    title: 'Январская въюга',
+    title: '',
   },
   {
     id: 'promo-main',
-    src: '/videos/ПРИЗВАНИЕ АРТИСТ 2025 (Горизонтальный)_optimized.mp4',
+    src: 'https://rutube.ru/video/56fd172a86aff0d705834ea2bab83d2d',
     poster: '/videos/thumbs/ПРИЗВАНИЕ АРТИСТ 2025 (Горизонтальный)_thumb.jpg',
-    title: 'ПРИЗВАНИЕ АРТИСТ 2025',
+    title: '',
   },
 ];
 
