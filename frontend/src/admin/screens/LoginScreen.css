@@ -18,14 +18,25 @@
   text-align: center;
 }
 
-.login-logo {
-  margin-bottom: 24px;
-}
-
-.login-logo .flexguard-logo {
+/* Место под аватарку админа: на экране входа — плейсхолдер «А» */
+.login-avatar {
   width: 80px;
   height: 80px;
-  margin: 0 auto;
+  margin: 0 auto 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(255, 49, 53, 0.25);
+}
+
+.login-avatar__letter {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1;
 }
 
 .login-title {

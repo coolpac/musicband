@@ -1,14 +1,24 @@
 /* Хакерский/кибер терминальный лоадер */
 
 .admin-terminal-loader {
+  position: fixed;
+  inset: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
   background: #030304;
-  position: relative;
   overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* В Telegram Mini App — по высоте viewport (учитывает интерфейс клиента) */
+.tg-mini-app .admin-terminal-loader {
+  min-height: var(--tg-viewport-stable-height, 100dvh);
+  height: var(--tg-viewport-stable-height, 100%);
 }
 
 /* Фоновый «дождь» из 0/1 */

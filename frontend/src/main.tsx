@@ -4,6 +4,7 @@ import App from './App';
 import AppLoader from './components/AppLoader';
 import AdminTerminalLoader, { MIN_LOADER_DISPLAY_MS } from './admin/components/AdminTerminalLoader';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { initTelegramWebApp, isInsideTelegram } from './telegram/telegramWebApp';
 import './styles/base.css';
 import './styles/home.css';
 import './styles/admin.css';
@@ -18,6 +19,7 @@ function ClientRoot() {
 
   useEffect(() => {
     if (!isAdminRoute) return;
+    if (isInsideTelegram()) initTelegramWebApp();
     const t = setTimeout(() => setMinLoaderElapsed(true), MIN_LOADER_DISPLAY_MS);
     return () => clearTimeout(t);
   }, [isAdminRoute]);

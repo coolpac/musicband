@@ -10,6 +10,9 @@ export class AdminBot {
   private bookingRepository: IBookingRepository;
   private adminTelegramIds: Set<number>;
 
+  /** Интервал перезагрузки списка админов из БД (мс). После UPDATE в БД новые админы подхватятся без рестарта. */
+  private static readonly ADMIN_RELOAD_INTERVAL_MS = 60_000;
+
   constructor(
     token: string,
     _userRepository: IUserRepository,
@@ -20,6 +23,7 @@ export class AdminBot {
     this.adminTelegramIds = new Set();
 
     this.loadAdmins();
+    setInterval(() => this.loadAdmins(), AdminBot.ADMIN_RELOAD_INTERVAL_MS);
     this.setupCommands();
     this.setupCallbacks();
 
@@ -27,16 +31,16 @@ export class AdminBot {
   }
 
   /**
-   * Загрузка списка админов из БД
+   * Загрузка списка админов из БД (вызывается при старте и по таймеру).
    */
   private async loadAdmins(): Promise<void> {
     try {
-      // Получаем всех админов из БД через Prisma напрямую
       const admins = await prisma.user.findMany({
         where: { role: USER_ROLES.ADMIN },
         select: { telegramId: true },
       });
 
+      this.adminTelegramIds.clear();
       admins.forEach((admin) => {
         const telegramId = Number(admin.telegramId);
         if (!isNaN(telegramId)) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getAdminStats } from '../../services/adminService';
 import AdminHeader from '../components/AdminHeader';
-import FlexGuardLogo from '../components/FlexGuardLogo';
+import { useAdminAuth } from '../context/AdminAuthContext';
 import '../../styles/admin.css';
 
 /* Оптимизированные SVG-иконки (stroke, 24×24) */
@@ -60,6 +60,7 @@ type DashboardScreenProps = {
 };
 
 export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToReviews }: DashboardScreenProps) {
+  const { avatarUrl, avatarLetter } = useAdminAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalBookings: 28,
     confirmedBookings: 3,
@@ -203,7 +204,13 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
         </section>
 
         <footer className="dashboard-hero dashboard-hero--bottom dashboard-hero--glass">
-          <FlexGuardLogo size="md" showBadge />
+          <div className="dashboard-hero__avatar">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="dashboard-hero__avatar-img" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="dashboard-hero__avatar-letter" aria-hidden>{avatarLetter}</span>
+            )}
+          </div>
           <p className="dashboard-hero__tagline">Админ-панель</p>
         </footer>
       </main>

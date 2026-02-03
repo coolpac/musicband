@@ -26,30 +26,25 @@ export default function AdminHeader({
       <div className="app-topbar admin-topbar">
         <div className="admin-topbar__left" aria-hidden="true" />
         <div className="admin-topbar__center">
-          {customContent || (
-            <img
-              alt="ГРУП"
-              className="app-topbar-logo"
-              src={topbarLogo}
-            />
-          )}
+          {customContent ??
+            (showAvatar ? (
+              <div className="admin-topbar__avatar admin-topbar__avatar--center">
+                {!loading && avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="admin-topbar__avatar-img"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="admin-topbar__avatar-letter" aria-hidden>{avatarLetter}</span>
+                )}
+              </div>
+            ) : (
+              <img alt="ВГУЛ" className="app-topbar-logo" src={topbarLogo} />
+            ))}
         </div>
-        <div className="admin-topbar__right">
-          {showAvatar && (
-            <div className="admin-topbar__avatar">
-              {!loading && avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  className="admin-topbar__avatar-img"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                avatarLetter
-              )}
-            </div>
-          )}
-        </div>
+        <div className="admin-topbar__right" />
       </div>
     </header>
   );
