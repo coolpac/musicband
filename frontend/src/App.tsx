@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
-import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId } from './telegram/telegramWebApp';
+import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId, getTelegramWebApp } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
 import { castVote, getMyVote } from './services/voteService';
 import { submitReview } from './services/reviewService';
@@ -68,26 +68,53 @@ export default function App() {
   const tg = useTelegramWebApp({ initOnMount: true });
 
   // Авторизация Mini App через Telegram initData → JWT (cookie + localStorage для сокетов)
+  // initData может быть пустой при первом рендере (Telegram заполняет асинхронно) —
+  // retry с задержкой до 3-х попыток
   useEffect(() => {
     if (!tg.isTelegram) return;
     if (authToken) return;
-    const initData = tg.webApp?.initData;
-    if (!initData) return;
 
-    apiPost<{ user: unknown; token: string; startParam?: string }>('/api/auth/telegram', {
-      initData,
-      startParam: getStartParam(),
-    })
-      .then((data) => {
-        if (data?.token) {
-          localStorage.setItem('auth_token', data.token);
-          setAuthToken(data.token);
+    let cancelled = false;
+    let attempt = 0;
+    const MAX_ATTEMPTS = 5;
+    const RETRY_DELAY = 500; // ms
+
+    const tryAuth = () => {
+      if (cancelled) return;
+      attempt++;
+
+      const initData = getTelegramWebApp()?.initData;
+      if (!initData) {
+        if (attempt < MAX_ATTEMPTS) {
+          console.warn(`Telegram initData empty, retry ${attempt}/${MAX_ATTEMPTS} in ${RETRY_DELAY}ms`);
+          setTimeout(tryAuth, RETRY_DELAY);
+        } else {
+          console.error('Telegram initData still empty after all retries');
         }
+        return;
+      }
+
+      apiPost<{ user: unknown; token: string; startParam?: string }>('/api/auth/telegram', {
+        initData,
+        startParam: getStartParam(),
       })
-      .catch((error) => {
-        console.error('Telegram auth failed:', error);
-      });
-  }, [tg.isTelegram, tg.webApp, authToken]);
+        .then((data) => {
+          if (!cancelled && data?.token) {
+            localStorage.setItem('auth_token', data.token);
+            setAuthToken(data.token);
+          }
+        })
+        .catch((error) => {
+          console.error('Telegram auth failed:', error);
+        });
+    };
+
+    tryAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tg.isTelegram, authToken]);
 
   useEffect(() => {
     if (!tg.isTelegram) return;
@@ -478,6 +505,31 @@ export default function App() {
               window.history.pushState({}, '', '?screen=home');
             }}
             onSubmit={async (songId) => {
+              // Если нет токена — попробовать авторизоваться ещё раз
+              if (!authToken) {
+                const initData = getTelegramWebApp()?.initData;
+                if (initData) {
+                  try {
+                    const data = await apiPost<{ user: unknown; token: string }>('/api/auth/telegram', {
+                      initData,
+                      startParam: getStartParam(),
+                    });
+                    if (data?.token) {
+                      localStorage.setItem('auth_token', data.token);
+                      setAuthToken(data.token);
+                    }
+                  } catch (authErr) {
+                    console.error('Auth retry before vote failed:', authErr);
+                    hapticNotification('error');
+                    showAlert('Не удалось авторизоваться. Попробуйте переоткрыть приложение.');
+                    return;
+                  }
+                } else {
+                  hapticNotification('error');
+                  showAlert('Не удалось авторизоваться. Откройте приложение через Telegram.');
+                  return;
+                }
+              }
               try {
                 await castVote(songId);
                 hapticNotification('success');
@@ -485,6 +537,14 @@ export default function App() {
                 window.history.pushState({}, '', '?screen=voting-results');
               } catch (error) {
                 console.error('Failed to submit vote:', error);
+                // Если 401 — токен протух, попробуем перезалогиниться
+                if (error instanceof ApiError && error.statusCode === 401) {
+                  localStorage.removeItem('auth_token');
+                  setAuthToken(null);
+                  hapticNotification('error');
+                  showAlert('Сессия истекла. Попробуйте проголосовать ещё раз.');
+                  return;
+                }
                 // Если это конфликт (уже голосовал) — просто открываем результаты
                 if (error instanceof ApiError && error.statusCode === 409) {
                   hapticNotification('success');
@@ -527,6 +587,7 @@ export default function App() {
             socketStatus={currentScreen === 'voting-results' ? socketStatus : null}
             retryTrigger={retryTrigger}
             onRetryConnection={handleRetryConnection}
+            sessionEnded={false}
           />
         );
       case 'winning-song': {

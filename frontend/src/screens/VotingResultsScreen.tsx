@@ -28,6 +28,8 @@ type VotingResultsScreenProps = {
   socketStatus?: 'connected' | 'reconnecting' | 'disconnected' | 'error' | null;
   retryTrigger?: number;
   onRetryConnection?: () => void;
+  /** Голосование завершено — можно просматривать песни */
+  sessionEnded?: boolean;
 };
 
 export default function VotingResultsScreen({
@@ -36,6 +38,7 @@ export default function VotingResultsScreen({
   socketStatus,
   retryTrigger = 0,
   onRetryConnection,
+  sessionEnded = false,
 }: VotingResultsScreenProps) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [results, setResults] = useState<VoteResult[]>([]);
@@ -131,15 +134,17 @@ export default function VotingResultsScreen({
           {sortedSongs.map((song, index) => {
             const percentage = getSongPercentage(song.id);
             const coverProps = getOptimizedImageProps(song.coverUrl);
+            const canClick = sessionEnded && onSongClick;
+            const Tag = canClick ? motion.button : motion.div;
             return (
-              <motion.button
+              <Tag
                 key={song.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
-                type="button"
-                className="voting-result-card voting-result-card--clickable"
-                onClick={() => { hapticImpact('light'); onSongClick?.(song.id); }}
+                {...(canClick ? { type: 'button' as const } : {})}
+                className={`voting-result-card${canClick ? ' voting-result-card--clickable' : ''}`}
+                onClick={canClick ? () => { hapticImpact('light'); onSongClick(song.id); } : undefined}
               >
                 <motion.div
                   initial={{ width: 0 }}
@@ -172,7 +177,7 @@ export default function VotingResultsScreen({
                     </span>
                   </div>
                 </div>
-              </motion.button>
+              </Tag>
             );
           })}
         </div>

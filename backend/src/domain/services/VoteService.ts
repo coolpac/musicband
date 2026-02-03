@@ -127,33 +127,33 @@ export class VoteService {
     const results = await this.voteRepository.getResults(session.id);
     const totalVotes = results.reduce((sum, r) => sum + r.votes, 0);
 
-    // Получаем информацию о песнях (оптимизированно - один запрос вместо N)
-    const songIds = results.map((r) => r.songId);
-    const songs = await this.songRepository.findByIds(songIds);
+    // Получаем ВСЕ активные песни (чтобы песни с 0 голосов тоже показывались)
+    const allActiveSongs = await this.songRepository.findActive();
 
-    // Создаем Map для быстрого доступа
-    const songsMap = new Map(songs.map((s) => [s.id, s]));
+    // Map голосов по songId для быстрого доступа
+    const votesMap = new Map(results.map((r) => [r.songId, r]));
 
-    // Собираем результаты с деталями песен
-    const songsWithDetails = results.map((result) => {
-      const song = songsMap.get(result.songId);
+    // Собираем результаты: все активные песни + их голоса (0 если не голосовали)
+    const songsWithDetails = allActiveSongs.map((song) => {
+      const result = votesMap.get(song.id);
       return {
-        song: song
-          ? {
-              id: song.id,
-              title: song.title,
-              artist: song.artist,
-              coverUrl: song.coverUrl,
-            }
-          : null,
-        votes: result.votes,
-        percentage: result.percentage,
+        song: {
+          id: song.id,
+          title: song.title,
+          artist: song.artist,
+          coverUrl: song.coverUrl,
+        },
+        votes: result?.votes ?? 0,
+        percentage: result?.percentage ?? 0,
       };
     });
 
+    // Сортируем по голосам (больше → первее)
+    songsWithDetails.sort((a, b) => b.votes - a.votes);
+
     const response = {
       sessionId: session.id,
-      songs: songsWithDetails.filter((s) => s.song !== null),
+      songs: songsWithDetails,
       totalVotes,
     };
 
