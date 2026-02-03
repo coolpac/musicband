@@ -23,6 +23,7 @@ export interface CreateSongData {
   title: string;
   artist: string;
   coverUrl?: string;
+  artistImageUrl?: string;
   lyrics?: string;
   isActive?: boolean;
   orderIndex?: number;
@@ -32,6 +33,7 @@ export interface UpdateSongData {
   title?: string;
   artist?: string;
   coverUrl?: string;
+  artistImageUrl?: string;
   lyrics?: string;
   isActive?: boolean;
   orderIndex?: number;
@@ -87,6 +89,7 @@ export class PrismaSongRepository implements ISongRepository {
         title: data.title,
         artist: data.artist,
         coverUrl: data.coverUrl,
+        artistImageUrl: data.artistImageUrl,
         lyrics: data.lyrics,
         isActive: data.isActive || false,
         orderIndex: data.orderIndex || 0,
@@ -101,6 +104,7 @@ export class PrismaSongRepository implements ISongRepository {
         title: data.title,
         artist: data.artist,
         coverUrl: data.coverUrl,
+        artistImageUrl: data.artistImageUrl,
         lyrics: data.lyrics,
         isActive: data.isActive,
         orderIndex: data.orderIndex,
@@ -125,6 +129,7 @@ export class PrismaSongRepository implements ISongRepository {
         title: data.title,
         artist: data.artist,
         coverUrl: data.coverUrl,
+        artistImageUrl: data.artistImageUrl,
         lyrics: data.lyrics,
         isActive: data.isActive,
         orderIndex: data.orderIndex,

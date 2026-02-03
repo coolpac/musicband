@@ -3,6 +3,7 @@ export type Song = {
   title: string;
   artist: string;
   coverUrl?: string;
+  artistImageUrl?: string;
   isActive: boolean;
   orderIndex: number;
 };

@@ -50,10 +50,15 @@ export class SongController {
       const { id } = req.params;
       const song = await this.songService.getSongById(id);
 
+      // Преобразуем строку lyrics в массив строк, разделяя по переносам строк
+      const lyricsArray = song.lyrics
+        ? song.lyrics.split(/\r?\n/).filter((line) => line.trim() !== '' || line === '')
+        : [];
+
       res.json({
         success: true,
         data: {
-          lyrics: song.lyrics || '',
+          lyrics: lyricsArray,
         },
       });
     } catch (error) {

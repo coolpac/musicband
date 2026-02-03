@@ -20,5 +20,9 @@ export async function getSongLyrics(
     `/api/songs/${songId}/lyrics`,
     options
   );
-  return response?.lyrics ?? ['Текст песни пока недоступен.'];
+  // Проверяем, что response существует и содержит lyrics
+  if (response && typeof response === 'object' && 'lyrics' in response) {
+    return Array.isArray(response.lyrics) ? response.lyrics : ['Текст песни пока недоступен.'];
+  }
+  return ['Текст песни пока недоступен.'];
 }

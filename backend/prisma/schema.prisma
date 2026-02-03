@@ -127,15 +127,16 @@ model ReferralEvent {
 }
 
 model Song {
-  id         String   @id @default(uuid())
-  title      String
-  artist     String
-  coverUrl   String?  @map("cover_url")
-  lyrics     String?
-  isActive   Boolean  @default(false) @map("is_active")
-  orderIndex Int      @default(0) @map("order_index")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id            String   @id @default(uuid())
+  title         String
+  artist        String
+  coverUrl      String?  @map("cover_url")
+  artistImageUrl String? @map("artist_image_url")
+  lyrics        String?
+  isActive      Boolean  @default(false) @map("is_active")
+  orderIndex    Int      @default(0) @map("order_index")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   votes Vote[]
 

@@ -152,6 +152,7 @@ export default function SongsManagementScreen() {
     title: '',
     artist: '',
     coverUrl: '',
+    artistImageUrl: '',
     lyrics: '',
     isActive: false,
     orderIndex: 0,
@@ -229,6 +230,7 @@ export default function SongsManagementScreen() {
       title: '',
       artist: '',
       coverUrl: '',
+      artistImageUrl: '',
       lyrics: '',
       isActive: false,
       orderIndex: songs.length,
@@ -242,6 +244,7 @@ export default function SongsManagementScreen() {
       title: song.title,
       artist: song.artist,
       coverUrl: song.coverUrl,
+      artistImageUrl: song.artistImageUrl,
       lyrics: song.lyrics,
       isActive: song.isActive,
       orderIndex: song.orderIndex,
@@ -314,6 +317,10 @@ export default function SongsManagementScreen() {
 
   const handleImageUpload = (url: string) => {
     setFormData({ ...formData, coverUrl: url });
+  };
+
+  const handleArtistImageUpload = (url: string) => {
+    setFormData({ ...formData, artistImageUrl: url });
   };
 
   if (isLoading) {
@@ -405,6 +412,17 @@ export default function SongsManagementScreen() {
             <FileUpload
               currentImage={formData.coverUrl}
               onUpload={handleImageUpload}
+              accept="image/*"
+              maxSize={5}
+              preset="cover"
+            />
+          </div>
+
+          <div className="admin-form-group">
+            <label className="admin-form-label">Изображение исполнителя</label>
+            <FileUpload
+              currentImage={formData.artistImageUrl}
+              onUpload={handleArtistImageUpload}
               accept="image/*"
               maxSize={5}
               preset="cover"

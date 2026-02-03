@@ -48,7 +48,7 @@ export class PrismaFormatRepository implements IFormatRepository {
   async findAllForBooking(): Promise<Format[]> {
     return this.client.format.findMany({
       where: { status: 'available' },
-      orderBy: { order: 'asc', name: 'asc' },
+      orderBy: [{ order: 'asc' }, { name: 'asc' }],
     });
   }
 

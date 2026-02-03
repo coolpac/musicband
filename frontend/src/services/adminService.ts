@@ -15,6 +15,7 @@ export type TrackInput = {
   title: string;
   artist: string;
   coverUrl?: string;
+  artistImageUrl?: string;
   lyrics?: string;
   isActive?: boolean;
   orderIndex?: number;

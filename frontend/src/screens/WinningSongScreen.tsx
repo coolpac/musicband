@@ -94,7 +94,21 @@ export default function WinningSongScreen({ onViewLyrics, songId }: WinningSongS
 
         <div className="winning-song-info">
           <div className="winning-song-artist-avatar">
-            <div className="winning-song-artist-avatar-placeholder"></div>
+            {(() => {
+              const artistImageProps = getOptimizedImageProps(winningSong.artistImageUrl);
+              return artistImageProps ? (
+                <OptimizedImage
+                  {...artistImageProps}
+                  alt={winningSong.artist}
+                  className="winning-song-artist-avatar-image"
+                  loading="eager"
+                  sizes="40px"
+                  objectFit="cover"
+                />
+              ) : (
+                <div className="winning-song-artist-avatar-placeholder"></div>
+              );
+            })()}
           </div>
           <div className="winning-song-text">
             <div className="winning-song-name">{winningSong.title}</div>
