@@ -124,9 +124,14 @@ export default function App() {
         } else {
           setCurrentFormatId(null);
         }
+        // Прокрутка к началу при переходе на home
+        if (screenParam === 'home' || !screenParam) {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
       } else {
         setCurrentScreen('home');
         setCurrentFormatId(null);
+        window.scrollTo({ top: 0, behavior: 'instant' });
       }
     };
 
@@ -150,9 +155,15 @@ export default function App() {
     fetch(`${base}/api/public/vote/session/${sessionId}`)
       .then((res) => res.json())
       .then((data) => {
-        if (!data.success) return;
+        if (!data.success) {
+          console.warn('Vote session not found or error:', data);
+          // Если сессия не найдена, но мы уже на экране voting — оставляем там
+          // (возможно API ещё не вернул данные или сессия создаётся)
+          return;
+        }
 
         const { status, winningSong } = data.data;
+        console.log('Vote session loaded:', { sessionId, status, winningSong });
 
         if (status === 'active') {
           setCurrentScreen('voting');
@@ -164,29 +175,45 @@ export default function App() {
             '',
             `?screen=winning-song&songId=${winningSong.id}&sessionId=${sessionId}`
           );
-        } else {
-          setCurrentScreen('home');
+        } else if (status === 'ended') {
+          // Голосование завершено без победителя — показываем результаты
+          setCurrentScreen('voting-results');
+          window.history.replaceState({}, '', `?screen=voting-results&sessionId=${sessionId}`);
         }
+        // Не переключаем на home если статус неизвестен
       })
       .catch((err) => {
         console.error('Failed to load voting session:', err);
+        // При ошибке сети не переключаем экран — возможно пользователь уже на voting
       });
   };
 
   // Deep link vote_{sessionId}: парсим start_param, URL или pending session из Redis
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
     const startParam = getStartParam();
-    const urlSessionId = new URLSearchParams(window.location.search).get('sessionId');
+    const urlSessionId = params.get('sessionId');
+    const urlScreen = params.get('screen');
+
+    // Если URL уже содержит screen=voting и sessionId — экран уже установлен через handlePopState
+    // Просто сохраняем sessionId для socket подключения, не делаем лишний fetch
+    if (urlScreen === 'voting' && urlSessionId) {
+      console.log('Voting screen already set via URL, saving sessionId:', urlSessionId);
+      setVotingSessionId(urlSessionId);
+      return;
+    }
 
     // 1. Проверяем start_param (direct link t.me/bot/app?startapp=vote_SESSION)
     if (startParam && startParam.startsWith('vote_')) {
       const sessionId = startParam.substring(5);
+      console.log('Found vote session in start_param:', sessionId);
       loadVotingSession(sessionId);
       return;
     }
 
-    // 2. Проверяем URL параметр sessionId
-    if (urlSessionId) {
+    // 2. Проверяем URL параметр sessionId (если screen не voting — нужно загрузить сессию)
+    if (urlSessionId && urlScreen !== 'voting') {
+      console.log('Found sessionId in URL, loading session:', urlSessionId);
       loadVotingSession(urlSessionId);
       return;
     }
@@ -527,7 +554,7 @@ export default function App() {
         </div>
       )}
       
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="popLayout" initial={false}>
         <PageTransition key={currentScreen + (currentFormatId || '')} id={currentScreen + (currentFormatId || '')}>
           {renderScreen()}
         </PageTransition>

@@ -152,9 +152,6 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
   if (error) {
     return (
       <main className="screen screen--format">
-        <button className="format-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-          Назад
-        </button>
         <div className="format-container">
           <NetworkError
             message="Не удалось загрузить форматы."
@@ -167,9 +164,6 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
 
   return (
     <main className="screen screen--format">
-      <button className="format-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-        Назад
-      </button>
       <div className="format-container">
         {loading ? (
           <div className="format-loading">Загрузка...</div>

@@ -31,44 +31,26 @@ export default function AppLoader({ onReady }: { onReady: () => void }) {
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
-    const start = performance.now();
-    let done = false;
-    let imagesPreloaded = false;
+    let cancelled = false;
 
-    // Запускаем preload изображений сразу
-    preloadImages([heroImage]).then(() => {
-      imagesPreloaded = true;
-      tryFinish();
-    });
-
-    const tryFinish = () => {
-      if (done) return;
-      const elapsed = performance.now() - start;
-      const ready = document.readyState === 'complete';
-      const minElapsed = elapsed >= MIN_DISPLAY_MS;
-      // Ждём: минимальное время + документ готов + изображения загружены
-      if (ready && minElapsed && imagesPreloaded) {
-        done = true;
-        setIsExiting(true);
-      }
-    };
-
-    const onLoad = () => {
-      tryFinish();
-    };
-
-    window.addEventListener('load', onLoad);
-
-    // Всегда ждём минимум MIN_DISPLAY_MS, затем проверяем document ready
-    const minTimer = setTimeout(tryFinish, MIN_DISPLAY_MS);
-    const maxTimer = setTimeout(() => {
-      done = true;
+    const finish = () => {
+      if (cancelled) return;
+      cancelled = true;
       setIsExiting(true);
-    }, MAX_WAIT_MS);
+    };
+
+    // Ждём ОБА условия: минимальное время сплеша И загрузку изображений
+    const minTimePromise = new Promise<void>((resolve) => setTimeout(resolve, MIN_DISPLAY_MS));
+    const imagesPromise = preloadImages([heroImage]);
+
+    // Основная логика — ждём оба условия
+    Promise.all([minTimePromise, imagesPromise]).then(finish);
+
+    // Максимальное время ожидания (fallback если что-то зависло)
+    const maxTimer = setTimeout(finish, MAX_WAIT_MS);
 
     return () => {
-      window.removeEventListener('load', onLoad);
-      clearTimeout(minTimer);
+      cancelled = true;
       clearTimeout(maxTimer);
     };
   }, []);

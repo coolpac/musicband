@@ -52,9 +52,6 @@ export default function FormatDetailScreen({
       <main className="screen screen--format-detail">
         <div className="format-detail-container">
           <p>Формат не найден</p>
-          <button className="btn btn-primary" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-            Назад
-          </button>
         </div>
       </main>
     );
@@ -62,9 +59,6 @@ export default function FormatDetailScreen({
 
   return (
     <main className="screen screen--format-detail">
-      <button className="format-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-        Назад
-      </button>
       <div className="format-detail-container">
         <div className="format-detail-hero">
           {format.status === 'coming-soon' ? (

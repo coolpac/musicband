@@ -192,9 +192,9 @@
 .format-cta {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 32px);
+  left: max(16px, env(safe-area-inset-left, 16px));
+  right: max(16px, env(safe-area-inset-right, 16px));
+  width: auto;
   max-width: 400px;
   height: 60px;
   margin: 0 auto 20px;
@@ -271,9 +271,14 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  /* Градиент затемнения как в Figma — сверху светлее, снизу темнее */
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.6) 30%,
+    rgba(0, 0, 0, 0.75) 60%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
   z-index: 2;
 }
 
@@ -411,12 +416,12 @@
 .format-detail-cta {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 32px);
+  left: max(16px, env(safe-area-inset-left, 16px));
+  right: max(16px, env(safe-area-inset-right, 16px));
+  width: auto;
   max-width: 400px;
   height: 60px;
-  margin: 0 0 20px;
+  margin: 0 auto 20px;
   border-radius: var(--radius-lg);
   z-index: 50;
 }
@@ -470,12 +475,20 @@
   }
 
   .format-cta {
+    left: auto;
+    right: auto;
+    width: 100%;
     max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
     margin-bottom: 30px;
   }
 
   .format-detail-cta {
     position: relative;
+    left: auto;
+    right: auto;
+    width: 100%;
     max-width: 500px;
     margin: 40px auto 0;
     border-radius: var(--radius-lg);

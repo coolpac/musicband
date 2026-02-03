@@ -431,9 +431,6 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
             </h2>
             <div
               className="why-slider"
-              onPointerDown={handleWhyPointerDown}
-              onPointerUp={handleWhyPointerUp}
-              onPointerCancel={handleWhyPointerUp}
               onScroll={handleWhyScrollWithStrip}
               ref={whySlider.sliderRef}
             >
