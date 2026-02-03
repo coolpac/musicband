@@ -37,6 +37,21 @@
   padding: 0;
 }
 
+.request-body--calendar {
+  position: relative;
+  min-height: 100%;
+  padding: 72px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.tg-mini-app .request-body--calendar {
+  min-height: var(--app-viewport-height);
+  padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
+}
+
  .request-body--gradient {
   background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 440 847' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%25' width='100%25' fill='url(%23grad)' opacity='0.4000000059604645'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(-47.15 108.7 -27.137 -11.771 440 -89.582)'><stop stop-color='rgba(255,10,10,1)' offset='0.092938'/><stop stop-color='rgba(191,8,8,1)' offset='0.3197'/><stop stop-color='rgba(128,5,5,1)' offset='0.54647'/><stop stop-color='rgba(96,4,4,1)' offset='0.65985'/><stop stop-color='rgba(64,3,3,1)' offset='0.77323'/><stop stop-color='rgba(32,1,1,1)' offset='0.88662'/><stop stop-color='rgba(16,1,1,1)' offset='0.94331'/><stop stop-color='rgba(0,0,0,1)' offset='1'/></radialGradient></defs></svg>");
   background-size: cover;
@@ -169,13 +184,14 @@
 }
 
 .request-calendar-block {
-  position: absolute;
-  top: 117.42px;
-  left: 26px;
-  width: min(389px, calc(100% - 52px));
+  position: relative;
+  top: auto;
+  left: auto;
+  width: min(410px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 64px;
 }
 
 .request-calendar-head {
@@ -217,20 +233,18 @@
  
 .request-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 47px);
-  gap: 10px;
-  justify-content: space-between;
-  grid-auto-rows: 47px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: clamp(6px, 2.5vw, 10px);
 }
  
  .request-day {
-  width: 47px;
-  height: 47px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
    border-radius: 15px;
    border: 1px solid var(--white);
   background: transparent;
   color: var(--white);
-  font-size: 24px;
+  font-size: clamp(16px, 4.2vw, 24px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -278,10 +292,10 @@
  }
 
 .request-select--calendar {
-  position: absolute;
-  top: 474.42px;
-  left: 26px;
-  width: min(389px, calc(100% - 52px));
+  position: relative;
+  top: auto;
+  left: auto;
+  width: min(410px, 100%);
   margin: 0;
 }
  
@@ -402,11 +416,11 @@
  }
 
 .request-primary--calendar {
-  position: absolute;
-  top: 747.42px;
-  left: 15px;
-  width: min(410px, calc(100% - 30px));
-  margin: 0;
+  position: relative;
+  top: auto;
+  left: auto;
+  width: min(410px, 100%);
+  margin: 8px 0 0;
 }
  
 .request-form-card {

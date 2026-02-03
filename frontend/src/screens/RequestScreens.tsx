@@ -160,6 +160,13 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
   const [availableDates, setAvailableDates] = useState<number[]>([]);
   const [datesError, setDatesError] = useState<Error | null>(null);
 
+  useEffect(() => {
+    // Сбрасываем скролл при входе в календарь (в SPA сохраняется позиция лендинга)
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+  }, []);
+
   const loadFormats = useCallback(async () => {
     setFormatsError(null);
     setFormatsLoading(true);
