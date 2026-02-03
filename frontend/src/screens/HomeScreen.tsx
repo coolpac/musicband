@@ -368,9 +368,11 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                     </>
                   )}
                 </div>
-                <div className="card-body glass">
-                  <p className="card-title">{item.title}</p>
-                </div>
+                {item.title && (
+                  <div className="card-body glass">
+                    <p className="card-title">{item.title}</p>
+                  </div>
+                )}
               </article>
             ))}
           </div>
