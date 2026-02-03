@@ -21,6 +21,7 @@ export type LiveResultsPayload = {
 };
 
 type VotingResultsScreenProps = {
+  /** Не используется: навигация назад — кнопка Telegram. */
   onBack?: () => void;
   onSongClick?: (songId: string) => void;
   liveResults?: LiveResultsPayload | null;
@@ -30,7 +31,6 @@ type VotingResultsScreenProps = {
 };
 
 export default function VotingResultsScreen({
-  onBack,
   onSongClick,
   liveResults,
   socketStatus,
@@ -104,11 +104,6 @@ export default function VotingResultsScreen({
   if (error) {
     return (
       <main className="screen screen--voting-results">
-        {onBack && (
-          <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-            Назад
-          </button>
-        )}
         <div className="voting-hero">
           <img alt="" className="voting-bg-image" src={votingBg} />
         </div>
@@ -124,11 +119,6 @@ export default function VotingResultsScreen({
 
   return (
     <main className="screen screen--voting-results">
-      {onBack && (
-        <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-          Назад
-        </button>
-      )}
       <div className="voting-hero">
         <img alt="" className="voting-bg-image" src={votingBg} />
       </div>

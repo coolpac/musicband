@@ -16,24 +16,6 @@
   min-height: var(--app-viewport-height);
 }
 
-.voting-back-btn {
-  position: fixed;
-  top: clamp(64px, 11svh, 107px);
-  left: 0;
-  z-index: 100;
-  background: transparent;
-  border: none;
-  color: var(--white);
-  font-size: 20px;
-  font-family: "Geologica", sans-serif;
-  cursor: pointer;
-  padding: 16px;
-}
-
-.voting-back-btn:hover {
-  opacity: 0.8;
-}
-
 .voting-hero {
   position: fixed;
   top: 0;
@@ -208,12 +190,12 @@
 .voting-confirm-btn {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 32px);
+  left: max(16px, env(safe-area-inset-left, 16px));
+  right: max(16px, env(safe-area-inset-right, 16px));
+  width: auto;
   max-width: 400px;
   height: 60px;
-  margin: 0 0 20px;
+  margin: 0 auto 20px;
   border-radius: var(--radius-lg);
   z-index: 50;
   background: var(--white);
@@ -276,12 +258,13 @@
   }
 
   .voting-confirm-btn {
+    left: auto;
+    right: auto;
+    width: 100%;
     max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
     margin-bottom: 30px;
-  }
-
-  .voting-back-btn {
-    left: 40px;
   }
 }
 
@@ -711,6 +694,7 @@
   max-width: 400px;
   height: 60px;
   margin: 0 auto;
+  display: block;
   border-radius: var(--radius-lg);
   z-index: 50;
   background: #FFFFFF;
@@ -720,6 +704,7 @@
   font-weight: 600;
   font-family: "Geologica", sans-serif;
   transition: opacity 0.2s ease, transform 0.1s ease;
+  box-sizing: border-box;
 }
 
 .winning-song-lyrics-btn:hover {

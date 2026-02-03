@@ -9,13 +9,14 @@ import '../styles/voting.css';
 import '../styles/lyrics.css';
 
 type SongLyricsScreenProps = {
+  /** Не используется: навигация назад — кнопка Telegram. */
   onBack?: () => void;
   songId?: string;
   /** 'figma' — как в макете: заголовок, текст слева. 'spotify' — центрированный, крупнее, в духе Spotify */
   variant?: 'figma' | 'spotify';
 };
 
-export default function SongLyricsScreen({ onBack, songId, variant = 'spotify' }: SongLyricsScreenProps) {
+export default function SongLyricsScreen({ songId, variant = 'spotify' }: SongLyricsScreenProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [song, setSong] = useState<Song | null>(null);
   const [lines, setLines] = useState<string[]>([]);
@@ -52,11 +53,6 @@ export default function SongLyricsScreen({ onBack, songId, variant = 'spotify' }
 
   return (
     <main className={`screen screen--lyrics screen--lyrics-${variant}`}>
-      {onBack && (
-        <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-          Назад
-        </button>
-      )}
       <div className="voting-hero">
         <img alt="" className="voting-bg-image" src={votingBg} />
       </div>

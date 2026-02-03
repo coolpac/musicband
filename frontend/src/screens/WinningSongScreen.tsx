@@ -11,12 +11,13 @@ import '../styles/voting.css';
 import '../styles/lyrics.css';
 
 type WinningSongScreenProps = {
+  /** Не используется: навигация назад — кнопка Telegram. */
   onBack?: () => void;
   onViewLyrics?: () => void;
   songId?: string;
 };
 
-export default function WinningSongScreen({ onBack, onViewLyrics, songId }: WinningSongScreenProps) {
+export default function WinningSongScreen({ onViewLyrics, songId }: WinningSongScreenProps) {
   const [winningSong, setWinningSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
@@ -56,11 +57,6 @@ export default function WinningSongScreen({ onBack, onViewLyrics, songId }: Winn
 
   return (
     <main className="screen screen--winning-song">
-      {onBack && (
-        <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-          Назад
-        </button>
-      )}
       <div className="voting-hero">
         <img alt="" className="voting-bg-image" src={votingBg} />
       </div>

@@ -11,11 +11,12 @@ import { getOptimizedImageProps } from '../types/image';
 import '../styles/voting.css';
 
 type VotingScreenProps = {
+  /** Не используется: навигация назад — кнопка Telegram. */
   onBack?: () => void;
   onSubmit?: (songId: string) => void;
 };
 
-export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
+export default function VotingScreen({ onSubmit }: VotingScreenProps) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,11 +64,6 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
   if (error) {
     return (
       <main className="screen screen--voting">
-        {onBack && (
-          <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-            Назад
-          </button>
-        )}
         <div className="voting-hero">
           <img alt="" className="voting-bg-image" src={votingBg} />
         </div>
@@ -83,11 +79,6 @@ export default function VotingScreen({ onBack, onSubmit }: VotingScreenProps) {
 
   return (
     <main className="screen screen--voting">
-      {onBack && (
-        <button className="voting-back-btn" onClick={() => { hapticImpact('light'); onBack(); }} type="button">
-          Назад
-        </button>
-      )}
       <div className="voting-hero">
         <img alt="" className="voting-bg-image" src={votingBg} />
       </div>
