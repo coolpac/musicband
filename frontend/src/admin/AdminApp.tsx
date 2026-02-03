@@ -5,6 +5,7 @@ import AdminTerminalLoader, { MIN_LOADER_DISPLAY_MS } from './components/AdminTe
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import LoginScreen from './screens/LoginScreen';
+import { useTelegramWebApp } from '../telegram/useTelegramWebApp';
 import '../styles/admin.css';
 import '../styles/admin-tabbar.css';
 
@@ -36,6 +37,7 @@ const ReviewsManagementScreen = lazy(() => import('./screens/ReviewsManagementSc
 export type BookingsView = 'log' | 'calendar';
 
 function AdminContent() {
+  useTelegramWebApp({ initOnMount: true });
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [bookingsView, setBookingsView] = useState<BookingsView>('log');
   const { isAuthenticated, loading } = useAdminAuth();

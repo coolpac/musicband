@@ -1,5 +1,5 @@
- .request-screen {
-   width: var(--container-width);
+.request-screen {
+  width: min(100%, var(--container-width));
    margin: 0 auto;
    min-height: 100vh;
    background: #000;
@@ -40,11 +40,14 @@
 .request-body--calendar {
   position: relative;
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
   padding: 72px 16px 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
+  box-sizing: border-box;
 }
 
 .tg-mini-app .request-body--calendar {
@@ -133,7 +136,7 @@
 .request-screen--form .request-logo {
   position: static;
   transform: none;
-  margin: 0 auto 16px;
+  margin: clamp(24px, 8svh, 64px) auto 16px;
   z-index: 1;
 }
  
@@ -195,6 +198,7 @@
   top: auto;
   left: auto;
   width: min(410px, 100%);
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -242,6 +246,7 @@
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: clamp(6px, 2.5vw, 10px);
+  max-width: 100%;
 }
  
  .request-day {

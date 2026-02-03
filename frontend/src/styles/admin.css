@@ -21,6 +21,10 @@
   padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)); /* Space for TabBar + safe area */
 }
 
+.tg-mini-app .admin-screen {
+  min-height: var(--app-viewport-height);
+}
+
 /* Header */
 .admin-header {
   display: flex;
