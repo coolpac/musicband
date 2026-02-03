@@ -131,10 +131,15 @@ export default function VotingManagementScreen() {
     }
 
     try {
-      await adminVoteService.startSession(Array.from(selectedSongs));
+      const result = await adminVoteService.startSession(Array.from(selectedSongs));
       toast.success('Голосование запущено!');
       setShowStartModal(false);
       await loadData();
+      if (result.qrCode) {
+        setQrCodeDataUrl(result.qrCode.dataURL ?? '');
+        setQrDeepLink(result.qrCode.deepLink ?? '');
+        setShowQRModal(true);
+      }
     } catch (error) {
       console.error('Error starting session:', error);
       toast.error('Не удалось запустить голосование');
@@ -174,31 +179,75 @@ export default function VotingManagementScreen() {
     }
   };
 
-  const handleDownloadQR = () => {
+  const handleDownloadQR = async () => {
     if (!qrCodeDataUrl) return;
 
-    const link = document.createElement('a');
-    link.href = qrCodeDataUrl;
-    link.download = `voting-qr-${activeSession?.id || 'session'}.png`;
-    link.click();
+    try {
+      const res = await fetch(qrCodeDataUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `voting-qr-${activeSession?.id || 'session'}.png`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('QR-код скачан');
+    } catch (error) {
+      console.error('Error downloading QR:', error);
+      toast.error('Не удалось скачать QR-код');
+    }
+  };
 
-    toast.success('QR-код скачан');
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        /* fallback below */
+      }
+    }
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    try {
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      document.body.removeChild(textarea);
+      return false;
+    }
   };
 
   const handleCopyLink = async () => {
-    if (!activeSession) return;
-
-    try {
-      const data = await adminVoteService.getSessionQR(activeSession.id);
-      const deepLink = data.qrCode?.deepLink;
-      if (!deepLink) {
-        throw new Error('no deeplink');
+    let deepLink = qrDeepLink;
+    if (!deepLink && activeSession) {
+      try {
+        const data = await adminVoteService.getSessionQR(activeSession.id);
+        deepLink = data.qrCode?.deepLink ?? '';
+      } catch {
+        deepLink = '';
       }
-      navigator.clipboard.writeText(deepLink);
-      toast.success('Ссылка Telegram скопирована');
-    } catch (error) {
-      console.error('Error copying voting link:', error);
+    }
+    if (!deepLink) {
       toast.error('Не удалось получить ссылку');
+      return;
+    }
+    const ok = await copyToClipboard(deepLink);
+    if (ok) {
+      toast.success('Ссылка Telegram скопирована');
+    } else {
+      toast.error('Не удалось скопировать (разрешите доступ к буферу или скопируйте ссылку вручную)');
     }
   };
 

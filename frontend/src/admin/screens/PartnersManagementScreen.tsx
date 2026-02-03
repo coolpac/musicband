@@ -46,17 +46,8 @@ export default function PartnersManagementScreen() {
   const loadPartners = async () => {
     setIsLoading(true);
     try {
-      // Mock data
-      const mockPartners: Partner[] = [
-        {
-          id: '1',
-          name: 'Partner Company',
-          logoUrl: '',
-          website: 'https://partner.com',
-          order: 1,
-        },
-      ];
-      setPartners(mockPartners);
+      const list = await getAdminPartners();
+      setPartners(list);
     } catch (error) {
       console.error('Error loading partners:', error);
       toast.error('Не удалось загрузить партнеров');

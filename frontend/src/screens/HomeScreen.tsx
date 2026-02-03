@@ -268,8 +268,9 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
             </span>
           </button>
         </div>
-        <div className="hero-copy">
-          <p className="hero-headline">
+        <div className="hero-text-block">
+          <div className="hero-copy">
+            <p className="hero-headline">
             <strong>Обязательный элемент</strong> любого
             <br />
             мероприятия и причина
@@ -278,10 +279,11 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
           </p>
           <p className="hero-subline">cover-группа</p>
           <p className="hero-title">“В ГОСТЯХ У ЛЕМЕНТАЛИЯ”</p>
+          </div>
+          <button className="btn btn-primary" type="button" onClick={handleGoToCalendar}>
+            Оставить заявку
+          </button>
         </div>
-        <button className="btn btn-primary" type="button" onClick={handleGoToCalendar}>
-          Оставить заявку
-        </button>
       </header>
 
       <section className="section posters-promo">
@@ -813,10 +815,16 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
         <h2 className="section-title">Наши партнеры</h2>
         <div className="tile-grid tile-grid--multi partners-grid">
           {partners.length > 0
-            ? partners.map((partner) => {
+            ? partners.map((partner, index) => {
                 const logoProps = getOptimizedImageProps(partner.logoUrl);
+                const isFirst = index === 0;
                 const content = (
                   <>
+                    {isFirst && (
+                      <span className="partner-tile__badge" aria-hidden>
+                        Разработчики
+                      </span>
+                    )}
                     <span className="partner-tile__img-wrap">
                       {logoProps ? (
                         <OptimizedImage

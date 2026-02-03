@@ -74,6 +74,20 @@ body {
   padding-bottom: var(--tg-safe-area-inset-bottom, var(--safe-area-inset-bottom));
   padding-left: var(--tg-safe-area-inset-left, var(--safe-area-inset-left));
   padding-right: var(--tg-safe-area-inset-right, var(--safe-area-inset-right));
+  /* Запрет копирования и приближения */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+/* В полях ввода разрешаем выделение и копирование */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 /* В мини-приложении Telegram убираем padding, используем viewport height */
