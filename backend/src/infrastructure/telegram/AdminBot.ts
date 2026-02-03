@@ -79,7 +79,7 @@ export class AdminBot {
           return;
         }
 
-        const adminUrl = `${process.env.ADMIN_PANEL_URL || 'https://your-domain.com/admin'}?token=...`;
+        const adminUrl = `${process.env.ADMIN_PANEL_URL || 'https://your-domain.com/admin'}`;
 
         await this.bot.sendMessage(
           chatId,
@@ -93,7 +93,7 @@ export class AdminBot {
                 [
                   {
                     text: '🔗 Открыть админ-панель',
-                    url: adminUrl,
+                    web_app: { url: adminUrl },
                   },
                 ],
               ],
@@ -124,7 +124,7 @@ export class AdminBot {
               [
                 {
                   text: '🔗 Открыть админ-панель',
-                  url: adminUrl,
+                  web_app: { url: adminUrl },
                 },
               ],
             ],

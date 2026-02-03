@@ -199,6 +199,35 @@ export class UserBot {
   }
 
   /**
+   * Отправка уведомления о получении заявки (до подтверждения админом)
+   */
+  async sendBookingReceived(telegramId: string, bookingData: {
+    bookingDate: string;
+    formatName?: string;
+    fullName: string;
+  }): Promise<void> {
+    try {
+      const message =
+        '✅ Заявка получена!\n\n' +
+        `📅 Дата: ${bookingData.bookingDate}\n` +
+        (bookingData.formatName ? `🎤 Формат: ${bookingData.formatName}\n` : '') +
+        `👤 Имя: ${bookingData.fullName}\n\n` +
+        'С вами свяжется менеджер в ближайшее время.';
+
+      await this.bot.sendMessage(telegramId, message);
+    } catch (err: unknown) {
+      const code = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { error_code?: number } }).response?.error_code
+        : undefined;
+      if (code === 403) {
+        logger.warn('User blocked the bot', { telegramId });
+      } else {
+        logger.error('Error sending booking received message', { error: err, telegramId });
+      }
+    }
+  }
+
+  /**
    * Уведомление проголосовавшего о победителе голосования
    */
   async sendVotingWinnerNotification(

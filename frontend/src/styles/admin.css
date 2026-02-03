@@ -18,6 +18,7 @@
   min-height: 100vh;
   background: var(--admin-bg);
   color: var(--admin-text);
+  padding-top: calc(clamp(64px, 11svh, 107px) + env(safe-area-inset-top, 0)); /* Отступ под фиксированный хедер */
   padding-bottom: calc(80px + env(safe-area-inset-bottom, 0)); /* Space for TabBar + safe area */
 }
 
@@ -25,17 +26,20 @@
   min-height: var(--app-viewport-height);
 }
 
-/* Header */
+/* Header — фиксированный, всегда сверху */
 .admin-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top, 0));
   background: var(--admin-bg);
   border-bottom: 1px solid var(--admin-border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 .admin-header__left,

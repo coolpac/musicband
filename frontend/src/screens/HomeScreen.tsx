@@ -155,7 +155,17 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
     [whyDesktopSlider]
   );
 
+  const isRutubeUrl = (url: string) => /rutube\.ru/i.test(url);
+  const getRutubeEmbedUrl = (url: string) => {
+    if (/rutube\.ru\/play\/embed\//i.test(url)) return url;
+    const match = url.match(/rutube\.ru\/video\/([a-zA-Z0-9]+)/i);
+    if (match) return `https://rutube.ru/play/embed/${match[1]}`;
+    return url;
+  };
+
   const handlePromoToggle = useCallback(() => {
+    const item = promoVideos[promoSlider.activeIndex];
+    if (!item || isRutubeUrl(item.src)) return;
     const video = promoVideoRefs.current[promoSlider.activeIndex];
     if (!video) return;
     if (video.paused) {
@@ -166,6 +176,8 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
   }, [promoSlider.activeIndex]);
 
   const handleLiveToggle = useCallback(() => {
+    const item = promoVideos[liveSlider.activeIndex];
+    if (!item || isRutubeUrl(item.src)) return;
     const video = liveVideoRefs.current[liveSlider.activeIndex];
     if (!video) return;
     if (video.paused) {
@@ -323,26 +335,38 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                 className={`card video-card promo-slide ${promoSlider.activeIndex === index && isPromoPlaying ? 'is-playing' : ''}`}
               >
                 <div className="card-media video-player">
-                  <video
-                    className="video-element"
-                    onPause={() => setIsPromoPlaying(false)}
-                    onPlay={() => setIsPromoPlaying(true)}
-                    playsInline
-                    poster={item.poster}
-                    preload="none"
-                    ref={(el) => {
-                      promoVideoRefs.current[index] = el;
-                    }}
-                  >
-                    <source src={item.src} type="video/mp4" />
-                  </video>
-                  <button
-                    className="video-play-button"
-                    onClick={handlePromoToggle}
-                    type="button"
-                  >
-                    <img alt="Play" src={promoPlay} width={48} height={48} loading="lazy" decoding="async" />
-                  </button>
+                  {isRutubeUrl(item.src) ? (
+                    <iframe
+                      className="video-embed"
+                      src={getRutubeEmbedUrl(item.src)}
+                      title={item.title}
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <>
+                      <video
+                        className="video-element"
+                        onPause={() => setIsPromoPlaying(false)}
+                        onPlay={() => setIsPromoPlaying(true)}
+                        playsInline
+                        poster={item.poster}
+                        preload="none"
+                        ref={(el) => {
+                          promoVideoRefs.current[index] = el;
+                        }}
+                      >
+                        <source src={item.src} type="video/mp4" />
+                      </video>
+                      <button
+                        className="video-play-button"
+                        onClick={handlePromoToggle}
+                        type="button"
+                      >
+                        <img alt="Play" src={promoPlay} width={48} height={48} loading="lazy" decoding="async" />
+                      </button>
+                    </>
+                  )}
                 </div>
                 <div className="card-body glass">
                   <p className="card-title">{item.title}</p>
@@ -661,23 +685,35 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
             >
               <div className={`live-card glass ${liveSlider.activeIndex === index && isLivePlaying ? 'is-playing' : ''}`}>
                 <div className="live-player">
-                  <video
-                    className="live-video"
-                    loop
-                    onPause={() => setIsLivePlaying(false)}
-                    onPlay={() => setIsLivePlaying(true)}
-                    playsInline
-                    poster={item.poster}
-                    preload="metadata"
-                    ref={(el) => {
-                      liveVideoRefs.current[index] = el;
-                    }}
-                  >
-                    <source src={item.src} type="video/mp4" />
-                  </video>
-                  <button className="video-play-button" onClick={handleLiveToggle} type="button">
-                    <img alt="Play" src={livePlay} width={48} height={48} loading="lazy" decoding="async" />
-                  </button>
+                  {isRutubeUrl(item.src) ? (
+                    <iframe
+                      className="live-embed"
+                      src={getRutubeEmbedUrl(item.src)}
+                      title={item.title}
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <>
+                      <video
+                        className="live-video"
+                        loop
+                        onPause={() => setIsLivePlaying(false)}
+                        onPlay={() => setIsLivePlaying(true)}
+                        playsInline
+                        poster={item.poster}
+                        preload="metadata"
+                        ref={(el) => {
+                          liveVideoRefs.current[index] = el;
+                        }}
+                      >
+                        <source src={item.src} type="video/mp4" />
+                      </video>
+                      <button className="video-play-button" onClick={handleLiveToggle} type="button">
+                        <img alt="Play" src={livePlay} width={48} height={48} loading="lazy" decoding="async" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </article>

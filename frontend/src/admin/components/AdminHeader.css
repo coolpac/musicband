@@ -1,8 +1,4 @@
-/* AdminHeader - sticky positioning для админки */
-.admin-header {
-  position: sticky;
-  z-index: 100;
-}
+/* AdminHeader — фиксированный хедер задаётся в admin.css; здесь только доп. стили topbar/avatar */
 
 .admin-topbar {
   display: flex;

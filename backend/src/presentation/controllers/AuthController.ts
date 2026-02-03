@@ -18,6 +18,7 @@ export class AuthController {
 
       logger.info('User authenticated via Telegram', {
         userId: result.user.id,
+        telegramId: result.user.telegramId,
         role: result.user.role,
         startParam: result.startParam,
       });

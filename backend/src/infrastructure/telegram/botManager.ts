@@ -108,6 +108,16 @@ export class BotManager {
     }
   }
 
+  async sendBookingReceived(telegramId: number, bookingData: {
+    bookingDate: string;
+    formatName?: string;
+    fullName: string;
+  }): Promise<void> {
+    if (this.userBot) {
+      await this.userBot.sendBookingReceived(telegramId.toString(), bookingData);
+    }
+  }
+
   /**
    * Уведомление проголосовавших о победителе голосования (массовая рассылка с учётом rate limit)
    */

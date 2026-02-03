@@ -51,13 +51,24 @@ export class BookingController {
           lastName: booking.user.lastName ?? undefined,
         });
 
-        // Уведомление пользователю (будет отправлено после подтверждения админом)
-        // Это будет обрабатываться в AdminBookingController при подтверждении
+        // Уведомление пользователю о получении заявки
+        await botManager.sendBookingReceived(Number(booking.user.telegramId), {
+          bookingDate: booking.bookingDate.toISOString().split('T')[0],
+          formatName: booking.format?.name,
+          fullName: booking.fullName,
+        });
       }
+
+      const response = {
+        id: booking.id,
+        bookingDate: booking.bookingDate.toISOString().split('T')[0],
+        formatId: booking.formatId ?? null,
+        status: booking.status,
+      };
 
       res.status(201).json({
         success: true,
-        data: booking,
+        data: response,
       });
     } catch (error) {
       next(error);
