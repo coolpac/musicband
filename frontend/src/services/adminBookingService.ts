@@ -175,17 +175,13 @@ export async function getAdminBookings(params?: {
     await new Promise((r) => setTimeout(r, 200));
     return { bookings: MOCK_BOOKINGS, total: MOCK_BOOKINGS.length };
   }
-  try {
-    const search = new URLSearchParams();
-    if (params?.date) search.set('date', params.date);
-    if (params?.status) search.set('status', params.status);
-    if (params?.page != null) search.set('page', String(params.page));
-    if (params?.limit != null) search.set('limit', String(params.limit));
-    const q = search.toString();
-    return await apiGet<{ bookings: AdminBooking[]; total: number }>(q ? `${BASE}?${q}` : BASE);
-  } catch {
-    return { bookings: MOCK_BOOKINGS, total: MOCK_BOOKINGS.length };
-  }
+  const search = new URLSearchParams();
+  if (params?.date) search.set('date', params.date);
+  if (params?.status) search.set('status', params.status);
+  if (params?.page != null) search.set('page', String(params.page));
+  if (params?.limit != null) search.set('limit', String(params.limit));
+  const q = search.toString();
+  return await apiGet<{ bookings: AdminBooking[]; total: number }>(q ? `${BASE}?${q}` : BASE);
 }
 
 export async function getAdminBookingStats(): Promise<AdminBookingStats> {
@@ -193,11 +189,7 @@ export async function getAdminBookingStats(): Promise<AdminBookingStats> {
     await new Promise((r) => setTimeout(r, 150));
     return MOCK_STATS;
   }
-  try {
-    return await apiGet<AdminBookingStats>(`${BASE}/stats`);
-  } catch {
-    return MOCK_STATS;
-  }
+  return await apiGet<AdminBookingStats>(`${BASE}/stats`);
 }
 
 export async function getAdminBookingCalendar(month?: string): Promise<{ dates: CalendarDate[] }> {
@@ -206,12 +198,8 @@ export async function getAdminBookingCalendar(month?: string): Promise<{ dates: 
     await new Promise((r) => setTimeout(r, 200));
     return buildMockCalendar(monthStr);
   }
-  try {
-    const url = month ? `${BASE}/calendar?month=${encodeURIComponent(month)}` : `${BASE}/calendar`;
-    return await apiGet<{ dates: CalendarDate[] }>(url);
-  } catch {
-    return buildMockCalendar(monthStr);
-  }
+  const url = month ? `${BASE}/calendar?month=${encodeURIComponent(month)}` : `${BASE}/calendar`;
+  return await apiGet<{ dates: CalendarDate[] }>(url);
 }
 
 export async function getAdminBlockedDates(month?: string): Promise<AdminBlockedDate[]> {
@@ -223,16 +211,8 @@ export async function getAdminBlockedDates(month?: string): Promise<AdminBlocked
     }
     return MOCK_BLOCKED_DATES;
   }
-  try {
-    const url = month ? `${BASE}/blocked-dates?month=${encodeURIComponent(month)}` : `${BASE}/blocked-dates`;
-    return await apiGet<AdminBlockedDate[]>(url);
-  } catch {
-    if (month) {
-      const prefix = month + '-';
-      return MOCK_BLOCKED_DATES.filter((b) => b.date.startsWith(prefix));
-    }
-    return MOCK_BLOCKED_DATES;
-  }
+  const url = month ? `${BASE}/blocked-dates?month=${encodeURIComponent(month)}` : `${BASE}/blocked-dates`;
+  return await apiGet<AdminBlockedDate[]>(url);
 }
 
 export async function updateAdminBookingStatus(
@@ -248,6 +228,16 @@ export async function updateAdminBookingIncome(
   income: number
 ): Promise<{ booking: AdminBooking }> {
   return apiPut<{ booking: AdminBooking }>(`${BASE}/${id}/income`, { income });
+}
+
+/**
+ * Отметить заявку как выполненную: записать доход и отправить пользователю кнопку отзыва.
+ */
+export async function completeAdminBooking(
+  id: string,
+  income: number
+): Promise<{ booking: AdminBooking }> {
+  return apiPost<{ booking: AdminBooking }>(`${BASE}/${id}/complete`, { income });
 }
 
 export async function blockDate(date: string, reason?: string): Promise<{ blockedDate: AdminBlockedDate }> {

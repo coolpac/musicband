@@ -60,7 +60,9 @@ export class AdminVoteController {
         data: {
           session,
           results: results.songs,
-          totalVoters: session.totalVoters,
+          // В активной сессии голоса ещё есть в таблице Vote — берём актуальный totalVotes.
+          // В завершённой сессии Vote удаляются (архитектурно), поэтому используем session.totalVoters.
+          totalVoters: session.isActive ? results.totalVotes : session.totalVoters,
         },
       });
     } catch (error) {
@@ -224,7 +226,10 @@ export class AdminVoteController {
         ? await this.voteService.getSessionById(sessionId)
         : await this.voteService.getActiveSession();
 
-      const totalVoters = session?.totalVoters || 0;
+      const totalVoters =
+        session?.isActive
+          ? results.totalVotes
+          : (session?.totalVoters || 0);
 
       res.json({
         success: true,

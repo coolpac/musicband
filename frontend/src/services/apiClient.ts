@@ -26,7 +26,8 @@ const GET_RETRY_BACKOFF_MS = [1000, 2000];
 /** Получить токен админа из localStorage */
 function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('admin_token');
+  // admin_token — для админки, auth_token — для Mini App пользователя
+  return localStorage.getItem('admin_token') || localStorage.getItem('auth_token');
 }
 
 /** Получить заголовки с авторизацией */
@@ -99,8 +100,14 @@ async function fetchWithAbort(
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    const message =
+      (errorData && typeof errorData === 'object' && 'message' in errorData && (errorData as any).message)
+        ? (errorData as any).message
+        : (errorData && typeof errorData === 'object' && 'error' in errorData && (errorData as any).error?.message)
+          ? (errorData as any).error.message
+          : `HTTP error ${response.status}`;
     throw new ApiError(
-      errorData.message || `HTTP error ${response.status}`,
+      message,
       response.status,
       errorData
     );

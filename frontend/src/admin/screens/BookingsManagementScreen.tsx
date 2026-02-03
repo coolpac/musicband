@@ -7,6 +7,7 @@ import {
   getAdminBlockedDates,
   updateAdminBookingStatus,
   updateAdminBookingIncome,
+  completeAdminBooking,
   blockDate as apiBlockDate,
   unblockDate as apiUnblockDate,
   type AdminBooking,
@@ -77,6 +78,7 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [completing, setCompleting] = useState(false);
 
   // Modal states
   const [showDayModal, setShowDayModal] = useState(false);
@@ -164,7 +166,8 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
     today.setHours(0, 0, 0, 0);
     date.setHours(0, 0, 0, 0);
 
-    const dateString = date.toISOString().split('T')[0];
+    // Важно: используем локальные компоненты даты, чтобы не было сдвига из-за UTC в toISOString()
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const isBlocked = blockedDates.some((b) => b.date === dateString);
     const booking = bookings.find((b) => b.bookingDate === dateString);
     const isPast = date < today;
@@ -194,7 +197,8 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
   };
 
   const handleDayClick = (day: CalendarDay) => {
-    if (day.isPast) {
+    // Прошедшие даты без заявки не редактируем (но заявку можно открыть для просмотра/дохода)
+    if (day.isPast && !day.hasBooking) {
       toast.error('Нельзя редактировать прошедшие даты');
       return;
     }
@@ -261,6 +265,36 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
       toast.error('Не удалось сохранить доход');
     } finally {
       setIncomeSaving(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!selectedDay?.booking) return;
+    if (selectedDay.booking.status !== 'confirmed') {
+      toast.error('Сначала подтвердите заявку');
+      return;
+    }
+    const num = incomeEdit.trim() === '' ? 0 : parseInt(incomeEdit.replace(/\s/g, ''), 10);
+    if (Number.isNaN(num) || num < 0) {
+      toast.error('Введите корректную сумму (число ≥ 0)');
+      return;
+    }
+
+    if (!window.confirm('Отметить как выполнено? Будет записан доход и пользователю отправится кнопка для отзыва.')) {
+      return;
+    }
+
+    setCompleting(true);
+    try {
+      await completeAdminBooking(selectedDay.booking.id, num);
+      toast.success('Отмечено как выполнено. Пользователю отправлена форма отзыва.');
+      setShowDayModal(false);
+      await loadData();
+    } catch (error) {
+      console.error('Error completing booking:', error);
+      toast.error('Не удалось отметить как выполнено');
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -356,7 +390,7 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
                   day.isPast ? 'calendar-day--past' : ''
                 }`}
                 onClick={() => handleDayClick(day)}
-                disabled={day.isPast}
+                disabled={day.isPast && !day.hasBooking}
               >
                 <span className="calendar-day__number">{day.date.getDate()}</span>
                 {day.hasBooking && day.booking && (
@@ -482,6 +516,15 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
                     {selectedDay.booking.status === 'pending' && (
                       <button className="admin-btn admin-btn--success" onClick={() => handleUpdateStatus(selectedDay.booking!.id, 'confirmed')}>
                         Подтвердить
+                      </button>
+                    )}
+                    {selectedDay.booking.status === 'confirmed' && (
+                      <button
+                        className="admin-btn admin-btn--success"
+                        onClick={handleComplete}
+                        disabled={incomeSaving || completing}
+                      >
+                        {completing ? 'Выполнение…' : 'Выполнено'}
                       </button>
                     )}
                     {selectedDay.booking.status !== 'cancelled' && (

@@ -11,6 +11,7 @@ import { validate } from '../../middleware/validator';
 import {
   UpdateBookingStatusSchema,
   UpdateBookingIncomeSchema,
+  CompleteBookingSchema,
   BlockDateSchema,
 } from '../../../application/dto/booking.dto';
 import { authenticate, requireAdmin } from '../../middleware/auth';
@@ -62,6 +63,11 @@ router.put(
   '/:id/income',
   validate(UpdateBookingIncomeSchema),
   adminBookingController.updateBookingIncome.bind(adminBookingController)
+);
+router.post(
+  '/:id/complete',
+  validate(CompleteBookingSchema),
+  adminBookingController.completeBooking.bind(adminBookingController)
 );
 router.delete('/:id', adminBookingController.deleteBooking.bind(adminBookingController));
 router.get('/calendar', adminBookingController.getCalendar.bind(adminBookingController));

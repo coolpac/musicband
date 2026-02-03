@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { VoteService } from '../../domain/services/VoteService';
 import { CastVoteDto } from '../../application/dto/vote.dto';
+import { UnauthorizedError } from '../../shared/errors';
+import { getSocketServer } from '../../app';
 
 export class VoteController {
   constructor(private voteService: VoteService) {}
@@ -12,11 +14,15 @@ export class VoteController {
   async castVote(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.user) {
-        throw new Error('User not authenticated');
+        throw new UnauthorizedError('User not authenticated');
       }
 
       const { songId } = req.body as CastVoteDto;
-      await this.voteService.castVote(req.user.userId, songId);
+      const sessionId = await this.voteService.castVote(req.user.userId, songId);
+
+      // Обновляем live-результаты через Socket.io (для экранов voting/voting-results)
+      const socketServer = getSocketServer();
+      socketServer?.requestResultsUpdate(sessionId);
 
       res.json({
         success: true,

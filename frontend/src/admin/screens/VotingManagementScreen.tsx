@@ -94,6 +94,7 @@ export default function VotingManagementScreen() {
       percentage: r.percentage,
     })).filter((s) => s.id);
     setLiveResults(results);
+    setActiveSession((prev) => (prev && prev.id === sessionId ? { ...prev, totalVotes: stats.totalVotes } : prev));
   };
 
   const loadHistory = async () => {

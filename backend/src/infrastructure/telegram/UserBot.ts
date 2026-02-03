@@ -242,6 +242,53 @@ export class UserBot {
   }
 
   /**
+   * Попросить пользователя оставить отзыв после выполнения бронирования.
+   * Отправляет сообщение с web_app кнопкой, открывающей Mini App на экране отзыва.
+   */
+  async sendReviewRequest(telegramId: string, payload: {
+    bookingId: string;
+    bookingDate: string;
+    formatName?: string;
+    fullName?: string;
+  }): Promise<void> {
+    try {
+      const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+      const reviewUrl = `${miniAppUrl}?screen=review-form&bookingId=${encodeURIComponent(payload.bookingId)}`;
+
+      const message =
+        '⭐ Будем благодарны за отзыв!\n\n' +
+        `📅 Дата: ${payload.bookingDate}\n` +
+        (payload.formatName ? `🎤 Формат: ${payload.formatName}\n` : '') +
+        (payload.fullName ? `👤 Имя: ${payload.fullName}\n` : '') +
+        '\nНажмите кнопку ниже, чтобы открыть форму отзыва:';
+
+      await this.bot.sendMessage(
+        telegramId,
+        message,
+        {
+          reply_markup: {
+            inline_keyboard: [[
+              {
+                text: '⭐ Оставить отзыв',
+                web_app: { url: reviewUrl },
+              },
+            ]],
+          },
+        }
+      );
+    } catch (err: unknown) {
+      const code = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { error_code?: number } }).response?.error_code
+        : undefined;
+      if (code === 403) {
+        logger.warn('User blocked the bot', { telegramId });
+      } else {
+        logger.error('Error sending review request', { error: err, telegramId, bookingId: payload.bookingId });
+      }
+    }
+  }
+
+  /**
    * Уведомление проголосовавшего о победителе голосования
    */
   async sendVotingWinnerNotification(

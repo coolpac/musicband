@@ -6,7 +6,7 @@ import { NotFoundError, ValidationError, ConflictError } from '../../shared/erro
 import { logger } from '../../shared/utils/logger';
 import { CacheService, CACHE_KEYS } from '../../shared/utils/cache';
 import { CACHE_TTL } from '../../shared/constants';
-import { getTodayDateString } from '../../shared/utils/timezone';
+import { getTodayDateString, formatDateInTimezone } from '../../shared/utils/timezone';
 
 export class BookingService {
   constructor(
@@ -84,7 +84,7 @@ export class BookingService {
     cacheMonth: string,
     todayStr: string
   ): Promise<{ dates: string[]; blockedDates: string[] }> {
-    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+    const formatDate = (d: Date) => formatDateInTimezone(d);
 
     const [year, monthNum] = cacheMonth.split('-').map(Number);
     const startDate = new Date(year, monthNum - 1, 1);
@@ -312,7 +312,7 @@ export class BookingService {
     // Группируем бронирования по датам
     const bookingsByDate = new Map<string, typeof bookings>();
     bookings.forEach((booking) => {
-      const dateStr = booking.bookingDate.toISOString().split('T')[0];
+      const dateStr = formatDateInTimezone(booking.bookingDate);
       if (!bookingsByDate.has(dateStr)) {
         bookingsByDate.set(dateStr, []);
       }
@@ -328,7 +328,7 @@ export class BookingService {
 
     const current = new Date(startDate);
     while (current <= endDate) {
-      const dateStr = current.toISOString().split('T')[0];
+      const dateStr = formatDateInTimezone(current);
       dates.push({
         date: dateStr,
         bookings: bookingsByDate.get(dateStr) || [],

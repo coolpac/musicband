@@ -6,6 +6,20 @@ export type VoteResult = {
   percentage: number;
 };
 
+type VoteResultsApiResponse = {
+  sessionId: string | null;
+  songs: Array<{
+    song: { id: string; title?: string; artist?: string; coverUrl?: string | null } | null;
+    votes: number;
+    percentage: number;
+  }>;
+  totalVotes: number;
+};
+
+export type MyVoteResponse = {
+  votedSongId: string | null;
+};
+
 // Mock data - will be replaced with real voting results
 const mockResults: VoteResult[] = [
   { songId: '1', voteCount: 142, percentage: 35 },
@@ -25,7 +39,15 @@ export async function getVoteResults(): Promise<VoteResult[]> {
     return mockResults;
   }
 
-  return await apiGet<VoteResult[]>('/api/votes/results');
+  const data = await apiGet<VoteResultsApiResponse>('/api/votes/results');
+  const songs = data?.songs ?? [];
+  return songs
+    .filter((s) => Boolean(s.song?.id))
+    .map((s) => ({
+      songId: s.song!.id,
+      voteCount: s.votes,
+      percentage: s.percentage,
+    }));
 }
 
 /**
@@ -45,4 +67,11 @@ export async function castVote(songId: string): Promise<void> {
     console.error('Failed to cast vote:', error);
     throw error;
   }
+}
+
+/**
+ * Get current user's vote in active session
+ */
+export async function getMyVote(): Promise<MyVoteResponse> {
+  return apiGet<MyVoteResponse>('/api/votes/my');
 }

@@ -280,6 +280,14 @@ export class SocketServer {
   }
 
   /**
+   * Публичный триггер обновления результатов (для HTTP контроллеров).
+   * Использует тот же debounce, что и события WebSocket.
+   */
+  requestResultsUpdate(sessionId: string): void {
+    this.scheduleResultsUpdate(sessionId);
+  }
+
+  /**
    * Рассылка обновления результатов всем в комнате
    */
   private async broadcastResultsUpdate(sessionId: string): Promise<void> {

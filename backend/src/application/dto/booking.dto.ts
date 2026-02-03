@@ -24,6 +24,10 @@ export const UpdateBookingIncomeSchema = z.object({
   income: z.number().min(0, 'Income cannot be negative'),
 });
 
+export const CompleteBookingSchema = z.object({
+  income: z.number().min(0, 'Income cannot be negative'),
+});
+
 export const BlockDateSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   reason: z.string().optional(),
@@ -32,4 +36,5 @@ export const BlockDateSchema = z.object({
 export type CreateBookingDto = z.infer<typeof CreateBookingSchema>;
 export type UpdateBookingStatusDto = z.infer<typeof UpdateBookingStatusSchema>;
 export type UpdateBookingIncomeDto = z.infer<typeof UpdateBookingIncomeSchema>;
+export type CompleteBookingDto = z.infer<typeof CompleteBookingSchema>;
 export type BlockDateDto = z.infer<typeof BlockDateSchema>;

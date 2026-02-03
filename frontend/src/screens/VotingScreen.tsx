@@ -13,7 +13,7 @@ import '../styles/voting.css';
 type VotingScreenProps = {
   /** Не используется: навигация назад — кнопка Telegram. */
   onBack?: () => void;
-  onSubmit?: (songId: string) => void;
+  onSubmit?: (songId: string) => void | Promise<void>;
 };
 
 export default function VotingScreen({ onSubmit }: VotingScreenProps) {
@@ -21,6 +21,7 @@ export default function VotingScreen({ onSubmit }: VotingScreenProps) {
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { execute } = useApiRequest<Song[]>();
   const mountedRef = useRef(true);
 
@@ -55,10 +56,13 @@ export default function VotingScreen({ onSubmit }: VotingScreenProps) {
   };
 
   const handleConfirm = () => {
-    if (selectedSongId) {
-      hapticImpact('medium');
-      onSubmit?.(selectedSongId);
-    }
+    if (!selectedSongId || isSubmitting || !onSubmit) return;
+    hapticImpact('medium');
+    setIsSubmitting(true);
+    Promise.resolve()
+      .then(() => onSubmit(selectedSongId))
+      .catch(() => undefined)
+      .finally(() => setIsSubmitting(false));
   };
 
   if (error) {
@@ -151,9 +155,9 @@ export default function VotingScreen({ onSubmit }: VotingScreenProps) {
           className="btn btn-primary voting-confirm-btn"
           onClick={handleConfirm}
           type="button"
-          disabled={!selectedSongId}
+          disabled={!selectedSongId || isSubmitting}
         >
-          Подтвердить выбор
+          {isSubmitting ? 'Отправка…' : 'Подтвердить выбор'}
         </motion.button>
       </div>
     </main>

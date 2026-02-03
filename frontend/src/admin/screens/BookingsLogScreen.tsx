@@ -5,6 +5,7 @@ import {
   getAdminBookings,
   updateAdminBookingStatus,
   updateAdminBookingIncome,
+  completeAdminBooking,
   deleteAdminBooking,
   type AdminBooking,
 } from '../../services/adminBookingService';
@@ -54,6 +55,7 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
   const [list, setList] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
   const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
   const [incomeEditValue, setIncomeEditValue] = useState('');
   const [savingIncomeId, setSavingIncomeId] = useState<string | null>(null);
@@ -64,8 +66,10 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
     try {
       const res = await getAdminBookings({ limit: 200 });
       setList((res.bookings ?? []).map(mapApiBooking));
-    } catch {
+    } catch (error) {
+      console.error('Failed to load bookings log:', error);
       setList([]);
+      toast.error('Не удалось загрузить лог заявок. Проверьте авторизацию и бэкенд.');
     } finally {
       setLoading(false);
     }
@@ -115,6 +119,31 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
       toast.error('Не удалось сохранить доход');
     } finally {
       setSavingIncomeId(null);
+    }
+  };
+
+  const handleComplete = async (b: BookingRow) => {
+    if (b.status !== 'confirmed') return;
+    if (b.income == null) {
+      toast.error('Сначала укажите доход (✎), затем нажмите «Выполнено».');
+      startEditIncome(b);
+      return;
+    }
+
+    if (!window.confirm('Отметить как выполнено? Будет записан доход и пользователю отправится кнопка для отзыва.')) {
+      return;
+    }
+
+    setCompletingId(b.id);
+    try {
+      await completeAdminBooking(b.id, b.income);
+      toast.success('Отмечено как выполнено. Пользователю отправлена форма отзыва.');
+      await loadList();
+    } catch (error) {
+      console.error('Complete booking failed:', error);
+      toast.error('Не удалось отметить как выполнено');
+    } finally {
+      setCompletingId(null);
     }
   };
 
@@ -277,11 +306,23 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
                             </button>
                           </>
                         )}
+                        {b.status === 'confirmed' && (
+                          <button
+                            type="button"
+                            className="bookings-log-action-btn bookings-log-action-btn--success"
+                            onClick={() => handleComplete(b)}
+                            disabled={completingId === b.id || deletingId === b.id || updatingId === b.id}
+                            aria-label="Выполнено: записать доход и попросить отзыв"
+                            title="Выполнено (доход + отзыв)"
+                          >
+                            {completingId === b.id ? <span className="bookings-log-action-dots">…</span> : '✓✓'}
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="bookings-log-action-btn bookings-log-action-btn--ghost-danger"
                           onClick={() => handleDelete(b)}
-                          disabled={deletingId === b.id || updatingId === b.id}
+                          disabled={deletingId === b.id || updatingId === b.id || completingId === b.id}
                           aria-label="Удалить заявку"
                           title="Удалить (спам)"
                         >

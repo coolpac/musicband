@@ -3,6 +3,8 @@ import { BookingService } from '../../domain/services/BookingService';
 import { CreateBookingDto } from '../../application/dto/booking.dto';
 import { logger } from '../../shared/utils/logger';
 import { getBotManager } from '../../infrastructure/telegram/botManager';
+import { UnauthorizedError } from '../../shared/errors';
+import { formatDateInTimezone } from '../../shared/utils/timezone';
 
 export class BookingController {
   constructor(private bookingService: BookingService) {}
@@ -14,7 +16,7 @@ export class BookingController {
   async createBooking(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.user) {
-        throw new Error('User not authenticated');
+        throw new UnauthorizedError('User not authenticated');
       }
 
       const data = req.body as CreateBookingDto;
@@ -37,10 +39,11 @@ export class BookingController {
       // Отправляем уведомления через Telegram Bots
       const botManager = getBotManager();
       if (botManager) {
+        const bookingDateStr = formatDateInTimezone(booking.bookingDate);
         // Уведомление админам
         await botManager.notifyNewBooking({
           id: booking.id,
-          bookingDate: booking.bookingDate.toISOString().split('T')[0],
+          bookingDate: bookingDateStr,
           formatName: booking.format?.name,
           fullName: booking.fullName,
           contactValue: booking.contactValue,
@@ -53,7 +56,7 @@ export class BookingController {
 
         // Уведомление пользователю о получении заявки
         await botManager.sendBookingReceived(Number(booking.user.telegramId), {
-          bookingDate: booking.bookingDate.toISOString().split('T')[0],
+          bookingDate: bookingDateStr,
           formatName: booking.format?.name,
           fullName: booking.fullName,
         });
@@ -61,7 +64,7 @@ export class BookingController {
 
       const response = {
         id: booking.id,
-        bookingDate: booking.bookingDate.toISOString().split('T')[0],
+        bookingDate: formatDateInTimezone(booking.bookingDate),
         formatId: booking.formatId ?? null,
         status: booking.status,
       };

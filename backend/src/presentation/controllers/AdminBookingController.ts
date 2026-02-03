@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { BookingService } from '../../domain/services/BookingService';
-import { UpdateBookingStatusDto, UpdateBookingIncomeDto, BlockDateDto } from '../../application/dto/booking.dto';
+import { UpdateBookingStatusDto, UpdateBookingIncomeDto, CompleteBookingDto, BlockDateDto } from '../../application/dto/booking.dto';
 import { logger } from '../../shared/utils/logger';
 import { getBotManager } from '../../infrastructure/telegram/botManager';
+import { ValidationError } from '../../shared/errors';
+import { formatDateInTimezone } from '../../shared/utils/timezone';
 
 export class AdminBookingController {
   constructor(private bookingService: BookingService) {}
@@ -79,7 +81,7 @@ export class AdminBookingController {
         if (botManager && booking.user) {
           await botManager.notifyBookingConfirmed({
             bookingId: booking.id,
-            bookingDate: booking.bookingDate.toISOString().split('T')[0],
+            bookingDate: formatDateInTimezone(booking.bookingDate),
             formatName: booking.format?.name || 'Не указан',
             fullName: booking.fullName,
             contactValue: booking.contactValue,
@@ -123,6 +125,53 @@ export class AdminBookingController {
   }
 
   /**
+   * POST /api/admin/bookings/:id/complete
+   * Отметить заявку как выполненную: записать доход и отправить пользователю кнопку «Оставить отзыв».
+   */
+  async completeBooking(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { income } = req.body as CompleteBookingDto;
+
+      const booking = await this.bookingService.getBookingById(id);
+      if (booking.status !== 'confirmed') {
+        throw new ValidationError('Booking must be confirmed before completing');
+      }
+      const hadIncome = booking.income != null;
+
+      const updated = await this.bookingService.updateBookingIncome(id, income);
+
+      logger.info('Booking completed by admin', {
+        bookingId: id,
+        income,
+        adminId: req.user?.userId,
+      });
+
+      const botManager = getBotManager();
+      // Чтобы не спамить, отправляем запрос отзыва только при первом "выполнено" (когда доход ещё не был записан)
+      if (!hadIncome && botManager && (updated as any).user?.telegramId) {
+        const userTelegramId = (updated as any).user.telegramId;
+        const userBot = botManager.getUserBot();
+        if (userBot) {
+          await userBot.sendReviewRequest(userTelegramId.toString(), {
+            bookingId: updated.id,
+            bookingDate: formatDateInTimezone(updated.bookingDate),
+            formatName: (updated as any).format?.name ?? undefined,
+            fullName: (updated as any).fullName ?? '',
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        data: { booking: updated },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * DELETE /api/admin/bookings/:id
    * Удалить заявку (например, спам)
    */
@@ -159,7 +208,7 @@ export class AdminBookingController {
         success: true,
         data: blockedDates.map((bd) => ({
           id: bd.id,
-          date: bd.blockedDate.toISOString().split('T')[0],
+          date: formatDateInTimezone(bd.blockedDate),
           reason: bd.reason ?? undefined,
         })),
       });

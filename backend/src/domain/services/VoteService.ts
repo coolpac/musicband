@@ -19,7 +19,7 @@ export class VoteService {
   /**
    * Создание голоса
    */
-  async castVote(userId: string, songId: string): Promise<void> {
+  async castVote(userId: string, songId: string): Promise<string> {
     // Проверяем пользователя
     const user = await this.userRepository.findById(userId);
     if (!user) {
@@ -49,15 +49,33 @@ export class VoteService {
     }
 
     // Создаем голос
-    await this.voteRepository.create({
-      userId,
-      songId,
-      sessionId: session.id,
-    });
+    try {
+      await this.voteRepository.create({
+        userId,
+        songId,
+        sessionId: session.id,
+      });
+    } catch (error: any) {
+      // Race-condition / double submit: Prisma unique constraint (P2002)
+      if (error && typeof error === 'object' && (error as any).code === 'P2002') {
+        throw new ConflictError('User has already voted in this session');
+      }
+      throw error;
+    }
 
     // Обновляем счетчик в Redis
-    await redis.incr(`votes:session:${session.id}:song:${songId}`);
-    await redis.sadd(`votes:session:${session.id}:voters`, userId);
+    // Не делаем Redis критичным: если Redis временно недоступен, голос уже записан в БД.
+    try {
+      await redis.incr(`votes:session:${session.id}:song:${songId}`);
+      await redis.sadd(`votes:session:${session.id}:voters`, userId);
+    } catch (error) {
+      logger.warn('Failed to update vote counters in Redis (non-critical)', {
+        error,
+        sessionId: session.id,
+        songId,
+        userId,
+      });
+    }
 
     // Инвалидируем кеш результатов
     await this.invalidateResultsCache(session.id);
@@ -67,6 +85,8 @@ export class VoteService {
       songId,
       sessionId: session.id,
     });
+
+    return session.id;
   }
 
   /**

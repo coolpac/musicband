@@ -4,8 +4,9 @@ import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
 import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
-import { castVote } from './services/voteService';
+import { castVote, getMyVote } from './services/voteService';
 import { submitReview } from './services/reviewService';
+import { apiPost, ApiError } from './services/apiClient';
 import HomeScreen from './screens/HomeScreen';
 import Header from './components/Header';
 import MenuOverlay from './components/MenuOverlay';
@@ -61,7 +62,32 @@ export default function App() {
   const [socketStatus, setSocketStatus] = useState<'connected' | 'reconnecting' | 'disconnected' | 'error' | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
   const [liveResults, setLiveResults] = useState<import('./screens/VotingResultsScreen').LiveResultsPayload | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(() =>
+    localStorage.getItem('auth_token') || localStorage.getItem('admin_token')
+  );
   const tg = useTelegramWebApp({ initOnMount: true });
+
+  // Авторизация Mini App через Telegram initData → JWT (cookie + localStorage для сокетов)
+  useEffect(() => {
+    if (!tg.isTelegram) return;
+    if (authToken) return;
+    const initData = tg.webApp?.initData;
+    if (!initData) return;
+
+    apiPost<{ user: unknown; token: string; startParam?: string }>('/api/auth/telegram', {
+      initData,
+      startParam: getStartParam(),
+    })
+      .then((data) => {
+        if (data?.token) {
+          localStorage.setItem('auth_token', data.token);
+          setAuthToken(data.token);
+        }
+      })
+      .catch((error) => {
+        console.error('Telegram auth failed:', error);
+      });
+  }, [tg.isTelegram, tg.webApp, authToken]);
 
   useEffect(() => {
     if (!tg.isTelegram) return;
@@ -248,14 +274,24 @@ export default function App() {
       return;
     }
 
-    if (socket?.connected) return;
+    // Если сокет уже подключен — просто (пере)входим в нужную сессию
+    if (socket?.connected) {
+      socket.emit('vote:join', { sessionId: votingSessionId || undefined });
+      return;
+    }
 
     const apiUrl = import.meta.env.VITE_API_URL || '';
-    const token = localStorage.getItem('auth_token');
+    const token = authToken;
 
     if (!token) {
       console.warn('No auth token for socket connection');
       return;
+    }
+
+    // На всякий случай: если есть старый объект сокета — закрываем
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
     }
 
     const newSocket = io(apiUrl, {
@@ -302,7 +338,7 @@ export default function App() {
     return () => {
       newSocket.disconnect();
     };
-  }, [currentScreen]);
+  }, [currentScreen, authToken, votingSessionId]);
 
   const handleRetryConnection = () => {
     if (socket && !socket.connected) {
@@ -453,7 +489,29 @@ export default function App() {
                 window.history.pushState({}, '', '?screen=voting-results');
               } catch (error) {
                 console.error('Failed to submit vote:', error);
+                // Если это конфликт (уже голосовал) — просто открываем результаты
+                if (error instanceof ApiError && error.statusCode === 409) {
+                  hapticNotification('success');
+                  setCurrentScreen('voting-results');
+                  window.history.pushState({}, '', '?screen=voting-results');
+                  return;
+                }
+
+                // Если голос мог записаться, но ответ упал (например, после записи) — проверим /api/votes/my
+                try {
+                  const mine = await getMyVote();
+                  if (mine?.votedSongId) {
+                    hapticNotification('success');
+                    setCurrentScreen('voting-results');
+                    window.history.pushState({}, '', '?screen=voting-results');
+                    return;
+                  }
+                } catch (e) {
+                  console.warn('Failed to verify my vote after error:', e);
+                }
+
                 hapticNotification('error');
+                showAlert('Не удалось отправить голос. Попробуйте ещё раз.');
               }
             }}
           />
