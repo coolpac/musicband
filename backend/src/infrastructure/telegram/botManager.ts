@@ -126,7 +126,7 @@ export class BotManager {
       ? payload.buttons
       : [{ text: 'Открыть приложение', url: miniAppUrl, kind: 'web_app' }];
 
-    const inlineRows: Array<Array<{ text: string; url: string }>> = [];
+    const inlineRows: Array<Array<{ text: string; url: string; kind: 'url' | 'web_app' }>> = [];
     for (let i = 0; i < baseButtons.length; i += 2) {
       inlineRows.push(baseButtons.slice(i, i + 2));
     }

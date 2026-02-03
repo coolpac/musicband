@@ -13,7 +13,7 @@ export interface FindBookingsOptions {
 }
 
 export interface IBookingRepository {
-  findById(id: string): Promise<Booking | null>;
+  findById(id: string): Promise<BookingWithUserAndFormat | null>;
   findByUserId(userId: string): Promise<Booking[]>;
   findByDate(date: Date): Promise<Booking[]>;
   findByDateRange(startDate: Date, endDate: Date): Promise<Booking[]>;
