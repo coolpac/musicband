@@ -90,6 +90,75 @@ export class VoteService {
   }
 
   /**
+   * Временное решение: голосование по telegramId без проверки initData.
+   * Находит или создаёт пользователя по telegramId, затем создаёт голос.
+   * Небезопасно: telegramId можно подставить с другого устройства.
+   */
+  async castVoteByTelegramId(telegramId: number, songId: string, sessionId?: string): Promise<string> {
+    const tid = BigInt(telegramId);
+    let user = await this.userRepository.findByTelegramId(tid);
+    if (!user) {
+      user = await this.userRepository.create({
+        telegramId: tid,
+        role: 'user',
+      });
+      logger.info('User created from public vote (telegramId)', { userId: user.id, telegramId });
+    }
+
+    const session = sessionId
+      ? await this.voteRepository.findSessionById(sessionId)
+      : await this.voteRepository.findActiveSession();
+    if (!session) {
+      throw new ValidationError(sessionId ? 'Session not found' : 'No active voting session');
+    }
+    if (!session.isActive) {
+      throw new ValidationError('Voting session is not active');
+    }
+
+    const song = await this.songRepository.findById(songId);
+    if (!song) throw new NotFoundError('Song');
+    if (!song.isActive) throw new ValidationError('Song is not active for voting');
+
+    const existingVote = await this.voteRepository.findByUserAndSession(user.id, session.id);
+    if (existingVote) {
+      throw new ConflictError('User has already voted in this session');
+    }
+
+    try {
+      await this.voteRepository.create({
+        userId: user.id,
+        songId,
+        sessionId: session.id,
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        throw new ConflictError('User has already voted in this session');
+      }
+      throw error;
+    }
+
+    try {
+      await redis.incr(`votes:session:${session.id}:song:${songId}`);
+      await redis.sadd(`votes:session:${session.id}:voters`, user.id);
+    } catch (error) {
+      logger.warn('Failed to update vote counters in Redis (non-critical)', {
+        error,
+        sessionId: session.id,
+        songId,
+      });
+    }
+
+    await this.invalidateResultsCache(session.id);
+    logger.info('Vote cast (by telegramId)', {
+      telegramId,
+      userId: user.id,
+      songId,
+      sessionId: session.id,
+    });
+    return session.id;
+  }
+
+  /**
    * Получение результатов голосования (с кешированием)
    */
   async getResults(sessionId?: string) {

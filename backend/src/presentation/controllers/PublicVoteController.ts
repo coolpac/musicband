@@ -185,4 +185,30 @@ export class PublicVoteController {
       next(error);
     }
   }
+
+  /**
+   * POST /api/public/vote
+   * Временное решение: голосование по telegramId без initData.
+   * Тело: { songId, telegramId, sessionId? }. Один голос на (сессия, telegramId).
+   */
+  async castVote(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { songId, telegramId, sessionId } = req.body as {
+        songId: string;
+        telegramId: number;
+        sessionId?: string;
+      };
+      const sessionIdResult = await this.voteService.castVoteByTelegramId(
+        Number(telegramId),
+        songId,
+        sessionId
+      );
+      res.status(201).json({
+        success: true,
+        data: { sessionId: sessionIdResult },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -51,22 +51,33 @@ export async function getVoteResults(): Promise<VoteResult[]> {
 }
 
 /**
- * Cast a vote for a song
+ * Cast a vote for a song (требует авторизации).
  */
 export async function castVote(songId: string): Promise<void> {
   if (isMockMode()) {
-    // [Mock] Casting vote for song
-    // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 500));
     return;
   }
+  await apiPost<void>('/api/votes', { songId });
+}
 
-  try {
-    await apiPost<void>('/api/votes', { songId });
-  } catch (error) {
-    console.error('Failed to cast vote:', error);
-    throw error;
+/**
+ * Временное: голосование по telegramId без initData. POST /api/public/vote.
+ */
+export async function castVotePublic(
+  songId: string,
+  telegramId: number,
+  sessionId?: string
+): Promise<void> {
+  if (isMockMode()) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return;
   }
+  await apiPost<{ data: { sessionId: string } }>('/api/public/vote', {
+    songId,
+    telegramId,
+    ...(sessionId ? { sessionId } : {}),
+  });
 }
 
 /**

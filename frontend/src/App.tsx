@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
 import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId, getTelegramWebApp } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
-import { castVote, getMyVote } from './services/voteService';
+import { castVote, castVotePublic, getMyVote } from './services/voteService';
 import { submitReview } from './services/reviewService';
 import { apiPost, ApiError } from './services/apiClient';
 import HomeScreen from './screens/HomeScreen';
@@ -505,31 +505,38 @@ export default function App() {
               window.history.pushState({}, '', '?screen=home');
             }}
             onSubmit={async (songId) => {
-              // Если нет токена — попробовать авторизоваться ещё раз
+              const tryPublicVote = async (): Promise<boolean> => {
+                const telegramId = getTelegramUserId();
+                if (telegramId == null) return false;
+                try {
+                  await castVotePublic(songId, telegramId, votingSessionId || undefined);
+                  return true;
+                } catch (err) {
+                  if (err instanceof ApiError && err.statusCode === 409) return true;
+                  return false;
+                }
+              };
+
+              // Нет токена: пробуем публичное голосование по telegramId (временное решение)
               if (!authToken) {
-                const initData = getTelegramWebApp()?.initData;
-                if (initData) {
-                  try {
-                    const data = await apiPost<{ user: unknown; token: string }>('/api/auth/telegram', {
-                      initData,
-                      startParam: getStartParam(),
-                    });
-                    if (data?.token) {
-                      localStorage.setItem('auth_token', data.token);
-                      setAuthToken(data.token);
-                    }
-                  } catch (authErr) {
-                    console.error('Auth retry before vote failed:', authErr);
-                    hapticNotification('error');
-                    showAlert('Не удалось авторизоваться. Попробуйте переоткрыть приложение.');
-                    return;
-                  }
-                } else {
-                  hapticNotification('error');
-                  showAlert('Не удалось авторизоваться. Откройте приложение через Telegram.');
+                const ok = await tryPublicVote();
+                if (ok) {
+                  hapticNotification('success');
+                  setCurrentScreen('voting-results');
+                  window.history.pushState({}, '', '?screen=voting-results');
                   return;
                 }
+                const telegramId = getTelegramUserId();
+                if (telegramId == null) {
+                  hapticNotification('error');
+                  showAlert('Откройте приложение через Telegram, чтобы проголосовать.');
+                  return;
+                }
+                hapticNotification('error');
+                showAlert('Не удалось отправить голос. Попробуйте ещё раз.');
+                return;
               }
+
               try {
                 await castVote(songId);
                 hapticNotification('success');
@@ -537,23 +544,34 @@ export default function App() {
                 window.history.pushState({}, '', '?screen=voting-results');
               } catch (error) {
                 console.error('Failed to submit vote:', error);
-                // Если 401 — токен протух, попробуем перезалогиниться
                 if (error instanceof ApiError && error.statusCode === 401) {
+                  // Токен протух — пробуем публичное голосование по telegramId
+                  const ok = await tryPublicVote();
+                  if (ok) {
+                    hapticNotification('success');
+                    setCurrentScreen('voting-results');
+                    window.history.pushState({}, '', '?screen=voting-results');
+                    return;
+                  }
                   localStorage.removeItem('auth_token');
                   setAuthToken(null);
                   hapticNotification('error');
                   showAlert('Сессия истекла. Попробуйте проголосовать ещё раз.');
                   return;
                 }
-                // Если это конфликт (уже голосовал) — просто открываем результаты
                 if (error instanceof ApiError && error.statusCode === 409) {
                   hapticNotification('success');
                   setCurrentScreen('voting-results');
                   window.history.pushState({}, '', '?screen=voting-results');
                   return;
                 }
-
-                // Если голос мог записаться, но ответ упал (например, после записи) — проверим /api/votes/my
+                const ok = await tryPublicVote();
+                if (ok) {
+                  hapticNotification('success');
+                  setCurrentScreen('voting-results');
+                  window.history.pushState({}, '', '?screen=voting-results');
+                  return;
+                }
                 try {
                   const mine = await getMyVote();
                   if (mine?.votedSongId) {
@@ -565,7 +583,6 @@ export default function App() {
                 } catch (e) {
                   console.warn('Failed to verify my vote after error:', e);
                 }
-
                 hapticNotification('error');
                 showAlert('Не удалось отправить голос. Попробуйте ещё раз.');
               }
