@@ -40,7 +40,7 @@
 .request-body--calendar {
   position: relative;
   min-height: 100%;
-  padding: 72px 16px 32px;
+  padding: 72px 16px 100px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -49,7 +49,7 @@
 
 .tg-mini-app .request-body--calendar {
   min-height: var(--app-viewport-height);
-  padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(100px, calc(76px + env(safe-area-inset-bottom, 0px)));
 }
 
  .request-body--gradient {
@@ -96,9 +96,9 @@
 
 /* На форме — отступ сверху под фиксированный логотип (как на календаре) */
 .request-screen--form .request-body__scroll {
-  padding-top: 56px;
-  padding-left: 15px;
-  padding-right: 15px;
+  padding-top: 24px;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
  
@@ -128,6 +128,13 @@
   width: 140.327px;
   height: 37.303px;
   z-index: 2;
+}
+
+.request-screen--form .request-logo {
+  position: static;
+  transform: none;
+  margin: 0 auto 16px;
+  z-index: 1;
 }
  
  .request-nav-body {
@@ -416,16 +423,19 @@
  }
 
 .request-primary--calendar {
-  position: relative;
-  top: auto;
-  left: auto;
-  width: min(410px, 100%);
-  margin: 8px 0 0;
+  position: fixed;
+  left: 50%;
+  bottom: max(34px, calc(16px + env(safe-area-inset-bottom, 0px)));
+  transform: translateX(-50%);
+  width: min(410px, calc(100% - 30px));
+  margin: 0;
+  z-index: 6;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
  
 .request-form-card {
-  width: min(410px, calc(100% - 30px));
-  margin: clamp(16px, 4vw, 28px) auto 0;
+  width: min(410px, 100%);
+  margin: clamp(8px, 4vw, 24px) auto 0;
   padding: 30px 20px 30px;
    border-radius: 25px;
   background: rgba(255, 255, 255, 0);
