@@ -124,14 +124,23 @@ export function useSnapSlider(options: UseSnapSliderOptions): UseSnapSliderRetur
   }, [direction, itemCount, measure]);
 
   useEffect(() => {
-    // Initial measure after mount and when itemCount changes
+    // Initial measure after mount and when itemCount changes.
+    // Двойной таймер: первый — сразу после layout (50ms),
+    // второй — после завершения page transition (300ms) для гарантии
+    // корректного состояния при навигации назад (framer-motion fade-in).
     if (itemCount > 0) {
-      // Small delay to ensure DOM is rendered
-      const timer = setTimeout(() => {
+      const timer1 = setTimeout(() => {
         measure();
         updateActiveIndex();
       }, 50);
-      return () => clearTimeout(timer);
+      const timer2 = setTimeout(() => {
+        measure();
+        updateActiveIndex();
+      }, 300);
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
     }
   }, [itemCount, measure, updateActiveIndex]);
 

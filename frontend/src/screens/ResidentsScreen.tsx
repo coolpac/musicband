@@ -43,6 +43,8 @@ export default function ResidentsScreen() {
                   src={image}
                   alt={name}
                   className="residents-card__img"
+                  width={440}
+                  height={550}
                   loading="lazy"
                   decoding="async"
                 />

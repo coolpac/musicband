@@ -19,7 +19,9 @@
   padding-bottom: 24px;
 }
 
-/* Появление хиро при загрузке: каскад fade + translateY, только GPU (transform/opacity). */
+/* Появление хиро при загрузке: каскад fade + translateY, только GPU (transform/opacity).
+   PageTransition (framer-motion) уже анимирует opacity всего экрана при навигации.
+   CSS animation hero-in добавляет каскадный stagger-эффект поверх page transition. */
 .hero-media {
   position: relative;
   width: 100vw;
@@ -29,20 +31,20 @@
   overflow: visible;
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);
-  opacity: 0;
-  animation: hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 1;
+  animation: hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: 0.05s;
 }
 
 .hero-copy {
-  opacity: 0;
-  animation: hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 1;
+  animation: hero-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: 0.25s;
 }
 
 .hero .btn {
-  opacity: 0;
-  animation: hero-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 1;
+  animation: hero-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: 0.45s;
 }
 
@@ -61,7 +63,6 @@
   .hero-media,
   .hero-copy,
   .hero .btn {
-    opacity: 1;
     animation: none;
   }
 }
@@ -516,6 +517,15 @@
   transform: translateY(15px);
   transition: opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), 
               transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Первый слайд виден сразу как fallback — пока JS ещё не установил is-active ни на одном слайде.
+   Когда is-active появится на любом слайде, :has() деактивирует fallback и управление
+   переходит к обычным .is-active правилам ниже. */
+.why-slider:not(:has(.is-active)) .why-slide:first-child .why-mobile-content img,
+.why-slider:not(:has(.is-active)) .why-slide:first-child .why-mobile-content p {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .why-slide.is-active .why-mobile-content img {
@@ -1133,6 +1143,7 @@ a.social-tile:hover {
 /* Секция партнёров — изображение на всю область плитки, название снизу */
 .partners-grid {
   align-items: stretch;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* Первая ячейка: плашка «Разработчики» над первой карточкой партнёра */
@@ -1141,6 +1152,8 @@ a.social-tile:hover {
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 .partner-first-cell .partners-badge {

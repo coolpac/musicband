@@ -19,7 +19,7 @@ export const residents: Resident[] = [
     shortDescription: 'Фронтмен, солист, автор.',
     description:
       'Фронтмен, солист, автор. Майкл Джексон до сих пор благодарит за песни. Играет в группе «Лента», пишет песни и ведёт концерты.',
-    image: '/residents/sasha.svg',
+    image: '/residents/sasha.webp',
     descriptionSvg: '/residents/sasha-description-overlay.svg',
   },
   {
@@ -28,7 +28,7 @@ export const residents: Resident[] = [
     shortDescription: 'Гитарист, аранжировщик.',
     description:
       'Гитарист и аранжировщик. Классика и рок в одном флаконе. Участвует в проектах «Лента» и сольных выступлениях.',
-    image: '/residents/alexandr.svg',
+    image: '/residents/alexandr.webp',
   },
   {
     id: 'roma',
@@ -36,7 +36,7 @@ export const residents: Resident[] = [
     shortDescription: 'Бас-гитарист, бэк-вокал.',
     description:
       'Бас-гитарист и бэк-вокал. Держит ритм и низы в группе «Лента». Любит минимализм и чёткие линии.',
-    image: '/residents/roma.svg',
+    image: '/residents/roma.webp',
   },
   {
     id: 'egor',
@@ -44,7 +44,7 @@ export const residents: Resident[] = [
     shortDescription: 'Ударные, перкуссия.',
     description:
       'Ударные и перкуссия. От джаза до рока. Участник «Ленты» и сессионный музыкант.',
-    image: '/residents/egor.svg',
+    image: '/residents/egor.webp',
   },
   {
     id: 'vadim',
@@ -52,7 +52,7 @@ export const residents: Resident[] = [
     shortDescription: 'Клавиши, саунд-дизайн.',
     description:
       'Клавишник и саунд-дизайнер. Электроника и живой звук. Сочиняет аранжировки для «Ленты».',
-    image: '/residents/vadim.svg',
+    image: '/residents/vadim.webp',
   },
   {
     id: 'anya',
@@ -60,6 +60,6 @@ export const residents: Resident[] = [
     shortDescription: 'Вокал, скрипка.',
     description:
       'Вокал и скрипка. Классическое образование и современный репертуар. Выступает с «Лентой» и сольными программами.',
-    image: '/residents/anya.svg',
+    image: '/residents/anya.webp',
   },
 ];

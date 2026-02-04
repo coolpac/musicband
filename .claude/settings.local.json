@@ -16,7 +16,8 @@
       "Bash(npx vite build)",
       "Bash(find:*)",
       "Bash(du:*)",
-      "Bash(xargs du:*)"
+      "Bash(xargs du:*)",
+      "Bash(node scripts/convert-residents-svg.mjs:*)"
     ]
   }
 }
