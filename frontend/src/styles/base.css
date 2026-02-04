@@ -133,6 +133,9 @@ img {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  /* Компенсация fixed header при scrollIntoView — заголовок секции
+     не уезжает под хедер. Значение = высота header + визуальный отступ. */
+  scroll-margin-top: calc(clamp(64px, 11svh, 107px) + 16px);
 }
 
 .section-title {

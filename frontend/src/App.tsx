@@ -125,7 +125,19 @@ export default function App() {
     tg.showBackButton();
     const cleanup = tg.onBackButtonClick(() => {
       hapticImpact('light');
-      window.history.back();
+      // Не используем history.back() — Telegram WebView может заморозить рендер
+      // при обработке browser navigation, вызывая чёрный экран.
+      // Вместо этого: прямая навигация через React state + синхронное обновление URL.
+      if (currentScreen === 'format-detail') {
+        setCurrentScreen('formats');
+        setCurrentFormatId(null);
+        window.history.replaceState({}, '', '?screen=formats');
+      } else {
+        setCurrentScreen('home');
+        window.history.replaceState({}, '', '?screen=home');
+        // scrollTo после рендера — иначе Telegram WebView может заморозить paint
+        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+      }
     });
     return () => {
       cleanup?.();
@@ -177,14 +189,14 @@ export default function App() {
         } else {
           setCurrentFormatId(null);
         }
-        // Прокрутка к началу при переходе на home
+        // Прокрутка к началу при переходе на home — через rAF чтобы не блокировать paint
         if (screenParam === 'home' || !screenParam) {
-          window.scrollTo({ top: 0, behavior: 'instant' });
+          requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
         }
       } else {
         setCurrentScreen('home');
         setCurrentFormatId(null);
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       }
     };
 
@@ -385,15 +397,22 @@ export default function App() {
     }
     if (currentScreen !== 'home') {
       setCurrentScreen('home');
+      window.history.pushState({}, '', '?screen=home');
     }
-    const el = document.getElementById(target);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
-    if (target === 'home') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    // Задержка скролла пока overlay меню закрывается (CSS transition 450ms).
+    // Без задержки scrollIntoView конфликтует с transition и позиция съезжает.
+    const MENU_CLOSE_DELAY = 460;
+    const scrollToTarget = () => {
+      if (target === 'home') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      const el = document.getElementById(target);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+    setTimeout(scrollToTarget, MENU_CLOSE_DELAY);
   };
 
   const handleFormatClick = (formatId: string) => {
