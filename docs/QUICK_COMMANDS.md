@@ -9,15 +9,27 @@ docker compose ps
 
 ## Просмотр логов
 
+Имя контейнера бэкенда — **musicians-backend** (не `backend`). Через compose можно вызывать по имени сервиса:
+
 ```bash
 # Все сервисы
 docker compose logs --tail=100 -f
 
-# Только бэкенд
-docker compose logs backend --tail=50 -f
+# Только бэкенд (по имени сервиса из docker-compose)
+docker compose logs backend --tail=100 -f
 
-# Только фронтенд (nginx)
-docker compose logs frontend --tail=50 -f
+# То же по имени контейнера
+docker logs musicians-backend --tail 100 -f
+```
+
+**Проверка бота и отзывов** (после «Выполнено» в админке, если отзыв не пришёл):
+
+```bash
+# Все последние логи бэкенда
+docker logs musicians-backend --tail 200
+
+# Только про отзыв / UserBot / ошибки
+docker logs musicians-backend --tail 500 2>&1 | grep -i -E "review|UserBot|Booking completed|WARN|ERROR"
 ```
 
 ## Перезапуск сервисов

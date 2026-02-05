@@ -1,6 +1,8 @@
 import Redis from 'ioredis';
 import { logger } from '../shared/utils/logger';
 
+let intentionalDisconnect = false;
+
 export const redis = new Redis({
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379', 10),
@@ -12,6 +14,7 @@ export const redis = new Redis({
 });
 
 redis.on('connect', () => {
+  intentionalDisconnect = false;
   logger.info('Redis connected successfully');
 });
 
@@ -20,7 +23,11 @@ redis.on('error', (error) => {
 });
 
 redis.on('close', () => {
-  logger.warn('Redis connection closed');
+  if (intentionalDisconnect) {
+    logger.info('Redis connection closed');
+  } else {
+    logger.warn('Redis connection closed');
+  }
 });
 
 export async function connectRedis(): Promise<void> {
@@ -34,6 +41,7 @@ export async function connectRedis(): Promise<void> {
 }
 
 export async function disconnectRedis(): Promise<void> {
+  intentionalDisconnect = true;
   redis.disconnect();
   logger.info('Redis disconnected');
 }

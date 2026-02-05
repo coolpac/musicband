@@ -19,16 +19,14 @@ export const logger = winston.createLogger({
     new winston.transports.File({
       filename: path.join(logDir, 'combined.log'),
     }),
-  ],
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
+    // В консоль всегда — чтобы docker logs показывал логи (важно для отладки бота и отзывов)
     new winston.transports.Console({
       format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        process.env.NODE_ENV === 'production'
+          ? winston.format.simple()
+          : winston.format.combine(winston.format.colorize(), winston.format.simple()),
       ),
-    })
-  );
-}
+    }),
+  ],
+});

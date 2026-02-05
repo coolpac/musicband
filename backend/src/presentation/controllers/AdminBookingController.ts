@@ -146,6 +146,7 @@ export class AdminBookingController {
         adminId: req.user?.userId,
       });
 
+      let reviewRequestSent = false;
       const botManager = getBotManager();
       // Отправляем запрос отзыва при "Выполнено" (включая повторную отправку, если нужно).
       // Важно: сообщение отправляет UserBot — пользователь должен иметь диалог с ботом.
@@ -153,12 +154,22 @@ export class AdminBookingController {
         const userTelegramId = (updated as any).user.telegramId;
         const userBot = botManager.getUserBot();
         if (userBot) {
-          await userBot.sendReviewRequest(userTelegramId.toString(), {
-            bookingId: updated.id,
-            bookingDate: formatDateInTimezone(updated.bookingDate),
-            formatName: (updated as any).format?.name ?? undefined,
-            fullName: (updated as any).fullName ?? '',
-          });
+          try {
+            reviewRequestSent = await userBot.sendReviewRequest(userTelegramId.toString(), {
+              bookingId: updated.id,
+              bookingDate: formatDateInTimezone(updated.bookingDate),
+              formatName: (updated as any).format?.name ?? undefined,
+              fullName: (updated as any).fullName ?? '',
+            });
+          } catch (err: unknown) {
+            // На всякий случай: sendReviewRequest возвращает boolean и сам обрабатывает ошибки.
+            // Но если что-то пойдёт не так — не блокируем «Выполнено».
+            logger.warn('Review request send threw unexpectedly', {
+              bookingId: id,
+              telegramId: userTelegramId?.toString?.() ?? String(userTelegramId),
+              error: err,
+            });
+          }
         } else {
           logger.warn('UserBot not initialized, review request not sent', {
             bookingId: id,
@@ -169,7 +180,7 @@ export class AdminBookingController {
 
       res.json({
         success: true,
-        data: { booking: updated },
+        data: { booking: updated, reviewRequestSent },
       });
     } catch (error) {
       next(error);

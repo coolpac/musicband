@@ -57,7 +57,7 @@ export class AuthService {
     // Пробуем валидировать initData от обоих ботов
     // Сначала пробуем User Bot (для обычных пользователей)
     let initData = this.userBotToken
-      ? validateInitData(rawInitData, this.userBotToken)
+      ? validateInitData(rawInitData, this.userBotToken, 3600, { logFailures: false })
       : null;
 
     // Если не прошло, пробуем Admin Bot (для админов)

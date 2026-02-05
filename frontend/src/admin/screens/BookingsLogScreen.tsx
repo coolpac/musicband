@@ -65,7 +65,11 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
     setLoading(true);
     try {
       const res = await getAdminBookings({ limit: 200 });
-      setList((res.bookings ?? []).map(mapApiBooking));
+      const rows = (res.bookings ?? [])
+        .map(mapApiBooking)
+        // «Лог» = показываем самые новые заявки сверху (по времени создания)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setList(rows);
     } catch (error) {
       console.error('Failed to load bookings log:', error);
       setList([]);
@@ -136,8 +140,12 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
 
     setCompletingId(b.id);
     try {
-      await completeAdminBooking(b.id, b.income);
-      toast.success('Отмечено как выполнено. Пользователю отправлена форма отзыва.');
+      const res = await completeAdminBooking(b.id, b.income);
+      if (res.reviewRequestSent === false) {
+        toast.success('Отмечено как выполнено. Форма отзыва не отправлена (пользователь не писал боту).');
+      } else {
+        toast.success('Отмечено как выполнено. Пользователю отправлена форма отзыва.');
+      }
       await loadList();
     } catch (error) {
       console.error('Complete booking failed:', error);

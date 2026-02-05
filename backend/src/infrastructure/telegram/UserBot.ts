@@ -3,6 +3,18 @@ import { logger } from '../../shared/utils/logger';
 import { ReferralService } from '../../domain/services/ReferralService';
 import { redis } from '../../config/redis';
 
+function getTelegramErrorCode(error: unknown): number | undefined {
+  const err = error as any;
+  const code = err?.response?.body?.error_code ?? err?.response?.error_code;
+  if (typeof code === 'number') return code;
+  if (typeof code === 'string') {
+    const parsed = Number(code);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  const statusCode = err?.response?.statusCode ?? err?.statusCode;
+  return typeof statusCode === 'number' ? statusCode : undefined;
+}
+
 export class UserBot {
   private bot: TelegramBot;
   private referralService: ReferralService;
@@ -222,9 +234,7 @@ export class UserBot {
 
       await this.bot.sendMessage(telegramId, message);
     } catch (err: unknown) {
-      const code = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { error_code?: number } }).response?.error_code
-        : undefined;
+      const code = getTelegramErrorCode(err);
       if (code === 403) {
         logger.warn('User blocked the bot', { telegramId });
       } else {
@@ -251,9 +261,7 @@ export class UserBot {
 
       await this.bot.sendMessage(telegramId, message);
     } catch (err: unknown) {
-      const code = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { error_code?: number } }).response?.error_code
-        : undefined;
+      const code = getTelegramErrorCode(err);
       if (code === 403) {
         logger.warn('User blocked the bot', { telegramId });
       } else {
@@ -271,7 +279,7 @@ export class UserBot {
     bookingDate: string;
     formatName?: string;
     fullName?: string;
-  }): Promise<void> {
+  }): Promise<boolean> {
     try {
       const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
       const reviewUrl = `${miniAppUrl}?screen=review-form&bookingId=${encodeURIComponent(payload.bookingId)}`;
@@ -297,15 +305,20 @@ export class UserBot {
           },
         }
       );
+      return true;
     } catch (err: unknown) {
-      const code = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { error_code?: number } }).response?.error_code
-        : undefined;
+      const code = getTelegramErrorCode(err);
       if (code === 403) {
-        logger.warn('User blocked the bot', { telegramId });
+        logger.warn('User blocked the bot', { telegramId, bookingId: payload.bookingId });
       } else {
-        logger.error('Error sending review request', { error: err, telegramId, bookingId: payload.bookingId });
+        logger.error('Error sending review request', {
+          error: err,
+          telegramId,
+          bookingId: payload.bookingId,
+          errorCode: code,
+        });
       }
+      return false;
     }
   }
 
@@ -336,9 +349,7 @@ export class UserBot {
         sent++;
       } catch (err: unknown) {
         failed++;
-        const code = err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { error_code?: number } }).response?.error_code
-          : undefined;
+        const code = getTelegramErrorCode(err);
         if (code !== 403) {
           logger.error('Voting follow-up send failed', { telegramId, error: err });
         }
@@ -377,9 +388,7 @@ export class UserBot {
         }
       );
     } catch (err: unknown) {
-      const code = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { error_code?: number } }).response?.error_code
-        : undefined;
+      const code = getTelegramErrorCode(err);
       if (code === 403) {
         logger.warn('User blocked the bot, skipping winner notification', { telegramId: telegramId.toString() });
       } else {
@@ -395,9 +404,7 @@ export class UserBot {
     try {
       await this.bot.sendMessage(telegramId, `📩 Сообщение от администратора:\n\n${message}`);
     } catch (err: unknown) {
-      const code = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { error_code?: number } }).response?.error_code
-        : undefined;
+      const code = getTelegramErrorCode(err);
       if (code === 403) {
         logger.warn('User blocked the bot', { telegramId });
       } else {

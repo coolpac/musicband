@@ -5,6 +5,18 @@ import { IBookingRepository } from '../database/repositories/BookingRepository';
 import { USER_ROLES } from '../../shared/constants';
 import { prisma } from '../../config/database';
 
+function getTelegramErrorCode(error: unknown): number | undefined {
+  const err = error as any;
+  const code = err?.response?.body?.error_code ?? err?.response?.error_code;
+  if (typeof code === 'number') return code;
+  if (typeof code === 'string') {
+    const parsed = Number(code);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  const statusCode = err?.response?.statusCode ?? err?.statusCode;
+  return typeof statusCode === 'number' ? statusCode : undefined;
+}
+
 export class AdminBot {
   private bot: TelegramBot;
   private bookingRepository: IBookingRepository;
@@ -479,6 +491,11 @@ export class AdminBot {
           let spinnerIndex = 0;
           let lastProgress = { sent: 0, failed: 0, total: 0 };
 
+          const isMessageNotModifiedError = (err: unknown): boolean => {
+            const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: unknown }).message) : '';
+            return msg.toLowerCase().includes('message is not modified');
+          };
+
           const updateStatus = async (force = false) => {
             if (!force && lastProgress.total === 0) return;
             const frame = spinner[spinnerIndex % spinner.length];
@@ -487,10 +504,21 @@ export class AdminBot {
               `Рассылка ${frame}\n` +
               `Отправлено: ${lastProgress.sent} из ${lastProgress.total}\n` +
               `Ошибок: ${lastProgress.failed}`;
-            await this.bot.editMessageText(text, {
-              chat_id: chatId,
-              message_id: statusMessage.message_id,
-            });
+            try {
+              await this.bot.editMessageText(text, {
+                chat_id: chatId,
+                message_id: statusMessage.message_id,
+              });
+            } catch (err: unknown) {
+              // Это частая, безопасная ситуация при конкурентных обновлениях статуса
+              // (Telegram 400: message is not modified). Не ломаем рассылку и не спамим error-логами.
+              if (isMessageNotModifiedError(err)) return;
+              logger.warn('Failed to update broadcast status message', {
+                chatId,
+                messageId: statusMessage.message_id,
+                error: err,
+              });
+            }
           };
 
           const timer = setInterval(() => {
@@ -844,10 +872,9 @@ export class AdminBot {
       for (const adminId of this.adminTelegramIds) {
         try {
           await this.bot.sendMessage(adminId, message);
-        } catch (error: any) {
-          if (error.response?.error_code !== 403) {
-            logger.error('Error sending new user notification', { error, adminId });
-          }
+        } catch (error: unknown) {
+          const code = getTelegramErrorCode(error);
+          if (code !== 403) logger.error('Error sending new user notification', { error, adminId });
         }
       }
     } catch (error) {
@@ -913,9 +940,7 @@ export class AdminBot {
             },
           });
         } catch (err: unknown) {
-          const code = err && typeof err === 'object' && 'response' in err
-            ? (err as { response?: { error_code?: number } }).response?.error_code
-            : undefined;
+          const code = getTelegramErrorCode(err);
           if (code !== 403) {
             logger.error('Error sending new booking notification', { error: err, adminId });
           }

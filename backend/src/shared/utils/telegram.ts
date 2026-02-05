@@ -19,6 +19,19 @@ export interface InitData {
   start_param?: string; // Из deep link (например, vote_{sessionId})
 }
 
+export interface ValidateInitDataOptions {
+  /**
+   * По умолчанию функция пишет warn-логи для причин невалидности.
+   * Можно отключить (например, когда пробуем несколько botToken подряд),
+   * чтобы не засорять логи ложными предупреждениями.
+   */
+  logFailures?: boolean;
+  /**
+   * Дополнительные поля, которые будут добавлены в логи (если logFailures=true).
+   */
+  logMeta?: Record<string, unknown>;
+}
+
 /**
  * Проверяет валидность initData от Telegram Mini App
  * @param rawInitData - сырая строка initData от Telegram
@@ -29,22 +42,30 @@ export interface InitData {
 export function validateInitData(
   rawInitData: string,
   botToken: string,
-  maxAge: number = 3600
+  maxAge: number = 3600,
+  options?: ValidateInitDataOptions
 ): InitData | null {
   try {
+    const logFailures = options?.logFailures !== false;
+    const baseMeta = options?.logMeta || {};
+    const warn = (message: string, meta?: Record<string, unknown>) => {
+      if (!logFailures) return;
+      logger.warn(message, { ...baseMeta, ...(meta || {}) });
+    };
+
     // Парсим initData
     const params = new URLSearchParams(rawInitData);
     const hash = params.get('hash');
     
     if (!hash) {
-      logger.warn('InitData validation failed: missing hash');
+      warn('InitData validation failed: missing hash');
       return null;
     }
 
     // Проверяем auth_date
     const authDateStr = params.get('auth_date');
     if (!authDateStr) {
-      logger.warn('InitData validation failed: missing auth_date');
+      warn('InitData validation failed: missing auth_date');
       return null;
     }
 
@@ -53,12 +74,12 @@ export function validateInitData(
     const age = currentTime - authDate;
 
     if (age > maxAge) {
-      logger.warn('InitData validation failed: expired', { age, maxAge });
+      warn('InitData validation failed: expired', { age, maxAge });
       return null;
     }
 
     if (age < 0) {
-      logger.warn('InitData validation failed: auth_date in future');
+      warn('InitData validation failed: auth_date in future');
       return null;
     }
 
@@ -89,7 +110,7 @@ export function validateInitData(
 
     // Сравниваем хеши
     if (calculatedHash !== hash) {
-      logger.warn('InitData validation failed: invalid hash');
+      warn('InitData validation failed: invalid hash');
       return null;
     }
 
@@ -100,7 +121,7 @@ export function validateInitData(
       try {
         user = JSON.parse(decodeURIComponent(userStr)) as TelegramUser;
       } catch (error) {
-        logger.warn('InitData validation failed: invalid user data', { error });
+        warn('InitData validation failed: invalid user data', { error });
         return null;
       }
     }
@@ -115,7 +136,7 @@ export function validateInitData(
 
     return initData;
   } catch (error) {
-    logger.error('InitData validation error', { error });
+    logger.error('InitData validation error', { error, ...(options?.logMeta || {}) });
     return null;
   }
 }

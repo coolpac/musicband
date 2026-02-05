@@ -286,8 +286,12 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
 
     setCompleting(true);
     try {
-      await completeAdminBooking(selectedDay.booking.id, num);
-      toast.success('Отмечено как выполнено. Пользователю отправлена форма отзыва.');
+      const res = await completeAdminBooking(selectedDay.booking.id, num);
+      if (res.reviewRequestSent === false) {
+        toast.success('Отмечено как выполнено. Форма отзыва не отправлена (пользователь не писал боту).');
+      } else {
+        toast.success('Отмечено как выполнено. Пользователю отправлена форма отзыва.');
+      }
       setShowDayModal(false);
       await loadData();
     } catch (error) {

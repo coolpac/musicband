@@ -72,9 +72,15 @@ deploy_backend() {
     if [ "${FULL_DEPLOY:-false}" != "true" ]; then
         log "Получение обновлений из git..."
         git pull origin "$CURRENT_BRANCH"
+        log "Сборка Docker образа backend..."
+        docker compose build --pull backend
     fi
     
-    docker compose up -d --no-deps --build backend
+    # Важно: миграции должны применяться при любом деплое backend,
+    # иначе Prisma схема может не совпасть с БД (ошибки вида "column ... does not exist").
+    run_migrations
+
+    docker compose up -d --no-deps backend
 
     # Ждём пока health check пройдёт
     log "Ожидание health check..."
@@ -126,16 +132,13 @@ full_deploy() {
     log "Сборка Docker образов..."
     docker compose build --pull
 
-    # 4. Миграции (из нового образа backend)
-    run_migrations
-
-    # 5. Перезапуск backend
+    # 4. Перезапуск backend (внутри — apply migrations)
     deploy_backend || { rollback; exit 1; }
 
-    # 6. Перезапуск frontend
+    # 5. Перезапуск frontend
     deploy_frontend
 
-    # 7. Очистка
+    # 6. Очистка
     log "Очистка старых образов..."
     docker image prune -f
 

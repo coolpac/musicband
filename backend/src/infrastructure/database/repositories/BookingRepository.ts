@@ -108,7 +108,8 @@ export class PrismaBookingRepository implements IBookingRepository {
         user: true,
         format: true,
       },
-      orderBy: { bookingDate: 'asc' },
+      // Стабильная сортировка: по дате события, а внутри дня — по времени создания
+      orderBy: [{ bookingDate: 'asc' }, { createdAt: 'desc' }, { id: 'desc' }],
     });
   }
 
@@ -164,7 +165,7 @@ export class PrismaBookingRepository implements IBookingRepository {
           },
           format: true,
         },
-        orderBy: { bookingDate: 'desc' },
+        orderBy: [{ bookingDate: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take: limit,
       }),

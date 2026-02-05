@@ -236,8 +236,8 @@ export async function updateAdminBookingIncome(
 export async function completeAdminBooking(
   id: string,
   income: number
-): Promise<{ booking: AdminBooking }> {
-  return apiPost<{ booking: AdminBooking }>(`${BASE}/${id}/complete`, { income });
+): Promise<{ booking: AdminBooking; reviewRequestSent?: boolean }> {
+  return apiPost<{ booking: AdminBooking; reviewRequestSent?: boolean }>(`${BASE}/${id}/complete`, { income });
 }
 
 export async function blockDate(date: string, reason?: string): Promise<{ blockedDate: AdminBlockedDate }> {
