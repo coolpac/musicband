@@ -10,6 +10,47 @@ export function getTelegramWebApp(): TelegramWebApp | null {
   return window.Telegram?.WebApp ?? null;
 }
 
+function parseTelegramVersion(version: string): number[] {
+  // Telegram отдаёт версии вида "6.0", "7.10", "8.0" и т.п.
+  // На всякий случай выкидываем всё, что не похоже на числа.
+  return String(version)
+    .trim()
+    .split('.')
+    .map((part) => Number.parseInt(part.replace(/[^\d]/g, ''), 10))
+    .map((n) => (Number.isFinite(n) ? n : 0));
+}
+
+function compareTelegramVersions(a: string, b: string): number {
+  const av = parseTelegramVersion(a);
+  const bv = parseTelegramVersion(b);
+  const len = Math.max(av.length, bv.length, 2);
+  for (let i = 0; i < len; i++) {
+    const ai = av[i] ?? 0;
+    const bi = bv[i] ?? 0;
+    if (ai > bi) return 1;
+    if (ai < bi) return -1;
+  }
+  return 0;
+}
+
+export function isTelegramWebAppVersionAtLeast(minVersion: string): boolean {
+  const tg = getTelegramWebApp();
+  if (!tg) return false;
+
+  // Предпочитаем нативный helper (Bot API 6.1+), но делаем fallback для более старых клиентов.
+  if (typeof tg.isVersionAtLeast === 'function') {
+    try {
+      return Boolean(tg.isVersionAtLeast(minVersion));
+    } catch {
+      // ignore
+    }
+  }
+
+  const current = tg.version;
+  if (!current) return false;
+  return compareTelegramVersions(current, minVersion) >= 0;
+}
+
 export function isInsideTelegram(): boolean {
   return Boolean(getTelegramWebApp());
 }
@@ -23,7 +64,7 @@ export function initTelegramWebApp(): void {
   tg.expand();
 
   // Запрет закрытия свайпом по контенту (Bot API 7.7+)
-  if (tg.disableVerticalSwipes) {
+  if (isTelegramWebAppVersionAtLeast('7.7') && tg.disableVerticalSwipes) {
     tg.disableVerticalSwipes();
   }
 
@@ -33,10 +74,14 @@ export function initTelegramWebApp(): void {
   }
 
   // Цвета под тему Telegram
-  if (tg.themeParams?.bg_color) {
+  if (isTelegramWebAppVersionAtLeast('6.1') && tg.setBackgroundColor && tg.themeParams?.bg_color) {
     tg.setBackgroundColor(tg.themeParams.bg_color);
   }
-  if (tg.themeParams?.secondary_bg_color ?? tg.themeParams?.bg_color) {
+  if (
+    isTelegramWebAppVersionAtLeast('6.1') &&
+    tg.setHeaderColor &&
+    (tg.themeParams?.secondary_bg_color ?? tg.themeParams?.bg_color)
+  ) {
     tg.setHeaderColor(tg.themeParams.secondary_bg_color ?? tg.themeParams.bg_color ?? '#111111');
   }
   applyTelegramViewportAndSafeArea();
@@ -91,11 +136,13 @@ export function showConfirm(message: string): Promise<boolean> {
 
 /** Включить подтверждение при закрытии мини-приложения (свайп по шапке). */
 export function enableClosingConfirmation(): void {
+  if (!isTelegramWebAppVersionAtLeast('6.2')) return;
   getTelegramWebApp()?.enableClosingConfirmation?.();
 }
 
 /** Выключить подтверждение при закрытии. */
 export function disableClosingConfirmation(): void {
+  if (!isTelegramWebAppVersionAtLeast('6.2')) return;
   getTelegramWebApp()?.disableClosingConfirmation?.();
 }
 

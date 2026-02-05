@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import {
   getTelegramWebApp,
   isInsideTelegram,
+  isTelegramWebAppVersionAtLeast,
   initTelegramWebApp,
   hapticImpact,
   hapticSelection,
@@ -20,14 +21,17 @@ export function useTelegramWebApp(options?: { initOnMount?: boolean }) {
   }, [initOnMount]);
 
   const showBackButton = useCallback(() => {
+    if (!isTelegramWebAppVersionAtLeast('6.1')) return;
     getTelegramWebApp()?.BackButton?.show();
   }, []);
 
   const hideBackButton = useCallback(() => {
+    if (!isTelegramWebAppVersionAtLeast('6.1')) return;
     getTelegramWebApp()?.BackButton?.hide();
   }, []);
 
   const onBackButtonClick = useCallback((handler: () => void) => {
+    if (!isTelegramWebAppVersionAtLeast('6.1')) return () => {};
     const tg = getTelegramWebApp();
     if (!tg?.BackButton) return () => {};
     tg.BackButton.onClick(handler);
