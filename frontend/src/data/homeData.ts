@@ -50,12 +50,12 @@ export const liveVideos: LiveVideoItem[] = [
 ];
 
 export const promoVideos: PromoVideoItem[] = [
-  {
-    id: 'promo-main',
-    src: 'https://rutube.ru/video/56fd172a86aff0d705834ea2bab83d2d',
-    poster: '/videos/thumbs/ПРИЗВАНИЕ АРТИСТ 2025 (Горизонтальный)_thumb.jpg',
-    title: '',
-  },
+  { id: 'promo-1', src: 'https://rutube.ru/video/56fd172a86aff0d705834ea2bab83d2d/', poster: '', title: 'НОВОЕ ПРОМО "ГАНГСТЕРЫ" 2025' },
+  { id: 'promo-2', src: 'https://rutube.ru/video/f3403d22144bf5398978b71eb7407423/', poster: '', title: 'ПРИЗВАНИЕ АРТИСТ 2025 (ПОБЕДА!)' },
+  { id: 'promo-3', src: 'https://rutube.ru/video/6db676dc12f800c2f0525c11d2f2f209/', poster: '', title: 'КВАРТИРНИК №1 (ВГУЛ) ОТЧЁТНИК' },
+  { id: 'promo-4', src: 'https://rutube.ru/video/40656f651368b42f7d5627ed6a9e7c20/', poster: '', title: 'РЕПОРТАЖ ШОУ-КОНЦЕРТА "31 КАНАЛ"' },
+  { id: 'promo-5', src: 'https://rutube.ru/video/5297e7c30dd2030284d6d38e0768c8e9/', poster: '', title: 'СЕДАЯ НОЧЬ - ОТРЫВОК С ПРЕМИИ "ПРИЗВАНИЕ АРТИСТ" 2024' },
+  { id: 'promo-6', src: 'https://rutube.ru/video/ee884839b614dfd5241a30588fd9b464/', poster: '', title: 'СВАДЕБНОЕ СОПРОВОЖДЕНИЕ' },
 ];
 
 export const whyMobileSlides: WhyMobileSlide[] = [

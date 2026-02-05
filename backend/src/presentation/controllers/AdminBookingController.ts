@@ -137,7 +137,6 @@ export class AdminBookingController {
       if (booking.status !== 'confirmed') {
         throw new ValidationError('Booking must be confirmed before completing');
       }
-      const hadIncome = booking.income != null;
 
       const updated = await this.bookingService.updateBookingIncome(id, income);
 
@@ -148,8 +147,9 @@ export class AdminBookingController {
       });
 
       const botManager = getBotManager();
-      // Чтобы не спамить, отправляем запрос отзыва только при первом "выполнено" (когда доход ещё не был записан)
-      if (!hadIncome && botManager && (updated as any).user?.telegramId) {
+      // Отправляем запрос отзыва при "Выполнено" (включая повторную отправку, если нужно).
+      // Важно: сообщение отправляет UserBot — пользователь должен иметь диалог с ботом.
+      if (botManager && (updated as any).user?.telegramId) {
         const userTelegramId = (updated as any).user.telegramId;
         const userBot = botManager.getUserBot();
         if (userBot) {
@@ -158,6 +158,11 @@ export class AdminBookingController {
             bookingDate: formatDateInTimezone(updated.bookingDate),
             formatName: (updated as any).format?.name ?? undefined,
             fullName: (updated as any).fullName ?? '',
+          });
+        } else {
+          logger.warn('UserBot not initialized, review request not sent', {
+            bookingId: id,
+            telegramId: userTelegramId?.toString?.() ?? String(userTelegramId),
           });
         }
       }
