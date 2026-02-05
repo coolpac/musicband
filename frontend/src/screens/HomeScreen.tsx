@@ -341,13 +341,34 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
               >
                 <div className="card-media video-player">
                   {isRutubeUrl(item.src) ? (
-                    <iframe
-                      className="video-embed"
-                      src={getRutubeEmbedUrl(item.src)}
-                      title={item.title}
-                      allow="autoplay; fullscreen; picture-in-picture"
-                      allowFullScreen
-                    />
+                    promoSlider.activeIndex === index ? (
+                      <iframe
+                        className="video-embed"
+                        src={getRutubeEmbedUrl(item.src)}
+                        title={item.title || `Промо ${index + 1}`}
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    ) : (
+                      <>
+                        <img
+                          alt=""
+                          className="video-element"
+                          src={item.poster || posterImage}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                        <button
+                          className="video-play-button"
+                          onClick={() => { hapticImpact('light'); promoSlider.scrollToIndex(index); }}
+                          type="button"
+                          aria-label={`Открыть промо ${index + 1}`}
+                        >
+                          <img alt="Play" src={promoPlay} width={48} height={48} loading="lazy" decoding="async" />
+                        </button>
+                      </>
+                    )
                   ) : (
                     <>
                       <video

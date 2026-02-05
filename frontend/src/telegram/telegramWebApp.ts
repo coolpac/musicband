@@ -94,6 +94,7 @@ export function initTelegramWebApp(): void {
  * @see https://docs.telegram-mini-apps.com/platform/haptic-feedback
  */
 export function hapticImpact(style: 'light' | 'medium' | 'heavy' = 'light'): void {
+  if (!isTelegramWebAppVersionAtLeast('6.1')) return;
   getTelegramWebApp()?.HapticFeedback?.impactOccurred(style);
 }
 
@@ -102,6 +103,7 @@ export function hapticImpact(style: 'light' | 'medium' | 'heavy' = 'light'): voi
  * Только при изменении выбора, не при подтверждении.
  */
 export function hapticSelection(): void {
+  if (!isTelegramWebAppVersionAtLeast('6.1')) return;
   getTelegramWebApp()?.HapticFeedback?.selectionChanged();
 }
 
@@ -110,6 +112,7 @@ export function hapticSelection(): void {
  * success — действие выполнено, error — ошибка, warning — предупреждение.
  */
 export function hapticNotification(type: 'success' | 'warning' | 'error'): void {
+  if (!isTelegramWebAppVersionAtLeast('6.1')) return;
   getTelegramWebApp()?.HapticFeedback?.notificationOccurred(type);
 }
 
@@ -149,7 +152,7 @@ export function disableClosingConfirmation(): void {
 /** Открыть ссылку t.me/... внутри Telegram (чат, канал). Вне Telegram — window.open. */
 export function openTelegramLink(url: string): void {
   const tg = getTelegramWebApp();
-  if (tg?.openTelegramLink && /^https:\/\/t\.me\//i.test(url)) {
+  if (isTelegramWebAppVersionAtLeast('6.1') && tg?.openTelegramLink && /^https:\/\/t\.me\//i.test(url)) {
     tg.openTelegramLink(url);
   } else {
     window.open(url, '_blank', 'noopener,noreferrer');

@@ -7,7 +7,6 @@ import navBg4 from '../assets/figma/downloaded/nav-bg-4.png';
 import navBg5 from '../assets/figma/downloaded/nav-bg-5.png';
 import navLogoFill from '../assets/figma/downloaded/nav-logo-fill.svg';
 import navLogoMask from '../assets/figma/downloaded/nav-logo-mask.svg';
-import navTitle from '../assets/figma/downloaded/nav-title.svg';
 
 type MenuTarget = 'home' | 'formats' | 'live' | 'partners' | 'socials';
 
@@ -113,7 +112,7 @@ export default function MenuOverlay({ isOpen, onClose, onNavigate }: MenuOverlay
 
           <div className="menu-overlay__topbar-spacer" aria-hidden="true" />
         </div>
-        <img alt="Меню" className="menu-overlay__title" src={navTitle} />
+        <h2 className="menu-overlay__title">МЕНЮ</h2>
         <div className="menu-overlay__links">
           {menuItems.map((item) => (
             <button
