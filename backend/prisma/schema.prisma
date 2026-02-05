@@ -162,6 +162,19 @@ model VotingSession {
   @@map("voting_sessions")
 }
 
+/// Отложенная рассылка участникам голосования через 24 часа после окончания сессии
+model VotingFollowUp {
+  id          String    @id @default(uuid())
+  sessionId   String    @map("session_id")
+  telegramIds Json      @map("telegram_ids") // string[] — id участников для рассылки
+  scheduledAt DateTime  @map("scheduled_at")
+  sentAt      DateTime? @map("sent_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([scheduledAt, sentAt])
+  @@map("voting_follow_ups")
+}
+
 model Vote {
   id        String         @id @default(uuid())
   userId    String         @map("user_id")

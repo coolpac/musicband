@@ -220,6 +220,52 @@ export class BotManager {
   }
 
   /**
+   * Обработка отложенных рассылок участникам голосования (24ч после окончания сессии).
+   * Вызывается по расписанию (например каждые 15 мин). Находит записи с scheduledAt <= now и sentAt = null,
+   * отправляет сообщение «Ну как вчера прошёл ваш вечер?» с кнопкой в приложение, помечает sentAt.
+   */
+  async processScheduledVotingFollowUps(): Promise<void> {
+    if (!this.userBot) return;
+
+    const now = new Date();
+    const due = await prisma.votingFollowUp.findMany({
+      where: {
+        sentAt: null,
+        scheduledAt: { lte: now },
+      },
+      orderBy: { scheduledAt: 'asc' },
+    });
+
+    for (const row of due) {
+      const telegramIds = Array.isArray(row.telegramIds)
+        ? (row.telegramIds as string[])
+        : [];
+      if (telegramIds.length === 0) {
+        await prisma.votingFollowUp.update({
+          where: { id: row.id },
+          data: { sentAt: now },
+        });
+        continue;
+      }
+      try {
+        const { sent, failed } = await this.userBot.sendVotingFollowUp24h(telegramIds);
+        await prisma.votingFollowUp.update({
+          where: { id: row.id },
+          data: { sentAt: new Date() },
+        });
+        logger.info('Voting follow-up sent', {
+          followUpId: row.id,
+          sessionId: row.sessionId,
+          sent,
+          failed,
+        });
+      } catch (err) {
+        logger.error('Voting follow-up send failed', { followUpId: row.id, sessionId: row.sessionId, error: err });
+      }
+    }
+  }
+
+  /**
    * Уведомление проголосовавших о победителе голосования (массовая рассылка с учётом rate limit)
    */
   async notifyVotingWinner(

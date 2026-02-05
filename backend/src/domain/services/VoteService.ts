@@ -414,6 +414,23 @@ export class VoteService {
       logger.warn('Failed to clear vote session cache', { sessionId, error });
     }
 
+    // Планируем рассылку «как вчера прошёл вечер» участникам через 24 часа
+    if (voterTelegramIds.length > 0) {
+      const scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await prisma.votingFollowUp.create({
+        data: {
+          sessionId,
+          telegramIds: voterTelegramIds.map((tid) => tid.toString()),
+          scheduledAt,
+        },
+      });
+      logger.info('Voting follow-up scheduled in 24h', {
+        sessionId,
+        voterCount: voterTelegramIds.length,
+        scheduledAt: scheduledAt.toISOString(),
+      });
+    }
+
     logger.info('Voting session ended', {
       sessionId,
       totalVoters: endedSession.totalVoters,

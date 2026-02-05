@@ -222,6 +222,19 @@ async function startServer() {
     setBotManager(botManager);
     logger.info('Telegram bots initialized');
 
+    // Рассылка участникам голосования через 24ч — проверка каждые 15 минут
+    const FOLLOW_UP_INTERVAL_MS = 15 * 60 * 1000;
+    setInterval(() => {
+      getBotManager()
+        ?.processScheduledVotingFollowUps()
+        ?.catch((err) => logger.error('Voting follow-up job failed', { error: err }));
+    }, FOLLOW_UP_INTERVAL_MS);
+    setTimeout(() => {
+      getBotManager()
+        ?.processScheduledVotingFollowUps()
+        ?.catch((err) => logger.error('Voting follow-up job failed', { error: err }));
+    }, 60 * 1000);
+
     // Запускаем сервер
     httpServer.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);

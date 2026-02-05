@@ -39,8 +39,29 @@ export class UserBot {
           // Обрабатываем реферальную ссылку
           await this.handleReferralLink(chatId, referralCode, msg.from);
         } else {
-          // Обычный старт - показываем приветствие
-          await this.bot.sendMessage(chatId, 'Добро пожаловать! Откройте Mini App для продолжения.');
+          // Обычный старт — приветствие с кнопкой открытия приложения
+          const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+          const welcomeText =
+            '👋 *ПРИВЕТСТВИЕ*\n\n' +
+            'Добро пожаловать! Теперь и ты — «В гостях у Лементалия». Располагайся и чувствуй себя как дома.\n' +
+            'Cover-группа «ВГУЛ» в твоём распоряжении.\n\n' +
+            'Здесь мы познакомимся поближе.\n\n' +
+            'Ты узнаешь:\n' +
+            '• о наших форматах\n' +
+            '• увидишь наши выступления\n' +
+            '• услышишь, как мы звучим.\n\n' +
+            'А после ты с лёгкостью можешь пригласить нас на своё событие, где мы с огромным удовольствием сделаем его незабываемым, остросюжетным и грандиозным!';
+          await this.bot.sendMessage(chatId, welcomeText, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [[
+                {
+                  text: '📱 Открыть приложение',
+                  web_app: { url: miniAppUrl },
+                },
+              ]],
+            },
+          });
         }
       } catch (error) {
         logger.error('Error handling /start command', { error, chatId: msg.chat.id });
@@ -286,6 +307,47 @@ export class UserBot {
         logger.error('Error sending review request', { error: err, telegramId, bookingId: payload.bookingId });
       }
     }
+  }
+
+  /**
+   * Рассылка участникам голосования через 24 часа после окончания сессии
+   * («Ну как вчера прошёл ваш вечер?» + кнопка в бот)
+   */
+  async sendVotingFollowUp24h(telegramIds: string[]): Promise<{ sent: number; failed: number }> {
+    const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+    const message =
+      'Ну как вчера прошёл ваш вечер?\n\n' +
+      'Мы все видели, как вы отжигали💥\n\n' +
+      'Считаем, что необходимо повторить! Как говорится: "между первой и второй — перерывчик небольшой"!\n\n' +
+      'Переходи к нам в бот, там расписание нашей следующей встречи🤝\n' +
+      'Там и познакомимся поближе!';
+
+    const replyMarkup = {
+      inline_keyboard: [[
+        { text: '📱 Открыть приложение', web_app: { url: miniAppUrl } },
+      ]],
+    };
+
+    let sent = 0;
+    let failed = 0;
+    for (const telegramId of telegramIds) {
+      try {
+        await this.bot.sendMessage(telegramId, message, { reply_markup: replyMarkup });
+        sent++;
+      } catch (err: unknown) {
+        failed++;
+        const code = err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { error_code?: number } }).response?.error_code
+          : undefined;
+        if (code !== 403) {
+          logger.error('Voting follow-up send failed', { telegramId, error: err });
+        }
+      }
+      if (sent % 25 === 0) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+    return { sent, failed };
   }
 
   /**
