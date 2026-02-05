@@ -15,6 +15,15 @@ function getTelegramErrorCode(error: unknown): number | undefined {
   return typeof statusCode === 'number' ? statusCode : undefined;
 }
 
+function getTelegramErrorDescription(error: unknown): string | undefined {
+  const err = error as any;
+  const desc = err?.response?.body?.description;
+  if (typeof desc === 'string') return desc;
+  const msg = err?.message;
+  if (typeof msg === 'string') return msg;
+  return undefined;
+}
+
 export class UserBot {
   private bot: TelegramBot;
   private referralService: ReferralService;
@@ -279,7 +288,7 @@ export class UserBot {
     bookingDate: string;
     formatName?: string;
     fullName?: string;
-  }): Promise<boolean> {
+  }): Promise<{ sent: boolean; errorCode?: number; errorMessage?: string }> {
     try {
       const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
       const reviewUrl = `${miniAppUrl}?screen=review-form&bookingId=${encodeURIComponent(payload.bookingId)}`;
@@ -305,11 +314,17 @@ export class UserBot {
           },
         }
       );
-      return true;
+      return { sent: true };
     } catch (err: unknown) {
       const code = getTelegramErrorCode(err);
+      const description = getTelegramErrorDescription(err);
       if (code === 403) {
-        logger.warn('User blocked the bot', { telegramId, bookingId: payload.bookingId });
+        logger.warn('Review request forbidden (user blocked bot or no chat)', {
+          telegramId,
+          bookingId: payload.bookingId,
+          errorCode: code,
+          errorMessage: description,
+        });
       } else {
         logger.error('Error sending review request', {
           error: err,
@@ -318,7 +333,7 @@ export class UserBot {
           errorCode: code,
         });
       }
-      return false;
+      return { sent: false, errorCode: code, errorMessage: description };
     }
   }
 

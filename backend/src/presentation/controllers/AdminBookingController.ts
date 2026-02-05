@@ -147,6 +147,7 @@ export class AdminBookingController {
       });
 
       let reviewRequestSent = false;
+      let reviewRequestError: { code?: number; message?: string } | undefined;
       const botManager = getBotManager();
       // Отправляем запрос отзыва при "Выполнено" (включая повторную отправку, если нужно).
       // Важно: сообщение отправляет UserBot — пользователь должен иметь диалог с ботом.
@@ -155,12 +156,16 @@ export class AdminBookingController {
         const userBot = botManager.getUserBot();
         if (userBot) {
           try {
-            reviewRequestSent = await userBot.sendReviewRequest(userTelegramId.toString(), {
+            const result = await userBot.sendReviewRequest(userTelegramId.toString(), {
               bookingId: updated.id,
               bookingDate: formatDateInTimezone(updated.bookingDate),
               formatName: (updated as any).format?.name ?? undefined,
               fullName: (updated as any).fullName ?? '',
             });
+            reviewRequestSent = result.sent;
+            if (!result.sent) {
+              reviewRequestError = { code: result.errorCode, message: result.errorMessage };
+            }
           } catch (err: unknown) {
             // На всякий случай: sendReviewRequest возвращает boolean и сам обрабатывает ошибки.
             // Но если что-то пойдёт не так — не блокируем «Выполнено».
@@ -180,7 +185,7 @@ export class AdminBookingController {
 
       res.json({
         success: true,
-        data: { booking: updated, reviewRequestSent },
+        data: { booking: updated, reviewRequestSent, reviewRequestError },
       });
     } catch (error) {
       next(error);

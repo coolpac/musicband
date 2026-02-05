@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import Modal from '../components/Modal';
+import { ApiError } from '../../services/apiClient';
 import {
   getAdminBookingCalendar,
   getAdminBlockedDates,
@@ -288,7 +289,16 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
     try {
       const res = await completeAdminBooking(selectedDay.booking.id, num);
       if (res.reviewRequestSent === false) {
-        toast.success('Отмечено как выполнено. Форма отзыва не отправлена (пользователь не писал боту).');
+        const details = res.reviewRequestError?.message
+          ? `${res.reviewRequestError.code ? `${res.reviewRequestError.code}: ` : ''}${res.reviewRequestError.message}`
+          : (res.reviewRequestError?.code === 403
+            ? '403: пользователь не писал UserBot или заблокировал бота'
+            : '');
+        toast.success(
+          details
+            ? `Отмечено как выполнено. Форма отзыва не отправлена (${details}).`
+            : 'Отмечено как выполнено. Форма отзыва не отправлена.'
+        );
       } else {
         toast.success('Отмечено как выполнено. Пользователю отправлена форма отзыва.');
       }
@@ -296,7 +306,20 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
       await loadData();
     } catch (error) {
       console.error('Error completing booking:', error);
-      toast.error('Не удалось отметить как выполнено');
+      let errorMessage = 'Неизвестная ошибка';
+      if (error instanceof ApiError) {
+        const code =
+          (error.data && typeof error.data === 'object' && 'error' in error.data && (error.data as any).error?.code)
+            ? String((error.data as any).error.code)
+            : undefined;
+        errorMessage = `${error.message}${code ? ` (${code})` : ''}${error.statusCode ? ` [${error.statusCode}]` : ''}`;
+      } else if (error instanceof Error) {
+        errorMessage =
+          error.name === 'AbortError'
+            ? 'Таймаут запроса (сервер долго отвечает). Попробуйте ещё раз.'
+            : (error.message || 'Неизвестная ошибка');
+      }
+      toast.error(`Не удалось отметить как выполнено: ${errorMessage}`);
     } finally {
       setCompleting(false);
     }

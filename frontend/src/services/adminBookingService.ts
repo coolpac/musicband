@@ -236,8 +236,21 @@ export async function updateAdminBookingIncome(
 export async function completeAdminBooking(
   id: string,
   income: number
-): Promise<{ booking: AdminBooking; reviewRequestSent?: boolean }> {
-  return apiPost<{ booking: AdminBooking; reviewRequestSent?: boolean }>(`${BASE}/${id}/complete`, { income });
+): Promise<{
+  booking: AdminBooking;
+  reviewRequestSent?: boolean;
+  reviewRequestError?: { code?: number; message?: string };
+}> {
+  return apiPost<{
+    booking: AdminBooking;
+    reviewRequestSent?: boolean;
+    reviewRequestError?: { code?: number; message?: string };
+  }>(
+    `${BASE}/${id}/complete`,
+    { income },
+    // Отправка отзыва может зависеть от Telegram API — даём больше времени, чтобы не ловить AbortError.
+    { timeout: 30000 }
+  );
 }
 
 export async function blockDate(date: string, reason?: string): Promise<{ blockedDate: AdminBlockedDate }> {
