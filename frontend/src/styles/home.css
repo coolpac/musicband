@@ -1051,42 +1051,39 @@
   opacity: 1;
 }
 
-.menu-overlay__content {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-
 .menu-overlay__title {
-  margin: 0 0 24px;
+  position: absolute;
+  left: 50%;
+  top: 60px;
+  transform: translateX(-50%);
+  margin: 0;
   font-family: "Geologica", "Evolventa", sans-serif;
-  font-size: clamp(32px, 8vw, 48px);
+  font-size: 30px;
   font-weight: 700;
   color: #ffffff;
   letter-spacing: -0.02em;
   line-height: 1.1;
+  z-index: 2;
 }
 
 .menu-overlay__links {
+  position: absolute;
+  right: 40px;
+  top: 570px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  text-align: center;
-  font-size: clamp(20px, 5.5vw, 30px);
+  gap: 5px;
+  text-align: right;
+  font-size: 30px;
+  z-index: 2;
 }
 
 .menu-overlay__links button {
   background: none;
   border: none;
   color: var(--white);
-  text-align: center;
-  font-size: clamp(20px, 5.5vw, 30px);
+  text-align: right;
+  font-size: 30px;
   font-family: "Geologica", sans-serif;
   cursor: pointer;
   padding: 0;
@@ -1094,6 +1091,7 @@
 
 @media (max-width: 360px) {
   .menu-overlay__links {
+    right: 16px;
     font-size: clamp(18px, 5vw, 24px);
   }
   .menu-overlay__links button {

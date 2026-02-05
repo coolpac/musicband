@@ -83,9 +83,8 @@ export default function MenuOverlay({ isOpen, onClose, onNavigate }: MenuOverlay
           ))}
         </div>
 
-        <div className="menu-overlay__content">
-          <h2 className="menu-overlay__title">МЕНЮ</h2>
-          <div className="menu-overlay__links">
+        <h2 className="menu-overlay__title">МЕНЮ</h2>
+        <div className="menu-overlay__links">
           {menuItems.map((item) => (
             <button
               key={item.target}
@@ -96,7 +95,6 @@ export default function MenuOverlay({ isOpen, onClose, onNavigate }: MenuOverlay
               {item.label}
             </button>
           ))}
-          </div>
         </div>
       </div>
     </div>
