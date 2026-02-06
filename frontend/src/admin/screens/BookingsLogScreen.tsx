@@ -30,6 +30,16 @@ interface BookingRow {
   income?: number | null;
 }
 
+function coerceIncome(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+  return null;
+}
+
 function mapApiBooking(b: AdminBooking): BookingRow {
   const bookingDate = typeof b.bookingDate === 'string' ? b.bookingDate.split('T')[0] : b.bookingDate;
   return {
@@ -44,7 +54,7 @@ function mapApiBooking(b: AdminBooking): BookingRow {
     status: b.status,
     createdAt: b.createdAt,
     telegramUsername: b.user?.username ?? null,
-    income: b.income ?? null,
+    income: coerceIncome((b as any).income),
   };
 }
 
