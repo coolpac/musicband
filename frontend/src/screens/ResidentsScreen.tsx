@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import { residents } from '../data/residents';
 import '../styles/residents.css';
@@ -11,6 +11,10 @@ function preloadImage(src: string) {
 
 export default function ResidentsScreen() {
   const [openId, setOpenId] = useState<string | null>(null);
+
+  useEffect(() => {
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  }, []);
 
   const handleCardClick = useCallback((id: string, descriptionSvg?: string) => {
     hapticSelection();
@@ -32,9 +36,9 @@ export default function ResidentsScreen() {
             return (
               <motion.article
                 key={id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4, delay: index * 0.1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25, delay: index * 0.04 }}
                 className="residents-card"
                 onClick={() => handleCardClick(id, descriptionSvg)}
                 onMouseEnter={() => handleHoverCard(descriptionSvg)}

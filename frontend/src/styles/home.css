@@ -287,10 +287,13 @@
   width: 100%;
 }
 
-.posters .card,
+.posters .card {
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
 .promo .card,
 .formats .card {
-  border: 2px solid var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.45);
 }
 
 .poster-slider {
@@ -897,9 +900,9 @@
   position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  padding: 16px;
+  padding: 8px;
   background: var(--glass-strong);
-  border: 1px solid var(--white);
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
 .live-player {
