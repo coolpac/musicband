@@ -76,16 +76,18 @@
   z-index: 1;
 }
 
-/* Noise dithering — маскирует color banding на тёмных градиентах фото (OLED 8-bit) */
+/* Noise dithering — маскирует color banding на тёмных/красных градиентах (OLED 8-bit).
+   Увеличен opacity и используется soft-light для лучшего смешивания с красным фоном.
+   См. https://css-tricks.com/grainy-gradients/ */
 .hero-photo-frame::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.04;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.12;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .hero-photo {
@@ -95,16 +97,16 @@
   object-fit: cover;
 }
 
-.hero-blur {
+/* SVG blur — математически точный без banding на OLED (как в Лэндинг.svg) */
+.hero-blur-svg {
   position: absolute;
   left: -7.8%;
   top: 71.8%;
   width: 115.6%;
   height: 28.3%;
-  background: #111111;
-  filter: blur(33.3px);
   z-index: 2;
   pointer-events: none;
+  overflow: visible;
 }
 
 .hero-vector-group {
@@ -943,36 +945,17 @@
   backface-visibility: hidden;
 }
 
-/* Переход «Оставить заявку» → Резиденты по SVG: размытая полоса #2B2B2B (filter17: 509×102, blur 22.6) между секциями. */
-.residents::before {
-  content: "";
+/* SVG blur сверху — переход от предыдущей секции (без banding, как в Лэндинг.svg) */
+.residents-blur-top {
   position: absolute;
   top: -63px;
   left: 50%;
   width: 509px;
   height: 102px;
   margin-left: -254.5px;
-  background: #2b2b2b;
-  filter: blur(22.6px);
   pointer-events: none;
   z-index: 10;
-}
-
-/* Мягкое проявление фото сверху: короткий градиент по верхнему краю изображения (в SVG граница смягчена размытием). */
-.residents::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 72px;
-  background: linear-gradient(
-    180deg,
-    rgba(17, 17, 17, 0.6) 0%,
-    rgba(17, 17, 17, 0) 100%
-  );
-  pointer-events: none;
-  z-index: 1;
+  overflow: visible;
 }
 
 .residents-container {
@@ -1008,18 +991,17 @@
   z-index: 2;
 }
 
-.residents-container::after {
-  content: "";
+/* SVG blur снизу — переход к кнопке (без banding, как в Лэндинг.svg) */
+.residents-blur-bottom {
   position: absolute;
-  left: calc(50% - 0.5px);
+  left: 50%;
   bottom: -35px;
   width: 509px;
   height: 97px;
-  background: #000000;
-  filter: blur(33.3px);
   transform: translateX(-50%);
   pointer-events: none;
   z-index: 3;
+  overflow: visible;
 }
 
 .residents-image {

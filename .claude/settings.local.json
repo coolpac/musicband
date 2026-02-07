@@ -20,7 +20,13 @@
       "Bash(node scripts/convert-residents-svg.mjs:*)",
       "Bash(done)",
       "Bash(brew list:*)",
-      "Bash(file:*)"
+      "Bash(file:*)",
+      "Bash(cwebp:*)",
+      "Bash(npx --yes sharp-cli resize:*)",
+      "Bash(sips -g all:*)",
+      "Bash(xargs ls:*)",
+      "Bash(sort:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

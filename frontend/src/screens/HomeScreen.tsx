@@ -255,7 +255,15 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
           <div className="hero-photo-frame">
             <img alt="Группа" className="hero-photo" src={heroImage} width={1280} height={720} fetchPriority="high" loading="eager" />
           </div>
-          <div aria-hidden="true" className="hero-blur" />
+          {/* SVG blur вместо CSS — без banding на OLED */}
+          <svg aria-hidden="true" className="hero-blur-svg" viewBox="0 0 509 172" preserveAspectRatio="none">
+            <defs>
+              <filter id="heroBlur" x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="33.3" />
+              </filter>
+            </defs>
+            <rect x="0" y="0" width="509" height="172" fill="#111111" filter="url(#heroBlur)" />
+          </svg>
           <img alt="" className="hero-vector-group" src={heroVectorGroup} width={415} height={147} />
           <img alt="ВГУП" className="hero-logo-type" src={heroLogo} width={200} height={80} />
           <img alt="" className="hero-cover-band" src={heroCoverBand} width={411} height={200} />
@@ -773,9 +781,27 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
       </section>
 
       <section className="section residents">
+        {/* SVG blur сверху — переход от предыдущей секции (как в Лэндинг.svg filter17) */}
+        <svg aria-hidden="true" className="residents-blur-top" viewBox="0 0 509 102" preserveAspectRatio="none">
+          <defs>
+            <filter id="residentsBlurTop" x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="22.6" />
+            </filter>
+          </defs>
+          <rect x="0" y="0" width="509" height="102" fill="#2B2B2B" filter="url(#residentsBlurTop)" />
+        </svg>
         <div className="residents-container">
           <img alt="Резиденты" className="residents-image" src={residentsImage} loading="lazy" decoding="async" />
           <h3 className="residents-subtitle">Резиденты</h3>
+          {/* SVG blur снизу — переход к кнопке (как в Лэндинг.svg) */}
+          <svg aria-hidden="true" className="residents-blur-bottom" viewBox="0 0 509 97" preserveAspectRatio="none">
+            <defs>
+              <filter id="residentsBlurBottom" x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="33.3" />
+              </filter>
+            </defs>
+            <rect x="0" y="0" width="509" height="97" fill="#000000" filter="url(#residentsBlurBottom)" />
+          </svg>
         </div>
         <button
           className="btn btn-primary residents-btn"
