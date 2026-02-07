@@ -99,6 +99,13 @@
   letter-spacing: 0.04em;
 }
 
+.calendar-section-loading {
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));

@@ -4,6 +4,7 @@
  */
 
 import { apiGet, apiPost, apiPut, apiDelete, isMockMode } from './apiClient';
+import { getOrFetch, invalidate, CACHE_KEYS } from './adminDataCache';
 
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
 
@@ -211,6 +212,33 @@ export async function getAdminBlockedDates(month?: string): Promise<AdminBlocked
   }
   const url = month ? `${BASE}/blocked-dates?month=${encodeURIComponent(month)}` : `${BASE}/blocked-dates`;
   return await apiGet<AdminBlockedDate[]>(url);
+}
+
+/** Кешированные вызовы для админ-экранов (без повторного fetch при переключении вкладки). */
+export async function getAdminBookingsCached(params?: {
+  date?: string;
+  status?: BookingStatus;
+  page?: number;
+  limit?: number;
+}): Promise<{ bookings: AdminBooking[]; total: number }> {
+  const key = CACHE_KEYS.ADMIN_BOOKINGS_LIST;
+  return getOrFetch(key, () => getAdminBookings(params));
+}
+
+export async function getAdminBookingCalendarCached(month?: string): Promise<{ dates: CalendarDate[] }> {
+  const monthStr = month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  return getOrFetch(CACHE_KEYS.ADMIN_CALENDAR(monthStr), () => getAdminBookingCalendar(month));
+}
+
+export async function getAdminBlockedDatesCached(month?: string): Promise<AdminBlockedDate[]> {
+  const monthStr = month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  return getOrFetch(CACHE_KEYS.ADMIN_BLOCKED_DATES(monthStr), () => getAdminBlockedDates(month));
+}
+
+/** Инвалидировать кеш заявок после мутаций (опционально). */
+export function invalidateAdminBookingsCache(): void {
+  invalidate(CACHE_KEYS.ADMIN_BOOKINGS_LIST);
+  invalidate(CACHE_KEYS.ADMIN_STATS);
 }
 
 export async function updateAdminBookingStatus(

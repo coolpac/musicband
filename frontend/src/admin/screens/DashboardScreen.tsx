@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { hapticImpact } from '../../telegram/telegramWebApp';
-import { getAdminStats } from '../../services/adminService';
+import { getAdminStatsCached } from '../../services/adminService';
+import { getCached, CACHE_KEYS } from '../../services/adminDataCache';
+import type { AdminStats } from '../../services/adminService';
 import AdminHeader from '../components/AdminHeader';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import '../../styles/admin.css';
@@ -67,25 +69,27 @@ type DashboardScreenProps = {
   onGoToAnalytics?: () => void;
 };
 
+const defaultStats: DashboardStats = {
+  totalBookings: 28,
+  confirmedBookings: 3,
+  pendingBookings: 24,
+  cancelledBookings: 1,
+  totalRevenue: 24000,
+  conversionRate: 11,
+  pendingConfirmation: 24,
+};
+
 export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToReviews, onGoToAnalytics }: DashboardScreenProps) {
   useAdminAuth(); // для шапки (аватар там)
-  const [stats, setStats] = useState<DashboardStats>({
-    totalBookings: 28,
-    confirmedBookings: 3,
-    pendingBookings: 24,
-    cancelledBookings: 1,
-    totalRevenue: 24000,
-    conversionRate: 11,
-    pendingConfirmation: 24,
-  });
-
-  const [loading, setLoading] = useState(true);
+  const cached = getCached<AdminStats>(CACHE_KEYS.ADMIN_STATS);
+  const [stats, setStats] = useState<DashboardStats>(cached ?? defaultStats);
+  const [loading, setLoading] = useState(!cached);
 
   useEffect(() => {
     let cancelled = false;
     const loadStats = async () => {
       try {
-        const data = await getAdminStats();
+        const data = await getAdminStatsCached();
         if (!cancelled) setStats(data);
       } catch (e) {
         console.warn('Dashboard: failed to load stats', e);

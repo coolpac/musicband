@@ -4,13 +4,14 @@ import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import { ApiError } from '../../services/apiClient';
 import {
-  getAdminBookings,
+  getAdminBookingsCached,
   updateAdminBookingStatus,
   updateAdminBookingIncome,
   completeAdminBooking,
   deleteAdminBooking,
   type AdminBooking,
 } from '../../services/adminBookingService';
+import { getCached, CACHE_KEYS } from '../../services/adminDataCache';
 import { IconCheck, IconX, IconTrash } from '../assets/icons';
 import '../../styles/admin.css';
 import './BookingsLogScreen.css';
@@ -63,9 +64,16 @@ type BookingsLogScreenProps = {
   onGoToCalendar?: () => void;
 };
 
+function sortedRows(res: { bookings?: AdminBooking[] }): BookingRow[] {
+  return (res.bookings ?? [])
+    .map(mapApiBooking)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
 export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenProps) {
-  const [list, setList] = useState<BookingRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cached = getCached<{ bookings: AdminBooking[]; total: number }>(CACHE_KEYS.ADMIN_BOOKINGS_LIST);
+  const [list, setList] = useState<BookingRow[]>(cached ? sortedRows(cached) : []);
+  const [loading, setLoading] = useState(!cached);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
@@ -74,14 +82,10 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadList = async () => {
-    setLoading(true);
+    if (!getCached(CACHE_KEYS.ADMIN_BOOKINGS_LIST)) setLoading(true);
     try {
-      const res = await getAdminBookings({ limit: 200 });
-      const rows = (res.bookings ?? [])
-        .map(mapApiBooking)
-        // «Лог» = показываем самые новые заявки сверху (по времени создания)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setList(rows);
+      const res = await getAdminBookingsCached({ limit: 200 });
+      setList(sortedRows(res));
     } catch (error) {
       console.error('Failed to load bookings log:', error);
       setList([]);

@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPut, apiDelete } from './apiClient';
+import { getOrFetch, CACHE_KEYS } from './adminDataCache';
 
 // Types
 export type AdminStats = {
@@ -48,6 +49,11 @@ export async function getAdminStats(): Promise<AdminStats> {
     conversionRate: data.conversionRate ?? 0,
     pendingConfirmation: data.pending,
   };
+}
+
+/** То же, с кешем (при возврате на вкладку — без повторного fetch). */
+export async function getAdminStatsCached(): Promise<AdminStats> {
+  return getOrFetch(CACHE_KEYS.ADMIN_STATS, getAdminStats);
 }
 
 /**

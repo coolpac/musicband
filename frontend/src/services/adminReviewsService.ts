@@ -3,6 +3,7 @@
  */
 
 import { apiGet, apiDelete, isMockMode } from './apiClient';
+import { getOrFetch, CACHE_KEYS } from './adminDataCache';
 
 export type AdminReview = {
   id: string;
@@ -123,6 +124,18 @@ export async function getAdminReviews(params?: {
   } catch {
     return getMockReviewsPayload(params);
   }
+}
+
+/** Кешированная загрузка отзывов (при возврате на вкладку — без повторного fetch). */
+export async function getAdminReviewsCached(params?: {
+  page?: number;
+  limit?: number;
+  rating?: number;
+}): Promise<{ reviews: AdminReview[]; total: number; page: number; limit: number }> {
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? 20;
+  const key = CACHE_KEYS.ADMIN_REVIEWS(page, limit);
+  return getOrFetch(key, () => getAdminReviews(params));
 }
 
 export async function deleteAdminReview(id: string): Promise<void> {

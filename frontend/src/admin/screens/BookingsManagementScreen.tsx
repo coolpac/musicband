@@ -2,11 +2,12 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import { CalendarDayCell } from '../components/CalendarDayCell';
+import { SectionLoader } from '../components/SectionLoader';
 import Modal from '../components/Modal';
 import { ApiError } from '../../services/apiClient';
 import {
-  getAdminBookingCalendar,
-  getAdminBlockedDates,
+  getAdminBookingCalendarCached,
+  getAdminBlockedDatesCached,
   updateAdminBookingStatus,
   updateAdminBookingIncome,
   completeAdminBooking,
@@ -14,6 +15,7 @@ import {
   unblockDate as apiUnblockDate,
   type AdminBooking,
 } from '../../services/adminBookingService';
+import { getCached, CACHE_KEYS } from '../../services/adminDataCache';
 import '../../styles/admin.css';
 import './BookingsManagementScreen.css';
 
@@ -75,11 +77,24 @@ type BookingsManagementScreenProps = {
   onGoToLog?: () => void;
 };
 
+function initialBookingsAndBlocked(monthStr: string): { bookings: Booking[]; blockedDates: BlockedDate[]; hasCache: boolean } {
+  const cachedCalendar = getCached<{ dates: { date: string; bookings: AdminBooking[] }[] }>(CACHE_KEYS.ADMIN_CALENDAR(monthStr));
+  const cachedBlocked = getCached<{ id: string; date: string; reason?: string }[]>(CACHE_KEYS.ADMIN_BLOCKED_DATES(monthStr));
+  const bookings = (cachedCalendar?.dates ?? []).flatMap((d) => (d.bookings ?? []).map(mapApiBooking));
+  const blockedDates = (cachedBlocked ?? []).map((b) => ({ id: b.id, date: b.date, reason: b.reason }));
+  return { bookings, blockedDates, hasCache: !!(cachedCalendar && cachedBlocked) };
+}
+
 export default function BookingsManagementScreen({ onGoToLog }: BookingsManagementScreenProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const monthStr = useMemo(
+    () => `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
+    [currentDate]
+  );
+  const initial = useMemo(() => initialBookingsAndBlocked(monthStr), [monthStr]);
+  const [bookings, setBookings] = useState<Booking[]>(initial.bookings);
+  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>(initial.blockedDates);
+  const [isLoading, setIsLoading] = useState(!initial.hasCache);
   const [completing, setCompleting] = useState(false);
 
   // Modal states
@@ -89,17 +104,13 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
   const [incomeEdit, setIncomeEdit] = useState('');
   const [incomeSaving, setIncomeSaving] = useState(false);
 
-  const monthStr = useMemo(
-    () => `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
-    [currentDate]
-  );
-
   const loadData = useCallback(async () => {
-    setIsLoading(true);
+    const hasCache = !!(getCached(CACHE_KEYS.ADMIN_CALENDAR(monthStr)) && getCached(CACHE_KEYS.ADMIN_BLOCKED_DATES(monthStr)));
+    if (!hasCache) setIsLoading(true);
     try {
       const [calendarRes, blockedRes] = await Promise.all([
-        getAdminBookingCalendar(monthStr),
-        getAdminBlockedDates(monthStr),
+        getAdminBookingCalendarCached(monthStr),
+        getAdminBlockedDatesCached(monthStr),
       ]);
 
       const allBookings = (calendarRes.dates ?? []).flatMap((d) =>
@@ -125,6 +136,13 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    const inited = initialBookingsAndBlocked(monthStr);
+    setBookings(inited.bookings);
+    setBlockedDates(inited.blockedDates);
+    setIsLoading(!inited.hasCache);
+  }, [monthStr]);
 
   const blockedDatesMap = useMemo(
     () => new Map(blockedDates.map((b) => [b.date, b] as const)),
@@ -351,17 +369,6 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
     [selectedDay, blockedDatesMap]
   );
 
-  if (isLoading) {
-    return (
-      <div className="admin-screen">
-        <AdminHeader />
-        <div className="admin-content">
-          <div className="admin-loading">Загрузка...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="admin-screen bookings-screen">
       <AdminHeader />
@@ -379,9 +386,8 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
           </div>
         )}
 
-        {/* Calendar */}
+        {/* Calendar — каркас всегда, данные подгружаются без блокировки */}
         <div className="modern-calendar">
-          {/* Header */}
           <div className="calendar-header">
             <button className="calendar-nav-btn" onClick={handlePrevMonth}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -404,7 +410,6 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
             </button>
           </div>
 
-          {/* Week days */}
           <div className="calendar-weekdays">
             {weekDays.map((day) => (
               <div key={day} className="calendar-weekday">
@@ -413,14 +418,18 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
             ))}
           </div>
 
-          {/* Days grid */}
+          {isLoading ? (
+            <div className="calendar-section-loading">
+              <SectionLoader label="Загрузка календаря…" />
+            </div>
+          ) : (
           <div className="calendar-grid">
             {calendarDays.map((day) => (
               <CalendarDayCell key={day.dateString} day={day} onDayClick={handleDayClick} />
             ))}
           </div>
+          )}
 
-          {/* Legend */}
           <div className="calendar-legend">
             <div className="legend-item">
               <span className="legend-dot legend-dot--confirmed"></span>

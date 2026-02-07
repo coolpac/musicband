@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
+import { SectionLoader } from '../components/SectionLoader';
 import {
-  getAdminReviews,
+  getAdminReviewsCached,
   getMockReviewsPayload,
   deleteAdminReview,
   type AdminReview,
 } from '../../services/adminReviewsService';
+import { getCached, CACHE_KEYS } from '../../services/adminDataCache';
 import { IconTrash } from '../assets/icons';
 import '../../styles/admin.css';
 import './ReviewsManagementScreen.css';
@@ -19,19 +21,21 @@ function displayName(review: AdminReview): string {
   return u.username ? `@${u.username}` : '—';
 }
 
+const limit = 20;
+
 export default function ReviewsManagementScreen() {
-  const [reviews, setReviews] = useState<AdminReview[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const cachedPage1 = getCached<{ reviews: AdminReview[]; total: number }>(CACHE_KEYS.ADMIN_REVIEWS(1, limit));
+  const [reviews, setReviews] = useState<AdminReview[]>(cachedPage1?.reviews ?? []);
+  const [total, setTotal] = useState(cachedPage1?.total ?? 0);
+  const [loading, setLoading] = useState(!cachedPage1);
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const limit = 20;
-
   const loadReviews = async () => {
-    setLoading(true);
+    const cached = getCached<{ reviews: AdminReview[]; total: number }>(CACHE_KEYS.ADMIN_REVIEWS(page, limit));
+    if (!cached) setLoading(true);
     try {
-      const res = await getAdminReviews({ page, limit });
+      const res = await getAdminReviewsCached({ page, limit });
       const list = res.reviews ?? [];
       const fallback = getMockReviewsPayload({ page, limit });
       setReviews(list.length > 0 ? list : fallback.reviews);
@@ -48,6 +52,17 @@ export default function ReviewsManagementScreen() {
 
   useEffect(() => {
     loadReviews();
+  }, [page]);
+
+  useEffect(() => {
+    const c = getCached<{ reviews: AdminReview[]; total: number }>(CACHE_KEYS.ADMIN_REVIEWS(page, limit));
+    if (c) {
+      setReviews(c.reviews);
+      setTotal(c.total);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
   }, [page]);
 
   const handleDelete = async (review: AdminReview) => {
@@ -76,7 +91,9 @@ export default function ReviewsManagementScreen() {
         </p>
 
         {loading ? (
-          <div className="admin-loading">Загрузка...</div>
+          <div className="reviews-section-loading">
+            <SectionLoader label="Загрузка отзывов…" />
+          </div>
         ) : reviews.length === 0 ? (
           <div className="reviews-empty">Нет отзывов</div>
         ) : (

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Toaster } from 'react-hot-toast';
 import TabBar, { AdminTab } from './components/TabBar';
 import AdminTerminalLoader, { MIN_LOADER_DISPLAY_MS } from './components/AdminTerminalLoader';
+import { SectionLoader } from './components/SectionLoader';
+import AdminHeader from './components/AdminHeader';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import LoginScreen from './screens/LoginScreen';
@@ -9,24 +11,14 @@ import { useTelegramWebApp } from '../telegram/useTelegramWebApp';
 import '../styles/admin.css';
 import '../styles/admin-tabbar.css';
 
-/** Лёгкий спиннер для Suspense при переключении табов (после первого входа) */
-function LightLoader() {
+/** Каркас экрана + локальный лоадер (двухфазная загрузка: сначала UI, потом контент) */
+function AdminScreenShell() {
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '40vh',
-    }}>
-      <div style={{
-        width: 32,
-        height: 32,
-        border: '3px solid rgba(255,255,255,0.15)',
-        borderTopColor: 'rgba(255,255,255,0.7)',
-        borderRadius: '50%',
-        animation: 'spin .6s linear infinite',
-      }} />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    <div className="admin-screen">
+      <AdminHeader />
+      <main className="admin-content">
+        <SectionLoader label="Загрузка…" />
+      </main>
     </div>
   );
 }
@@ -63,6 +55,16 @@ function AdminContent() {
     return () => clearTimeout(t);
   }, [loading, isAuthenticated]);
 
+  // После успешного входа прелоадим только часто используемые lazy-экраны
+  useEffect(() => {
+    if (booting) return;
+    import('./screens/DashboardScreen');
+    import('./screens/VotingManagementScreen');
+    import('./screens/SongsManagementScreen');
+    import('./screens/BookingsManagementScreen');
+    import('./screens/BookingsLogScreen');
+  }, [booting]);
+
   // Показываем загрузку пока проверяем токен
   if (loading) {
     return <AdminTerminalLoader />;
@@ -83,102 +85,65 @@ function AdminContent() {
     setActiveTab('bookings');
   };
 
-  // После первого входа — лёгкий спиннер для Suspense
-  const fallback = <LightLoader />;
+  const fallback = <AdminScreenShell />;
 
-  const renderScreen = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={fallback}>
-              <DashboardScreen
-                onGoToBookings={goToBookingsLog}
-                onGoToAgents={() => setActiveTab('agents')}
-                onGoToReviews={() => setActiveTab('reviews')}
-                onGoToAnalytics={() => setActiveTab('analytics')}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        );
-
-      case 'voting':
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={fallback}>
-              <VotingManagementScreen />
-            </Suspense>
-          </ErrorBoundary>
-        );
-
-      case 'songs':
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={fallback}>
-              <SongsManagementScreen />
-            </Suspense>
-          </ErrorBoundary>
-        );
-
-      case 'bookings':
-        return bookingsView === 'log' ? (
-          <ErrorBoundary>
-            <Suspense fallback={fallback}>
-              <BookingsLogScreen onGoToCalendar={() => setBookingsView('calendar')} />
-            </Suspense>
-          </ErrorBoundary>
-        ) : (
-          <ErrorBoundary>
-            <Suspense fallback={fallback}>
-              <BookingsManagementScreen onGoToLog={() => setBookingsView('log')} />
-            </Suspense>
-          </ErrorBoundary>
-        );
-
-      case 'content':
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={fallback}>
-              <ContentScreen />
-            </Suspense>
-          </ErrorBoundary>
-        );
-
-      case 'agents':
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={fallback}>
-              <AgentsManagementScreen />
-            </Suspense>
-          </ErrorBoundary>
-        );
-
-      case 'reviews':
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={fallback}>
-              <ReviewsManagementScreen />
-            </Suspense>
-          </ErrorBoundary>
-        );
-
-      case 'analytics':
-        return (
-          <ErrorBoundary>
-            <Suspense fallback={fallback}>
-              <ExtendedAnalyticsScreen />
-            </Suspense>
-          </ErrorBoundary>
-        );
-
-      default:
-        return null;
-    }
-  };
+  const hide = { display: 'none' as const };
+  const show = { display: 'block' as const };
 
   return (
     <div className="admin-app">
-      {renderScreen()}
+      <Suspense fallback={fallback}>
+        <div style={activeTab === 'dashboard' ? show : hide}>
+          <ErrorBoundary>
+            <DashboardScreen
+              onGoToBookings={goToBookingsLog}
+              onGoToAgents={() => setActiveTab('agents')}
+              onGoToReviews={() => setActiveTab('reviews')}
+              onGoToAnalytics={() => setActiveTab('analytics')}
+            />
+          </ErrorBoundary>
+        </div>
+        <div style={activeTab === 'voting' ? show : hide}>
+          <ErrorBoundary>
+            <VotingManagementScreen />
+          </ErrorBoundary>
+        </div>
+        <div style={activeTab === 'songs' ? show : hide}>
+          <ErrorBoundary>
+            <SongsManagementScreen />
+          </ErrorBoundary>
+        </div>
+        <div style={activeTab === 'bookings' && bookingsView === 'log' ? show : hide}>
+          <ErrorBoundary>
+            <BookingsLogScreen onGoToCalendar={() => setBookingsView('calendar')} />
+          </ErrorBoundary>
+        </div>
+        <div style={activeTab === 'bookings' && bookingsView === 'calendar' ? show : hide}>
+          <ErrorBoundary>
+            <BookingsManagementScreen onGoToLog={() => setBookingsView('log')} />
+          </ErrorBoundary>
+        </div>
+        <div style={activeTab === 'content' ? show : hide}>
+          <ErrorBoundary>
+            <ContentScreen />
+          </ErrorBoundary>
+        </div>
+        <div style={activeTab === 'agents' ? show : hide}>
+          <ErrorBoundary>
+            <AgentsManagementScreen />
+          </ErrorBoundary>
+        </div>
+        <div style={activeTab === 'reviews' ? show : hide}>
+          <ErrorBoundary>
+            <ReviewsManagementScreen />
+          </ErrorBoundary>
+        </div>
+        <div style={activeTab === 'analytics' ? show : hide}>
+          <ErrorBoundary>
+            <ExtendedAnalyticsScreen />
+          </ErrorBoundary>
+        </div>
+      </Suspense>
       <TabBar
         activeTab={activeTab}
         onTabChange={(tab) => {
