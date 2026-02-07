@@ -17,7 +17,10 @@
       "Bash(find:*)",
       "Bash(du:*)",
       "Bash(xargs du:*)",
-      "Bash(node scripts/convert-residents-svg.mjs:*)"
+      "Bash(node scripts/convert-residents-svg.mjs:*)",
+      "Bash(done)",
+      "Bash(brew list:*)",
+      "Bash(file:*)"
     ]
   }
 }

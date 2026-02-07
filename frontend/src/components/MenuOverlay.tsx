@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { hapticImpact } from '../telegram/telegramWebApp';
-import navBg1 from '../assets/figma/downloaded/nav-bg-1.png';
-import navBg2 from '../assets/figma/downloaded/nav-bg-2.png';
-import navBg3 from '../assets/figma/downloaded/nav-bg-3.png';
-import navBg4 from '../assets/figma/downloaded/nav-bg-4.png';
-import navBg5 from '../assets/figma/downloaded/nav-bg-5.png';
+// WebP с качеством 92 — меньше артефактов banding в тёмных градиентах чем JPEG
+import navBg1 from '../assets/figma/downloaded/nav-bg-1.webp';
+import navBg2 from '../assets/figma/downloaded/nav-bg-2.webp';
+import navBg3 from '../assets/figma/downloaded/nav-bg-3.webp';
+import navBg4 from '../assets/figma/downloaded/nav-bg-4.webp';
+import navBg5 from '../assets/figma/downloaded/nav-bg-5.webp';
 
 type MenuTarget = 'home' | 'formats' | 'live' | 'partners' | 'socials';
 

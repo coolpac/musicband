@@ -6,7 +6,6 @@
   font-weight: 400;
   font-display: swap;
   src: url("../assets/fonts/Proletarsk.ttf") format("truetype");
-  unicode-range: U+0000-044A, U+044C-FFFF;
 }
 
 @font-face {
@@ -15,7 +14,6 @@
   font-weight: 400;
   font-display: swap;
   src: url("../assets/fonts/Evolventa-Regular.ttf") format("truetype");
-  unicode-range: U+0400-04FF, U+0500-052F, U+2DE0-2DFF, U+A640-A69F;
 }
 
 :root {
@@ -140,7 +138,7 @@ img {
 
 .section-title {
   margin: 0;
-  font-family: "Proletarsk", "Evolventa", "Geologica", "Arial", sans-serif !important;
+  font-family: "Evolventa", "Geologica", "Arial", sans-serif !important;
   font-size: var(--text-size-lg);
   font-weight: 400;
   text-align: center;

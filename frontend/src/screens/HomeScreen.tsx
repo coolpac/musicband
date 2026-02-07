@@ -394,11 +394,9 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                     </>
                   )}
                 </div>
-                {item.title && (
-                  <div className="card-body glass">
-                    <p className="card-title">{item.title}</p>
-                  </div>
-                )}
+                <div className="card-body glass">
+                  <p className="card-title">{item.title || '\u00A0'}</p>
+                </div>
               </article>
             ))}
           </div>
@@ -734,8 +732,20 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                       >
                         <source src={item.src} type="video/mp4" />
                       </video>
-                      <button className="video-play-button" onClick={handleLiveToggle} type="button">
-                        <img alt="Play" src={livePlay} width={48} height={48} loading="lazy" decoding="async" />
+                      <button
+                        className="video-play-button"
+                        onClick={handleLiveToggle}
+                        type="button"
+                        aria-label={liveSlider.activeIndex === index && isLivePlaying ? 'Поставить на паузу' : 'Воспроизвести'}
+                      >
+                        {liveSlider.activeIndex === index && isLivePlaying ? (
+                          <svg width="48" height="48" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                            <rect x="6" y="4" width="4" height="16" rx="1" />
+                            <rect x="14" y="4" width="4" height="16" rx="1" />
+                          </svg>
+                        ) : (
+                          <img alt="" src={livePlay} width={48} height={48} loading="lazy" decoding="async" />
+                        )}
                       </button>
                     </>
                   )}
@@ -834,7 +844,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
 
       <section className="section partners" id="partners">
         <h2 className="section-title">Наши партнеры</h2>
-        <div className="tile-grid tile-grid--multi partners-grid">
+        <div className="tile-grid partners-grid">
           {partners.length > 0
             ? partners.map((partner, index) => {
                 const logoProps = getOptimizedImageProps(partner.logoUrl);
@@ -856,43 +866,30 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                     <span className="partner-tile__name">{partner.name}</span>
                   </>
                 );
-                const tile =
-                  partner.link ? (
+                const isFirst = index === 0;
+                const tileClass = isFirst ? 'tile partner-tile partner-tile--with-badge' : 'tile partner-tile';
+                const badge = isFirst ? (
+                  <span className="partners-badge partners-badge--corner" aria-hidden>
+                    Разработчики
+                  </span>
+                ) : null;
+                if (partner.link) {
+                  return (
                     <a
+                      key={partner.id}
                       href={partner.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="tile partner-tile"
+                      className={tileClass}
                     >
+                      {badge}
                       {content}
                     </a>
-                  ) : (
-                    <div className="tile partner-tile">
-                      {content}
-                    </div>
-                  );
-                if (index === 0) {
-                  return (
-                    <div key={partner.id} className="partner-first-cell">
-                      <span className="partners-badge" aria-hidden>
-                        Разработчики
-                      </span>
-                      {tile}
-                    </div>
                   );
                 }
-                return partner.link ? (
-                  <a
-                    key={partner.id}
-                    href={partner.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="tile partner-tile"
-                  >
-                    {content}
-                  </a>
-                ) : (
-                  <div key={partner.id} className="tile partner-tile">
+                return (
+                  <div key={partner.id} className={tileClass}>
+                    {badge}
                     {content}
                   </div>
                 );

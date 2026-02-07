@@ -39,7 +39,7 @@
 
 .footer-date .date-title {
   margin: 0;
-  font-family: "Proletarsk", "Evolventa", "Geologica", sans-serif;
+  font-family: "Evolventa", "Geologica", sans-serif;
   font-size: clamp(30px, 6vw, 40px);
   text-align: center;
   line-height: 1.1;
