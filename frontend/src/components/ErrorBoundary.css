@@ -25,6 +25,7 @@
 }
 
 .error-boundary__btn {
+  font-family: "Geologica", sans-serif;
   padding: 12px 24px;
   background: var(--accent, #ff3135);
   color: var(--white, #fff);

@@ -61,10 +61,10 @@ docker compose exec postgres psql -U musicians musicians_db
 
 ```sql
 -- Посмотреть всех пользователей
-SELECT id, "telegramId", username, role FROM users;
+SELECT id, telegram_id, username, role FROM users;
 
--- Сделать пользователя админом
-UPDATE users SET role = 'admin' WHERE "telegramId" = 123456789;
+-- Сделать пользователя админом (в БД колонка telegram_id, не telegramId)
+UPDATE users SET role = 'admin' WHERE telegram_id = 123456789;
 
 -- Проверить
 SELECT * FROM users WHERE role = 'admin';
@@ -146,16 +146,50 @@ docker compose restart backend
 
 ---
 
+## Админ до первого запуска бота
+
+Если человек **ещё ни разу не открывал** мини-приложение, его нет в базе. Можно заранее создать запись с ролью `admin` — когда он потом запустит бота, пользователь уже будет найден по `telegram_id`, роль не перезапишется.
+
+**Создать пользователя-админа вручную (одной командой):**
+
+```bash
+docker compose exec postgres psql -U musicians musicians_db -c "
+INSERT INTO users (id, telegram_id, role, created_at, updated_at)
+VALUES (gen_random_uuid()::text, 123456789, 'admin', NOW(), NOW());
+"
+```
+
+Подставьте нужный Telegram ID вместо `123456789`.
+
+**Или через интерактивный psql:**
+
+```bash
+docker compose exec postgres psql -U musicians musicians_db
+```
+
+```sql
+INSERT INTO users (id, telegram_id, role, created_at, updated_at)
+VALUES (gen_random_uuid()::text, 123456789, 'admin', NOW(), NOW());
+```
+
+После этого новый админ может:
+1. Зайти на `https://ваш-домен.ru/admin`
+2. Ввести свой Telegram ID и общий пароль (из `ADMIN_PASSWORD_HASH`)
+
+Когда он позже откроет мини-приложение через Telegram, запись в базе уже будет — обновятся только username/first_name/last_name, роль `admin` сохранится.
+
+---
+
 ## Быстрый чек-лист
 
 ```bash
 cd /opt/musicians
 
 # 1. Проверить, есть ли пользователь в базе
-docker compose exec postgres psql -U musicians musicians_db -c "SELECT * FROM users WHERE \"telegramId\" = 123456789;"
+docker compose exec postgres psql -U musicians musicians_db -c "SELECT * FROM users WHERE telegram_id = 123456789;"
 
-# 2. Сделать админом
-docker compose exec postgres psql -U musicians musicians_db -c "UPDATE users SET role = 'admin' WHERE \"telegramId\" = 123456789;"
+# 2. Сделать админом (в БД колонка telegram_id)
+docker compose exec postgres psql -U musicians musicians_db -c "UPDATE users SET role = 'admin' WHERE telegram_id = 123456789;"
 
 # 3. Сгенерировать хеш пароля
 docker compose exec backend node -e "console.log(require('bcryptjs').hashSync('my_secret_password', 10))"

@@ -120,5 +120,7 @@ export const CACHE_KEYS = {
   BLOCKED_DATES: (month?: string) => (month ? `bookings:blocked-dates:${month}` : 'bookings:blocked-dates'),
   /** Кеш результата getAvailableDates (dates + blockedDates) по месяцу */
   AVAILABLE_DATES: (month: string) => `bookings:available:${month}`,
+  /** Кеш календаря админки (getCalendar) по месяцу */
+  ADMIN_CALENDAR: (month: string) => `bookings:admin-calendar:${month}`,
   AGENT_STATS: (agentId: string) => `agent:stats:${agentId}`,
 } as const;

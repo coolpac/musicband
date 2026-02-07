@@ -43,7 +43,6 @@ export type AdminBlockedDate = {
 export type CalendarDate = {
   date: string;
   bookings: AdminBooking[];
-  formats: Array<{ id: string; name: string }>;
 };
 
 const BASE = '/api/admin/bookings';
@@ -156,11 +155,10 @@ function buildMockCalendar(month: string): { dates: CalendarDate[] } {
   const start = new Date(y, m - 1, 1);
   const end = new Date(y, m, 0);
   const dates: CalendarDate[] = [];
-  const formats = [{ id: 'f1', name: 'Дуэт' }, { id: 'f2', name: 'Соло' }];
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dateStr = d.toISOString().split('T')[0];
     const dayBookings = MOCK_BOOKINGS.filter((b) => b.bookingDate === dateStr);
-    dates.push({ date: dateStr, bookings: dayBookings, formats });
+    dates.push({ date: dateStr, bookings: dayBookings });
   }
   return { dates };
 }

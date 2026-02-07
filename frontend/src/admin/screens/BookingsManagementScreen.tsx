@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
+import { CalendarDayCell } from '../components/CalendarDayCell';
 import Modal from '../components/Modal';
 import { ApiError } from '../../services/apiClient';
 import {
@@ -88,13 +89,12 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
   const [incomeEdit, setIncomeEdit] = useState('');
   const [incomeSaving, setIncomeSaving] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [currentDate]);
+  const monthStr = useMemo(
+    () => `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
+    [currentDate]
+  );
 
-  const monthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [calendarRes, blockedRes] = await Promise.all([
@@ -120,84 +120,88 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [monthStr]);
 
-  // Генерация календаря
-  const generateCalendar = (): CalendarDay[] => {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const blockedDatesMap = useMemo(
+    () => new Map(blockedDates.map((b) => [b.date, b] as const)),
+    [blockedDates]
+  );
+
+  const bookingsMap = useMemo(
+    () => new Map(bookings.map((b) => [b.bookingDate, b] as const)),
+    [bookings]
+  );
+
+  const calendarDays = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Первый день месяца
+    const createCalendarDay = (date: Date, isCurrentMonth: boolean): CalendarDay => {
+      const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const dateString = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+      const booking = bookingsMap.get(dateString);
+      const isBlocked = blockedDatesMap.has(dateString);
+      const isPast = localDate < today;
+
+      return {
+        date: localDate,
+        dateString,
+        isCurrentMonth,
+        isToday: localDate.getTime() === today.getTime(),
+        isBlocked,
+        hasBooking: !!booking,
+        booking,
+        isPast,
+      };
+    };
+
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
 
-    // День недели первого дня (0 = воскресенье, нужно преобразовать в понедельник = 0)
     let startDayOfWeek = firstDay.getDay() - 1;
-    if (startDayOfWeek === -1) startDayOfWeek = 6; // Воскресенье
+    if (startDayOfWeek === -1) startDayOfWeek = 6;
 
     const days: CalendarDay[] = [];
 
-    // Добавляем дни предыдущего месяца
     const prevMonthLastDay = new Date(year, month, 0);
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
       const date = new Date(year, month - 1, prevMonthLastDay.getDate() - i);
       days.push(createCalendarDay(date, false));
     }
 
-    // Добавляем дни текущего месяца
     for (let day = 1; day <= lastDay.getDate(); day++) {
       const date = new Date(year, month, day);
       days.push(createCalendarDay(date, true));
     }
 
-    // Добавляем дни следующего месяца чтобы заполнить последнюю неделю
-    const remainingDays = 42 - days.length; // 6 недель * 7 дней
+    const remainingDays = 42 - days.length;
     for (let day = 1; day <= remainingDays; day++) {
       const date = new Date(year, month + 1, day);
       days.push(createCalendarDay(date, false));
     }
 
     return days;
-  };
+  }, [currentDate, blockedDatesMap, bookingsMap]);
 
-  const createCalendarDay = (date: Date, isCurrentMonth: boolean): CalendarDay => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    date.setHours(0, 0, 0, 0);
-
-    // Важно: используем локальные компоненты даты, чтобы не было сдвига из-за UTC в toISOString()
-    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    const isBlocked = blockedDates.some((b) => b.date === dateString);
-    const booking = bookings.find((b) => b.bookingDate === dateString);
-    const isPast = date < today;
-
-    return {
-      date,
-      dateString,
-      isCurrentMonth,
-      isToday: date.getTime() === today.getTime(),
-      isBlocked,
-      hasBooking: !!booking,
-      booking,
-      isPast,
-    };
-  };
-
-  const handlePrevMonth = () => {
+  const handlePrevMonth = useCallback(() => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
+  }, [currentDate]);
 
-  const handleNextMonth = () => {
+  const handleNextMonth = useCallback(() => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  };
+  }, [currentDate]);
 
-  const handleToday = () => {
+  const handleToday = useCallback(() => {
     setCurrentDate(new Date());
-  };
+  }, []);
 
-  const handleDayClick = (day: CalendarDay) => {
+  const handleDayClick = useCallback((day: CalendarDay) => {
     // Прошедшие даты без заявки не редактируем (но заявку можно открыть для просмотра/дохода)
     if (day.isPast && !day.hasBooking) {
       toast.error('Нельзя редактировать прошедшие даты');
@@ -208,14 +212,14 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
     setBlockReason('');
     setIncomeEdit(day.booking?.income != null ? String(day.booking.income) : '');
     setShowDayModal(true);
-  };
+  }, []);
 
   const handleToggleBlock = async () => {
     if (!selectedDay) return;
 
     try {
       if (selectedDay.isBlocked) {
-        const blocked = blockedDates.find((b) => b.date === selectedDay!.dateString);
+        const blocked = blockedDatesMap.get(selectedDay.dateString);
         if (blocked) {
           await apiUnblockDate(blocked.id);
           toast.success('Дата разблокирована');
@@ -342,7 +346,10 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
 
   const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-  const calendarDays = generateCalendar();
+  const blockedDateForSelected = useMemo(
+    () => (selectedDay ? blockedDatesMap.get(selectedDay.dateString) ?? null : null),
+    [selectedDay, blockedDatesMap]
+  );
 
   if (isLoading) {
     return (
@@ -408,27 +415,8 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
 
           {/* Days grid */}
           <div className="calendar-grid">
-            {calendarDays.map((day, index) => (
-              <button
-                key={index}
-                className={`calendar-day ${!day.isCurrentMonth ? 'calendar-day--other-month' : ''} ${
-                  day.isToday ? 'calendar-day--today' : ''
-                } ${day.isBlocked ? 'calendar-day--blocked' : ''} ${day.hasBooking ? 'calendar-day--booked' : ''} ${
-                  day.isPast ? 'calendar-day--past' : ''
-                }`}
-                onClick={() => handleDayClick(day)}
-                disabled={day.isPast && !day.hasBooking}
-              >
-                <span className="calendar-day__number">{day.date.getDate()}</span>
-                {day.hasBooking && day.booking && (
-                  <span className={`calendar-day__status calendar-day__status--${day.booking.status}`}>
-                    {day.booking.status === 'confirmed' && '✓'}
-                    {day.booking.status === 'pending' && '⏳'}
-                    {day.booking.status === 'cancelled' && '✗'}
-                  </span>
-                )}
-                {day.isBlocked && <span className="calendar-day__blocked-icon">🚫</span>}
-              </button>
+            {calendarDays.map((day) => (
+              <CalendarDayCell key={day.dateString} day={day} onDayClick={handleDayClick} />
             ))}
           </div>
 
@@ -568,10 +556,10 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
             {selectedDay.isBlocked && !selectedDay.hasBooking && (
               <div className="blocked-info">
                 <p className="blocked-message">🚫 Эта дата заблокирована для бронирований</p>
-                {blockedDates.find((b) => b.date === selectedDay.dateString)?.reason && (
+                {blockedDateForSelected?.reason && (
                   <div className="booking-detail-group">
                     <label>Причина:</label>
-                    <span>{blockedDates.find((b) => b.date === selectedDay.dateString)?.reason}</span>
+                    <span>{blockedDateForSelected.reason}</span>
                   </div>
                 )}
               </div>

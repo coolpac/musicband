@@ -30,6 +30,7 @@
 }
 
 .network-error__btn {
+  font-family: "Geologica", sans-serif;
   padding: 10px 20px;
   background: var(--accent, #ff3135);
   color: var(--white, #fff);

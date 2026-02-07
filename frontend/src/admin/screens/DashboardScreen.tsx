@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { hapticImpact } from '../../telegram/telegramWebApp';
 import { getAdminStats } from '../../services/adminService';
 import AdminHeader from '../components/AdminHeader';
-import FlexGuardLogo from '../components/FlexGuardLogo';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import '../../styles/admin.css';
 
@@ -223,11 +222,6 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
             )}
           </div>
         </section>
-
-        <footer className="dashboard-hero dashboard-hero--bottom dashboard-hero--glass">
-          <FlexGuardLogo size="md" showBadge={true} />
-          <p className="dashboard-hero__tagline">Админ-панель</p>
-        </footer>
       </main>
     </div>
   );

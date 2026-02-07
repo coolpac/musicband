@@ -145,12 +145,17 @@ img {
   font-feature-settings: normal;
 }
 
+/* Единый шрифт для всех кнопок — как на главной */
+button,
+.btn {
+  font-family: "Geologica", sans-serif;
+}
+
 .btn {
   border: none;
   border-radius: var(--radius-lg);
   padding: 16px 20px;
   font-size: var(--text-size-md);
-  font-family: "Geologica", sans-serif;
   cursor: pointer;
 }
 

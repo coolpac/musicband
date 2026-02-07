@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useDeferredValue, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import { ApiError } from '../../services/apiClient';
@@ -93,6 +94,18 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
   useEffect(() => {
     loadList();
   }, []);
+
+  const deferredList = useDeferredValue(list);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
+  const ROW_HEIGHT = 52;
+  const rowVirtualizer = useVirtualizer({
+    count: deferredList.length,
+    getScrollElement: () => tableWrapRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 8,
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
 
   const handleUpdateStatus = async (bookingId: string, status: 'confirmed' | 'cancelled') => {
     setUpdatingId(bookingId);
@@ -223,7 +236,11 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
         ) : list.length === 0 ? (
           <div className="bookings-log__empty">Нет заявок</div>
         ) : (
-          <div className="bookings-log-table-wrap">
+          <div
+            ref={tableWrapRef}
+            className="bookings-log-table-wrap bookings-log-table-wrap--virtual"
+            aria-label="Таблица заявок"
+          >
             <table className="bookings-log-table">
               <thead>
                 <tr>
@@ -241,138 +258,161 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
                   <th>Действия</th>
                 </tr>
               </thead>
-              <tbody>
-                {list.map((b) => (
-                  <tr key={b.id}>
-                    <td>{b.createdAt ? new Date(b.createdAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
-                    <td>{b.bookingDate}</td>
-                    <td>{b.fullName}</td>
-                    <td>{b.telegramUsername ? `@${b.telegramUsername}` : '—'}</td>
-                    <td>{b.contactValue}</td>
-                    <td>{b.contactType || '—'}</td>
-                    <td>{b.city || '—'}</td>
-                    <td>{b.source || '—'}</td>
-                    <td>{b.formatName || '—'}</td>
-                    <td className="bookings-log-table__income">
-                      {editingIncomeId === b.id ? (
-                        <div className="bookings-log-income-edit">
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            className="admin-form-input bookings-log-income-input"
-                            value={incomeEditValue}
-                            onChange={(e) => setIncomeEditValue(e.target.value.replace(/[^\d\s]/g, ''))}
-                            placeholder="0"
-                            aria-label="Доход, ₽"
-                          />
-                          <button
-                            type="button"
-                            className="admin-btn admin-btn--small admin-btn--secondary"
-                            onClick={() => handleSaveIncome(b.id)}
-                            disabled={savingIncomeId === b.id}
-                          >
-                            {savingIncomeId === b.id ? '…' : 'Ок'}
-                          </button>
-                          <button
-                            type="button"
-                            className="admin-btn admin-btn--small admin-btn--secondary"
-                            onClick={cancelEditIncome}
-                            disabled={savingIncomeId === b.id}
-                          >
-                            Отмена
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="bookings-log-income-cell">
-                          {b.income != null && b.income > 0 ? (
+              <tbody
+                style={{
+                  height: totalSize,
+                  position: 'relative',
+                  display: 'block',
+                }}
+              >
+                {virtualItems.map((virtualRow) => {
+                  const b = deferredList[virtualRow.index];
+                  return (
+                    <tr
+                      key={b.id}
+                      data-index={virtualRow.index}
+                      className="bookings-log-table__virtual-row"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                        display: 'table',
+                        tableLayout: 'fixed',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <td>{b.createdAt ? new Date(b.createdAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
+                      <td>{b.bookingDate}</td>
+                      <td>{b.fullName}</td>
+                      <td>{b.telegramUsername ? `@${b.telegramUsername}` : '—'}</td>
+                      <td>{b.contactValue}</td>
+                      <td>{b.contactType || '—'}</td>
+                      <td>{b.city || '—'}</td>
+                      <td>{b.source || '—'}</td>
+                      <td>{b.formatName || '—'}</td>
+                      <td className="bookings-log-table__income">
+                        {editingIncomeId === b.id ? (
+                          <div className="bookings-log-income-edit">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              className="admin-form-input bookings-log-income-input"
+                              value={incomeEditValue}
+                              onChange={(e) => setIncomeEditValue(e.target.value.replace(/[^\d\s]/g, ''))}
+                              placeholder="0"
+                              aria-label="Доход, ₽"
+                            />
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn--small admin-btn--secondary"
+                              onClick={() => handleSaveIncome(b.id)}
+                              disabled={savingIncomeId === b.id}
+                            >
+                              {savingIncomeId === b.id ? '…' : 'Ок'}
+                            </button>
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn--small admin-btn--secondary"
+                              onClick={cancelEditIncome}
+                              disabled={savingIncomeId === b.id}
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="bookings-log-income-cell">
+                            {b.income != null && b.income > 0 ? (
+                              <>
+                                {b.income.toLocaleString('ru-RU')} ₽
+                                <button
+                                  type="button"
+                                  className="bookings-log-income-edit-btn"
+                                  onClick={() => startEditIncome(b)}
+                                  aria-label="Изменить доход"
+                                  title="Изменить доход"
+                                >
+                                  ✎
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                —
+                                <button
+                                  type="button"
+                                  className="bookings-log-income-edit-btn"
+                                  onClick={() => startEditIncome(b)}
+                                  aria-label="Вписать доход"
+                                  title="Вписать доход"
+                                >
+                                  ✎
+                                </button>
+                              </>
+                            )}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`booking-status booking-status--${b.status}`}>
+                          {b.status === 'confirmed' && 'Подтверждено'}
+                          {b.status === 'pending' && 'В ожидании'}
+                          {b.status === 'cancelled' && 'Отменено'}
+                        </span>
+                      </td>
+                      <td className="bookings-log-table__actions">
+                        <div className="bookings-log-actions" role="group" aria-label="Действия по заявке">
+                          {b.status === 'pending' && (
                             <>
-                              {b.income.toLocaleString('ru-RU')} ₽
                               <button
                                 type="button"
-                                className="bookings-log-income-edit-btn"
-                                onClick={() => startEditIncome(b)}
-                                aria-label="Изменить доход"
-                                title="Изменить доход"
+                                className="bookings-log-action-btn bookings-log-action-btn--success"
+                                onClick={() => handleUpdateStatus(b.id, 'confirmed')}
+                                disabled={updatingId === b.id}
+                                aria-label="Подтвердить заявку"
+                                title="Подтвердить"
                               >
-                                ✎
+                                {updatingId === b.id ? <span className="bookings-log-action-dots">…</span> : <IconCheck size={18} />}
                               </button>
-                            </>
-                          ) : (
-                            <>
-                              —
                               <button
                                 type="button"
-                                className="bookings-log-income-edit-btn"
-                                onClick={() => startEditIncome(b)}
-                                aria-label="Вписать доход"
-                                title="Вписать доход"
+                                className="bookings-log-action-btn bookings-log-action-btn--danger"
+                                onClick={() => handleUpdateStatus(b.id, 'cancelled')}
+                                disabled={updatingId === b.id}
+                                aria-label="Отменить заявку"
+                                title="Отменить"
                               >
-                                ✎
+                                <IconX size={18} />
                               </button>
                             </>
                           )}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={`booking-status booking-status--${b.status}`}>
-                        {b.status === 'confirmed' && 'Подтверждено'}
-                        {b.status === 'pending' && 'В ожидании'}
-                        {b.status === 'cancelled' && 'Отменено'}
-                      </span>
-                    </td>
-                    <td className="bookings-log-table__actions">
-                      <div className="bookings-log-actions" role="group" aria-label="Действия по заявке">
-                        {b.status === 'pending' && (
-                          <>
+                          {b.status === 'confirmed' && (
                             <button
                               type="button"
                               className="bookings-log-action-btn bookings-log-action-btn--success"
-                              onClick={() => handleUpdateStatus(b.id, 'confirmed')}
-                              disabled={updatingId === b.id}
-                              aria-label="Подтвердить заявку"
-                              title="Подтвердить"
+                              onClick={() => handleComplete(b)}
+                              disabled={completingId === b.id || deletingId === b.id || updatingId === b.id}
+                              aria-label="Выполнено: записать доход и попросить отзыв"
+                              title="Выполнено (доход + отзыв)"
                             >
-                              {updatingId === b.id ? <span className="bookings-log-action-dots">…</span> : <IconCheck size={18} />}
+                              {completingId === b.id ? <span className="bookings-log-action-dots">…</span> : '✓✓'}
                             </button>
-                            <button
-                              type="button"
-                              className="bookings-log-action-btn bookings-log-action-btn--danger"
-                              onClick={() => handleUpdateStatus(b.id, 'cancelled')}
-                              disabled={updatingId === b.id}
-                              aria-label="Отменить заявку"
-                              title="Отменить"
-                            >
-                              <IconX size={18} />
-                            </button>
-                          </>
-                        )}
-                        {b.status === 'confirmed' && (
+                          )}
                           <button
                             type="button"
-                            className="bookings-log-action-btn bookings-log-action-btn--success"
-                            onClick={() => handleComplete(b)}
-                            disabled={completingId === b.id || deletingId === b.id || updatingId === b.id}
-                            aria-label="Выполнено: записать доход и попросить отзыв"
-                            title="Выполнено (доход + отзыв)"
+                            className="bookings-log-action-btn bookings-log-action-btn--ghost-danger"
+                            onClick={() => handleDelete(b)}
+                            disabled={deletingId === b.id || updatingId === b.id || completingId === b.id}
+                            aria-label="Удалить заявку"
+                            title="Удалить (спам)"
                           >
-                            {completingId === b.id ? <span className="bookings-log-action-dots">…</span> : '✓✓'}
+                            {deletingId === b.id ? <span className="bookings-log-action-dots">…</span> : <IconTrash size={18} />}
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          className="bookings-log-action-btn bookings-log-action-btn--ghost-danger"
-                          onClick={() => handleDelete(b)}
-                          disabled={deletingId === b.id || updatingId === b.id || completingId === b.id}
-                          aria-label="Удалить заявку"
-                          title="Удалить (спам)"
-                        >
-                          {deletingId === b.id ? <span className="bookings-log-action-dots">…</span> : <IconTrash size={18} />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

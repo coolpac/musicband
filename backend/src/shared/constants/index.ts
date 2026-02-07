@@ -48,6 +48,7 @@ export const CACHE_TTL = {
   VOTE_RESULTS: 2, // 2 секунды
   BLOCKED_DATES: 60 * 60, // 1 час
   AVAILABLE_DATES: 5 * 60, // 5 минут — результат getAvailableDates
+  ADMIN_CALENDAR: 2 * 60, // 2 минуты — календарь заявок для админки
   AGENT_STATS: 5 * 60, // 5 минут
 } as const;
 

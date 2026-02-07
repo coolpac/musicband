@@ -34,9 +34,10 @@ export class BookingService {
 
     const booking = await this.bookingRepository.create(data);
 
-    // Инвалидация кеша доступных дат (при создании бронирования)
+    // Инвалидация кешей: доступные даты и календарь админки
     const bookingMonth = `${data.bookingDate.getFullYear()}-${String(data.bookingDate.getMonth() + 1).padStart(2, '0')}`;
     await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(bookingMonth));
+    await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(bookingMonth));
 
     logger.info('Booking created', {
       bookingId: booking.id,
@@ -137,19 +138,29 @@ export class BookingService {
     await this.getBookingById(id);
     await this.bookingRepository.updateStatus(id, status);
     const updated = await this.getBookingById(id);
+    const bookingDate = (updated as BookingWithUserAndFormat).bookingDate;
+    const date = bookingDate instanceof Date ? bookingDate : new Date(bookingDate);
+    const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(month));
     return updated as BookingWithUserAndFormat;
   }
 
   /**
    * Обновление дохода бронирования
    */
-  async updateBookingIncome(id: string, income: number) {
+  async updateBookingIncome(id: string, income: number): Promise<BookingWithUserAndFormat> {
     if (income < 0) {
       throw new ValidationError('Income cannot be negative');
     }
 
-    await this.getBookingById(id);
-    return this.bookingRepository.updateIncome(id, income);
+    const booking = await this.getBookingById(id);
+    await this.bookingRepository.updateIncome(id, income);
+    const bookingDate = booking.bookingDate instanceof Date ? booking.bookingDate : new Date(booking.bookingDate);
+    const month = `${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, '0')}`;
+    await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(month));
+
+    const updated = await this.getBookingById(id);
+    return updated as BookingWithUserAndFormat;
   }
 
   /**
@@ -159,10 +170,11 @@ export class BookingService {
     const booking = await this.getBookingById(id);
     await this.bookingRepository.delete(id);
 
-    // Инвалидация кеша доступных дат
+    // Инвалидация кешей: доступные даты и календарь админки
     const bookingDate = booking.bookingDate instanceof Date ? booking.bookingDate : new Date(booking.bookingDate);
     const month = `${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, '0')}`;
     await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(month));
+    await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(month));
 
     logger.info('Booking deleted by admin', { bookingId: id });
   }
@@ -278,14 +290,14 @@ export class BookingService {
   }
 
   /**
-   * Получение календаря бронирований (для админа).
-   * formats загружаются один раз вне цикла по датам.
+   * Получение календаря бронирований (для админа). С кешированием в Redis (TTL 2 мин).
    */
   async getCalendar(month?: string) {
     const todayStr = getTodayDateString();
 
     let startDate: Date;
     let endDate: Date;
+    let cacheMonth: string;
 
     if (month) {
       const match = month.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
@@ -297,19 +309,31 @@ export class BookingService {
       const monthNum = Number(monthStr);
       startDate = new Date(year, monthNum - 1, 1);
       endDate = new Date(year, monthNum, 0);
+      cacheMonth = month;
     } else {
       const [y, m] = todayStr.slice(0, 7).split('-').map(Number);
       startDate = new Date(y, m - 1, 1);
       endDate = new Date(y, m, 0);
+      cacheMonth = todayStr.slice(0, 7);
     }
 
-    // Получаем все бронирования за месяц
+    const cacheKey = CACHE_KEYS.ADMIN_CALENDAR(cacheMonth);
+    return CacheService.getOrSet(
+      cacheKey,
+      () => this.computeCalendar(startDate, endDate),
+      CACHE_TTL.ADMIN_CALENDAR
+    );
+  }
+
+  /**
+   * Внутренний расчёт календаря за месяц (без кеша).
+   */
+  private async computeCalendar(
+    startDate: Date,
+    endDate: Date
+  ): Promise<{ dates: Array<{ date: string; bookings: Awaited<ReturnType<IBookingRepository['findByDateRange']>> }> }> {
     const bookings = await this.bookingRepository.findByDateRange(startDate, endDate);
 
-    // Получаем все форматы
-    const formats = this.formatRepository ? await this.formatRepository.findAll() : [];
-
-    // Группируем бронирования по датам
     const bookingsByDate = new Map<string, typeof bookings>();
     bookings.forEach((booking) => {
       const dateStr = formatDateInTimezone(booking.bookingDate);
@@ -319,20 +343,13 @@ export class BookingService {
       bookingsByDate.get(dateStr)!.push(booking);
     });
 
-    // Формируем результат
-    const dates: Array<{
-      date: string;
-      bookings: typeof bookings;
-      formats: typeof formats;
-    }> = [];
-
+    const dates: Array<{ date: string; bookings: typeof bookings }> = [];
     const current = new Date(startDate);
     while (current <= endDate) {
       const dateStr = formatDateInTimezone(current);
       dates.push({
         date: dateStr,
         bookings: bookingsByDate.get(dateStr) || [],
-        formats,
       });
       current.setDate(current.getDate() + 1);
     }
