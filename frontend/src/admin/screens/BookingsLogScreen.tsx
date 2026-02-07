@@ -1,4 +1,4 @@
-import { useState, useEffect, useDeferredValue, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
@@ -99,11 +99,10 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
     loadList();
   }, []);
 
-  const deferredList = useDeferredValue(list);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const ROW_HEIGHT = 52;
   const rowVirtualizer = useVirtualizer({
-    count: deferredList.length,
+    count: list.length,
     getScrollElement: () => tableWrapRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 8,
@@ -270,7 +269,7 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
                 }}
               >
                 {virtualItems.map((virtualRow) => {
-                  const b = deferredList[virtualRow.index];
+                  const b = list[virtualRow.index];
                   return (
                     <tr
                       key={b.id}

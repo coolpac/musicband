@@ -8,6 +8,13 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
 import LoginScreen from './screens/LoginScreen';
 import { useTelegramWebApp } from '../telegram/useTelegramWebApp';
+import { getAdminStatsCached } from '../services/adminService';
+import {
+  getAdminBookingsCached,
+  getAdminBookingCalendarCached,
+  getAdminBlockedDatesCached,
+} from '../services/adminBookingService';
+import { getAdminReviewsCached } from '../services/adminReviewsService';
 import '../styles/admin.css';
 import '../styles/admin-tabbar.css';
 
@@ -55,15 +62,24 @@ function AdminContent() {
     return () => clearTimeout(t);
   }, [loading, isAuthenticated]);
 
-  // После успешного входа прелоадим только часто используемые lazy-экраны
+  // Пока идёт показ терминал-лоадера — префетчим данные и чанки экранов (чтобы после появления дашборда всё уже было готово)
   useEffect(() => {
-    if (booting) return;
+    if (!isAuthenticated || loading) return;
+
+    const monthStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+
+    getAdminStatsCached().catch(() => {});
+    getAdminBookingsCached({ limit: 200 }).catch(() => {});
+    getAdminBookingCalendarCached(monthStr).catch(() => {});
+    getAdminBlockedDatesCached(monthStr).catch(() => {});
+    getAdminReviewsCached({ page: 1, limit: 20 }).catch(() => {});
+
     import('./screens/DashboardScreen');
     import('./screens/VotingManagementScreen');
     import('./screens/SongsManagementScreen');
     import('./screens/BookingsManagementScreen');
     import('./screens/BookingsLogScreen');
-  }, [booting]);
+  }, [isAuthenticated, loading]);
 
   // Показываем загрузку пока проверяем токен
   if (loading) {
