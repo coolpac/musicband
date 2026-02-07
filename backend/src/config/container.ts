@@ -172,8 +172,7 @@ class Container {
       this._bookingService = new BookingService(
         this.bookingRepository,
         this.blockedDateRepository,
-        this.userRepository,
-        this.formatRepository
+        this.userRepository
       );
     }
     return this._bookingService;

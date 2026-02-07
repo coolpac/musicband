@@ -29,6 +29,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
 COPY . .
 
+# Регенерируем Prisma client под текущую схему (важно при изменении schema.prisma)
+RUN npx prisma generate
+
 # Компилируем TypeScript
 RUN npm run build
 

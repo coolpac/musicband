@@ -40,7 +40,6 @@ import {
   PrismaUserRepository,
   PrismaBookingRepository,
   PrismaBlockedDateRepository,
-  PrismaFormatRepository,
   PrismaReferralLinkRepository,
   PrismaReferralEventRepository,
   PrismaAgentRepository,
@@ -193,12 +192,10 @@ async function startServer() {
     // Создаем сервисы для бронирований и рефералов
     const bookingRepository = new PrismaBookingRepository();
     const blockedDateRepository = new PrismaBlockedDateRepository();
-    const formatRepository = new PrismaFormatRepository();
     const bookingService = new BookingService(
       bookingRepository,
       blockedDateRepository,
-      userRepository,
-      formatRepository
+      userRepository
     );
 
     const agentRepository = new PrismaAgentRepository();

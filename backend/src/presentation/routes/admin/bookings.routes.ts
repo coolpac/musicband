@@ -5,7 +5,6 @@ import {
   PrismaBookingRepository,
   PrismaBlockedDateRepository,
   PrismaUserRepository,
-  PrismaFormatRepository,
 } from '../../../infrastructure/database/repositories';
 import { validate } from '../../middleware/validator';
 import {
@@ -25,12 +24,10 @@ const router = Router();
 const bookingRepository = new PrismaBookingRepository();
 const blockedDateRepository = new PrismaBlockedDateRepository();
 const userRepository = new PrismaUserRepository();
-const formatRepository = new PrismaFormatRepository();
 const bookingService = new BookingService(
   bookingRepository,
   blockedDateRepository,
-  userRepository,
-  formatRepository
+  userRepository
 );
 const adminBookingController = new AdminBookingController(bookingService);
 

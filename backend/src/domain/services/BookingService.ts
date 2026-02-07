@@ -1,7 +1,6 @@
 import { IBookingRepository, CreateBookingData, BookingWithUserAndFormat } from '../../infrastructure/database/repositories/BookingRepository';
 import { IBlockedDateRepository } from '../../infrastructure/database/repositories/BlockedDateRepository';
 import { IUserRepository } from '../../infrastructure/database/repositories/UserRepository';
-import { IFormatRepository } from '../../infrastructure/database/repositories/FormatRepository';
 import { NotFoundError, ValidationError, ConflictError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
 import { CacheService, CACHE_KEYS } from '../../shared/utils/cache';
@@ -12,8 +11,7 @@ export class BookingService {
   constructor(
     private bookingRepository: IBookingRepository,
     private blockedDateRepository: IBlockedDateRepository,
-    private userRepository: IUserRepository,
-    private formatRepository?: IFormatRepository
+    private userRepository: IUserRepository
   ) {}
 
   /**
