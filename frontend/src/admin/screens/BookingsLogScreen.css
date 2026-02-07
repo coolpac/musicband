@@ -58,21 +58,17 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-.bookings-log-table-wrap--virtual {
+.bookings-log-table-wrap--scroll {
   overflow: auto;
   max-height: min(70vh, 600px);
 }
 
-.bookings-log-table-wrap--virtual .bookings-log-table thead {
+.bookings-log-table-wrap--scroll .bookings-log-table thead {
   position: sticky;
   top: 0;
   z-index: 1;
   background: rgba(0, 0, 0, 0.2);
   box-shadow: 0 1px 0 var(--admin-border);
-}
-
-.bookings-log-table__virtual-row td {
-  background: rgba(255, 255, 255, 0.02);
 }
 
 .bookings-log-table {

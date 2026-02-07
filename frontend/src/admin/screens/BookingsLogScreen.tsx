@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import { ApiError } from '../../services/apiClient';
@@ -98,17 +97,6 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
   useEffect(() => {
     loadList();
   }, []);
-
-  const tableWrapRef = useRef<HTMLDivElement>(null);
-  const ROW_HEIGHT = 52;
-  const rowVirtualizer = useVirtualizer({
-    count: list.length,
-    getScrollElement: () => tableWrapRef.current,
-    estimateSize: () => ROW_HEIGHT,
-    overscan: 8,
-  });
-  const virtualItems = rowVirtualizer.getVirtualItems();
-  const totalSize = rowVirtualizer.getTotalSize();
 
   const handleUpdateStatus = async (bookingId: string, status: 'confirmed' | 'cancelled') => {
     setUpdatingId(bookingId);
@@ -239,11 +227,7 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
         ) : list.length === 0 ? (
           <div className="bookings-log__empty">Нет заявок</div>
         ) : (
-          <div
-            ref={tableWrapRef}
-            className="bookings-log-table-wrap bookings-log-table-wrap--virtual"
-            aria-label="Таблица заявок"
-          >
+          <div className="bookings-log-table-wrap bookings-log-table-wrap--scroll" aria-label="Таблица заявок">
             <table className="bookings-log-table">
               <thead>
                 <tr>
@@ -261,31 +245,9 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
                   <th>Действия</th>
                 </tr>
               </thead>
-              <tbody
-                style={{
-                  height: totalSize,
-                  position: 'relative',
-                  display: 'block',
-                }}
-              >
-                {virtualItems.map((virtualRow) => {
-                  const b = list[virtualRow.index];
-                  return (
-                    <tr
-                      key={b.id}
-                      data-index={virtualRow.index}
-                      className="bookings-log-table__virtual-row"
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                        display: 'table',
-                        tableLayout: 'fixed',
-                        boxSizing: 'border-box',
-                      }}
-                    >
+              <tbody>
+                {list.map((b) => (
+                    <tr key={b.id}>
                       <td>{b.createdAt ? new Date(b.createdAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
                       <td>{b.bookingDate}</td>
                       <td>{b.fullName}</td>
@@ -414,8 +376,7 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
                         </div>
                       </td>
                     </tr>
-                  );
-                })}
+                ))}
               </tbody>
             </table>
           </div>
