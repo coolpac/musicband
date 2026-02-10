@@ -23,7 +23,6 @@ export const residents: Resident[] = [
     description:
       'Фронтмен, солист, автор. Майкл Джексон до сих пор благодарит за песни. Играет в группе «Лента», пишет песни и ведёт концерты.',
     image: '/residents/sasha.webp',
-    image2x: '/residents/sasha-full.webp',
     descriptionSvg: '/residents/sasha-description-overlay.svg',
   },
   {
