@@ -8,8 +8,8 @@
   min-height: 100vh;
   background: linear-gradient(180deg, #1c1c1e 0%, #161618 50%, #1a1a1c 100%);
   padding: 0 !important;
-  /* отступ сверху под фиксированный хедер (как у .screen в base.css) */
-  padding-top: calc(clamp(64px, 11svh, 107px) + 20px) !important;
+  /* Карточки сразу под хедером — минимальный отступ только под фиксированный хедер */
+  padding-top: calc(clamp(64px, 11svh, 107px) + 4px) !important;
   margin: 0 !important;
   position: relative;
   box-sizing: border-box;

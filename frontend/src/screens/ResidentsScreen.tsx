@@ -68,7 +68,7 @@ export default function ResidentsScreen() {
       </AnimatePresence>
       <div className="residents-landing">
         {residents.map(
-          ({ id, name, shortDescription, description, image, descriptionSvg }, index) => {
+          ({ id, name, shortDescription, description, image, image2x, descriptionSvg }, index) => {
             const isOpen = openId === id;
             const useSvgOverlay = Boolean(descriptionSvg);
 
@@ -84,12 +84,15 @@ export default function ResidentsScreen() {
               >
                 <img
                   src={image}
+                  srcSet={image2x ? `${image} 1x, ${image2x} 2x` : undefined}
+                  sizes="100vw"
                   alt={name}
                   className="residents-card__img"
                   width={440}
                   height={550}
-                  loading="lazy"
+                  loading={index === 0 ? 'eager' : 'lazy'}
                   decoding="async"
+                  fetchPriority={index === 0 ? 'high' : undefined}
                 />
                 {useSvgOverlay && descriptionSvg && (
                   <AnimatePresence>

@@ -1,6 +1,7 @@
 /**
  * Резиденты — порядок: Саша, Александр, Рома, Егор, Вадим, Аня.
  * Карточка: имя + короткое описание; по клику — плашка с полным описанием (как в Саша описание.svg).
+ * Для чёткости на ретине: добавьте image2x (файл в 2× разрешении, например sasha@2x.webp).
  */
 export type Resident = {
   id: string;
@@ -8,6 +9,8 @@ export type Resident = {
   shortDescription: string;
   description: string;
   image: string;
+  /** Опционально: 2× версия для ретина-экранов (например /residents/sasha@2x.webp) */
+  image2x?: string;
   /** Опционально: SVG «описание» (оверлей) — при клике показывается вместо HTML-плашки; прелоад при наведении */
   descriptionSvg?: string;
 };
@@ -20,6 +23,7 @@ export const residents: Resident[] = [
     description:
       'Фронтмен, солист, автор. Майкл Джексон до сих пор благодарит за песни. Играет в группе «Лента», пишет песни и ведёт концерты.',
     image: '/residents/sasha.webp',
+    image2x: '/residents/sasha-full.webp',
     descriptionSvg: '/residents/sasha-description-overlay.svg',
   },
   {
