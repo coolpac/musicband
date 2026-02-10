@@ -1,11 +1,12 @@
 /* Residents landing — только фото по всей ширине, слитно друг за другом */
 /* Переопределяем .screen: контент на всю ширину вьюпорта, без чёрных полос по бокам */
+/* Фон чуть светлее #111, с лёгким градиентом — убираем ощущение "пол-экрана темные" */
 .screen.residents-screen {
   width: 100% !important;
   max-width: none !important;
   min-width: 100%;
   min-height: 100vh;
-  background: #111;
+  background: linear-gradient(180deg, #1c1c1e 0%, #161618 50%, #1a1a1c 100%);
   padding: 0 !important;
   /* отступ сверху под фиксированный хедер (как у .screen в base.css) */
   padding-top: calc(clamp(64px, 11svh, 107px) + 20px) !important;
@@ -43,14 +44,14 @@
 }
 
 /* Noise dithering — маскирует color banding на красных градиентах фото (OLED 8-bit).
-   soft-light лучше работает с красным фоном чем overlay. */
+   Чуть снижена непрозрачность, чтобы не затемнять карточки. */
 .residents-card::after {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.12;
+  opacity: 0.08;
   mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -144,5 +145,49 @@
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .residents-card__panel {
     background: rgba(40, 40, 40, 0.95);
+  }
+}
+
+/* Подсказка «нажмите / листайте» со стрелкой — чтобы было понятно, что карточки интерактивны */
+.residents-hint {
+  position: fixed;
+  left: 50%;
+  bottom: clamp(20px, 5vh, 40px);
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 24px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 14px;
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.residents-hint__arrow {
+  width: 28px;
+  height: 28px;
+  animation: residents-arrow-bounce 1.8s ease-in-out infinite;
+}
+
+.residents-hint__arrow svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes residents-arrow-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(6px);
   }
 }

@@ -9,17 +9,36 @@ function preloadImage(src: string) {
   img.src = src;
 }
 
+const HINT_HIDE_KEY = 'residents-hint-seen';
+
 export default function ResidentsScreen() {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [hintVisible, setHintVisible] = useState(() => {
+    if (typeof sessionStorage === 'undefined') return true;
+    return !sessionStorage.getItem(HINT_HIDE_KEY);
+  });
 
   useEffect(() => {
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
   }, []);
 
+  useEffect(() => {
+    if (!hintVisible) return;
+    const t = setTimeout(() => {
+      setHintVisible(false);
+      sessionStorage.setItem(HINT_HIDE_KEY, '1');
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [hintVisible]);
+
   const handleCardClick = useCallback((id: string, descriptionSvg?: string) => {
     hapticSelection();
+    if (hintVisible) {
+      setHintVisible(false);
+      try { sessionStorage.setItem(HINT_HIDE_KEY, '1'); } catch {}
+    }
     setOpenId((prev) => (prev === id ? null : id));
-  }, []);
+  }, [hintVisible]);
 
   const handleHoverCard = useCallback((descriptionSvg?: string) => {
     if (descriptionSvg) preloadImage(descriptionSvg);
@@ -27,6 +46,26 @@ export default function ResidentsScreen() {
 
   return (
     <main className="screen residents-screen">
+      <AnimatePresence>
+        {hintVisible && (
+          <motion.div
+            className="residents-hint"
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.3 }}
+          >
+            <span className="residents-hint__arrow" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M19 12l-7 7-7-7" />
+              </svg>
+            </span>
+            <span>Листайте вниз · Нажмите на карточку</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="residents-landing">
         {residents.map(
           ({ id, name, shortDescription, description, image, descriptionSvg }, index) => {
