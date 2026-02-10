@@ -132,6 +132,7 @@ export function NavigationScreen() {
           <button type="button">Главная</button>
           <button type="button">Форматы</button>
           <button type="button">Лайф</button>
+          <button type="button">Промо</button>
           <button type="button">Партнеры</button>
           <button type="button">Наши соц. сети</button>
         </div>

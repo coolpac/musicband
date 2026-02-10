@@ -29,7 +29,7 @@ import SongLyricsScreen from './screens/SongLyricsScreen';
 import ResidentsScreen from './screens/ResidentsScreen';
 
 type Screen = 'home' | 'nav' | 'calendar' | 'form' | 'success' | 'formats' | 'format-detail' | 'review-form' | 'review-success' | 'voting' | 'voting-results' | 'winning-song' | 'song-lyrics' | 'residents';
-type MenuTarget = 'home' | 'formats' | 'live' | 'partners' | 'socials';
+type MenuTarget = 'home' | 'formats' | 'live' | 'promo' | 'partners' | 'socials';
 
 export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -116,8 +116,21 @@ export default function App() {
     };
   }, [tg.isTelegram, authToken]);
 
+  // Кнопка «Назад»: при открытом меню — закрываем меню; иначе — навигация по экранам.
+  // Иначе в Telegram при нажатии «Назад» в меню закрывается всё приложение.
   useEffect(() => {
     if (!tg.isTelegram) return;
+    if (menuOpen) {
+      tg.showBackButton();
+      const cleanup = tg.onBackButtonClick(() => {
+        hapticImpact('light');
+        setMenuOpen(false);
+      });
+      return () => {
+        cleanup?.();
+        tg.hideBackButton();
+      };
+    }
     if (currentScreen === 'home') {
       tg.hideBackButton();
       return;
@@ -125,9 +138,6 @@ export default function App() {
     tg.showBackButton();
     const cleanup = tg.onBackButtonClick(() => {
       hapticImpact('light');
-      // Не используем history.back() — Telegram WebView может заморозить рендер
-      // при обработке browser navigation, вызывая чёрный экран.
-      // Вместо этого: прямая навигация через React state + синхронное обновление URL.
       if (currentScreen === 'format-detail') {
         setCurrentScreen('formats');
         setCurrentFormatId(null);
@@ -135,7 +145,6 @@ export default function App() {
       } else {
         setCurrentScreen('home');
         window.history.replaceState({}, '', '?screen=home');
-        // scrollTo после рендера — иначе Telegram WebView может заморозить paint
         requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       }
     });
@@ -143,7 +152,7 @@ export default function App() {
       cleanup?.();
       tg.hideBackButton();
     };
-  }, [currentScreen, tg.isTelegram, tg.showBackButton, tg.hideBackButton, tg.onBackButtonClick]);
+  }, [currentScreen, menuOpen, tg.isTelegram, tg.showBackButton, tg.hideBackButton, tg.onBackButtonClick]);
 
   // Подтверждение закрытия на экране формы заявки — чтобы не потерять данные
   useEffect(() => {

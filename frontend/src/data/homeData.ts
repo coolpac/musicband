@@ -117,7 +117,7 @@ export const whyMobileSlides: WhyMobileSlide[] = [
     id: 'uniqueness',
     image: imgThirdPanelRight,
     alt: 'Группа',
-    text: 'Мы показываем уровень, индевидуальность и неповторимость',
+    text: 'Мы показываем уровень, индивидуальность и неповторимость',
   },
 ];
 

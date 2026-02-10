@@ -335,7 +335,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
           </div>
         </div>
 
-        <div className="section promo">
+        <div className="section promo" id="promo">
           <h2 className="section-title">Промо</h2>
           <div
             className="promo-slider"
@@ -645,7 +645,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                         <img alt="Группа" loading="lazy" decoding="async" src={imgThirdPanelRight} width={175} height={234} />
                       </div>
                       <p className="why-desktop-text-block why-desktop-text--bold">
-                        Мы показываем уровень, индевидуальность и неповторимость
+                        Мы показываем уровень, индивидуальность и неповторимость
                       </p>
                     </div>
                   </div>
@@ -938,7 +938,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
           <button className="btn btn-primary date-btn" type="button" onClick={handleGoToCalendar}>
             Оставить заявку
           </button>
-          <p className="date-note">Не для всех. Для своих</p>
+          <p className="date-note">Не для всех. Для своих.</p>
         </div>
       </section>
     </main>

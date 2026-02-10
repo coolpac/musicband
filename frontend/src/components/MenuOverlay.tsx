@@ -7,7 +7,7 @@ import navBg3 from '../assets/figma/downloaded/nav-bg-3.webp';
 import navBg4 from '../assets/figma/downloaded/nav-bg-4.webp';
 import navBg5 from '../assets/figma/downloaded/nav-bg-5.webp';
 
-type MenuTarget = 'home' | 'formats' | 'live' | 'partners' | 'socials';
+type MenuTarget = 'home' | 'formats' | 'live' | 'promo' | 'partners' | 'socials';
 
 type MenuItem = {
   label: string;
@@ -18,6 +18,7 @@ const menuItems: MenuItem[] = [
   { label: 'Главная', target: 'home' },
   { label: 'Форматы', target: 'formats' },
   { label: 'Лайф', target: 'live' },
+  { label: 'Промо', target: 'promo' },
   { label: 'Партнеры', target: 'partners' },
   { label: 'Наши соц. сети', target: 'socials' },
 ];
@@ -89,6 +90,7 @@ export default function MenuOverlay({ isOpen, onClose, onNavigate }: MenuOverlay
           {menuItems.map((item) => (
             <button
               key={item.target}
+              className={item.target === 'promo' ? 'menu-overlay__link menu-overlay__link--promo' : 'menu-overlay__link'}
               onClick={() => { hapticImpact('light'); onNavigate(item.target); }}
               type="button"
               tabIndex={isOpen ? 0 : -1}

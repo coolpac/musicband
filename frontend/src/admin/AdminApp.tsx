@@ -46,6 +46,8 @@ function AdminContent() {
   useTelegramWebApp({ initOnMount: true });
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [bookingsView, setBookingsView] = useState<BookingsView>('log');
+  /** При переходе с дашборда по карточке статуса — открыть лог с этим фильтром (сбрасывается после монтирования лога) */
+  const [initialBookingsLogStatus, setInitialBookingsLogStatus] = useState<'pending' | 'confirmed' | 'cancelled' | null>(null);
   const { isAuthenticated, loading } = useAdminAuth();
 
   // Показываем терминал-лоадер только один раз при первом входе
@@ -96,7 +98,8 @@ function AdminContent() {
     return <AdminTerminalLoader />;
   }
 
-  const goToBookingsLog = () => {
+  const goToBookingsLog = (statusFilter?: 'pending' | 'confirmed' | 'cancelled') => {
+    if (statusFilter != null) setInitialBookingsLogStatus(statusFilter);
     setBookingsView('log');
     setActiveTab('bookings');
   };
@@ -112,7 +115,8 @@ function AdminContent() {
         <div style={activeTab === 'dashboard' ? show : hide}>
           <ErrorBoundary>
             <DashboardScreen
-              onGoToBookings={goToBookingsLog}
+              onGoToBookings={() => goToBookingsLog()}
+              onGoToBookingsLogWithStatus={goToBookingsLog}
               onGoToAgents={() => setActiveTab('agents')}
               onGoToReviews={() => setActiveTab('reviews')}
               onGoToAnalytics={() => setActiveTab('analytics')}
@@ -131,7 +135,11 @@ function AdminContent() {
         </div>
         <div style={activeTab === 'bookings' && bookingsView === 'log' ? show : hide}>
           <ErrorBoundary>
-            <BookingsLogScreen onGoToCalendar={() => setBookingsView('calendar')} />
+            <BookingsLogScreen
+              onGoToCalendar={() => setBookingsView('calendar')}
+              initialStatusFilter={initialBookingsLogStatus}
+              onConsumeInitialFilter={() => setInitialBookingsLogStatus(null)}
+            />
           </ErrorBoundary>
         </div>
         <div style={activeTab === 'bookings' && bookingsView === 'calendar' ? show : hide}>
@@ -169,6 +177,7 @@ function AdminContent() {
       />
       <Toaster
         position="top-center"
+        containerClassName="admin-toaster"
         toastOptions={{
           duration: 3000,
           style: {

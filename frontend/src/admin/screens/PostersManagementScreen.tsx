@@ -6,31 +6,29 @@ import Modal from '../components/Modal';
 import FileUpload from '../components/FileUpload';
 import { OptimizedImage } from '../../components/OptimizedImage';
 import { getOptimizedImageProps } from '../../types/image';
+import {
+  getAdminPosters,
+  createAdminPoster,
+  updateAdminPoster,
+  deleteAdminPoster,
+  uploadPosterImage,
+  type AdminPoster,
+} from '../../services/adminPosterService';
 import '../../styles/admin.css';
 import './PostersManagementScreen.css';
-
-interface Poster {
-  id: string;
-  title: string;
-  description?: string;
-  imageUrl: string;
-  link?: string;
-  order: number;
-}
 
 interface PosterInput {
   title: string;
   description?: string;
   imageUrl: string;
   link?: string;
-  order: number;
 }
 
 export default function PostersManagementScreen() {
-  const [posters, setPosters] = useState<Poster[]>([]);
+  const [posters, setPosters] = useState<AdminPoster[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingPoster, setEditingPoster] = useState<Poster | null>(null);
+  const [editingPoster, setEditingPoster] = useState<AdminPoster | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState<PosterInput>({
@@ -38,7 +36,6 @@ export default function PostersManagementScreen() {
     description: '',
     imageUrl: '',
     link: '',
-    order: 0,
   });
 
   useEffect(() => {
@@ -48,21 +45,12 @@ export default function PostersManagementScreen() {
   const loadPosters = async () => {
     setIsLoading(true);
     try {
-      // Mock data
-      const mockPosters: Poster[] = [
-        {
-          id: '1',
-          title: 'Концерт 14 февраля',
-          description: 'День всех влюбленных',
-          imageUrl: '',
-          link: 'https://example.com/concert',
-          order: 1,
-        },
-      ];
-      setPosters(mockPosters);
+      const list = await getAdminPosters();
+      setPosters(list);
     } catch (error) {
       console.error('Error loading posters:', error);
       toast.error('Не удалось загрузить афиши');
+      setPosters([]);
     } finally {
       setIsLoading(false);
     }
@@ -76,15 +64,19 @@ export default function PostersManagementScreen() {
       description: '',
       imageUrl: '',
       link: '',
-      order: posters.length + 1,
     });
     setShowModal(true);
   };
 
-  const handleEdit = (poster: Poster) => {
+  const handleEdit = (poster: AdminPoster) => {
     hapticImpact('light');
     setEditingPoster(poster);
-    setFormData({ ...poster });
+    setFormData({
+      title: poster.title,
+      description: poster.description ?? '',
+      imageUrl: poster.imageUrl ?? '',
+      link: poster.link ?? '',
+    });
     setShowModal(true);
   };
 
@@ -99,7 +91,7 @@ export default function PostersManagementScreen() {
     if (!confirmed) return;
 
     try {
-      // Deleting poster
+      await deleteAdminPoster(id);
       toast.success('Афиша удалена');
       await loadPosters();
     } catch (error) {
@@ -111,18 +103,37 @@ export default function PostersManagementScreen() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.imageUrl) {
-      toast.error('Заполните название и загрузите изображение');
+    if (!formData.title?.trim()) {
+      toast.error('Введите название афиши');
+      return;
+    }
+    if (!formData.imageUrl) {
+      toast.error('Загрузите изображение афиши');
       return;
     }
 
     setIsSaving(true);
     try {
+      let imageUrl = formData.imageUrl;
+      if (imageUrl.startsWith('data:')) {
+        imageUrl = await uploadPosterImage(imageUrl);
+      }
+
       if (editingPoster) {
-        // Updating poster
+        await updateAdminPoster(editingPoster.id, {
+          title: formData.title.trim(),
+          description: formData.description?.trim() || undefined,
+          imageUrl,
+          link: formData.link?.trim() || undefined,
+        });
         toast.success('Афиша обновлена');
       } else {
-        // Creating poster
+        await createAdminPoster({
+          title: formData.title.trim(),
+          description: formData.description?.trim() || undefined,
+          imageUrl,
+          link: formData.link?.trim() || undefined,
+        });
         toast.success('Афиша добавлена');
       }
 
@@ -130,7 +141,8 @@ export default function PostersManagementScreen() {
       await loadPosters();
     } catch (error) {
       console.error('Error saving poster:', error);
-      toast.error('Не удалось сохранить афишу');
+      const msg = error instanceof Error ? error.message : 'Не удалось сохранить афишу';
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }
@@ -167,7 +179,7 @@ export default function PostersManagementScreen() {
         ) : (
           <div className="posters-list">
             {posters.map((poster) => {
-              const imgProps = getOptimizedImageProps(poster.imageUrl);
+              const imgProps = getOptimizedImageProps(poster.imageUrl ?? undefined);
               return (
               <div key={poster.id} className="poster-item">
                 {imgProps ? (

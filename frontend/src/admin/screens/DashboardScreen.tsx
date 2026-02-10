@@ -64,6 +64,8 @@ type DashboardStats = {
 
 type DashboardScreenProps = {
   onGoToBookings?: () => void;
+  /** Перейти к логу заявок с предустановленным фильтром по статусу */
+  onGoToBookingsLogWithStatus?: (status: 'pending' | 'confirmed' | 'cancelled') => void;
   onGoToAgents?: () => void;
   onGoToReviews?: () => void;
   onGoToAnalytics?: () => void;
@@ -79,7 +81,13 @@ const defaultStats: DashboardStats = {
   pendingConfirmation: 24,
 };
 
-export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToReviews, onGoToAnalytics }: DashboardScreenProps) {
+export default function DashboardScreen({
+  onGoToBookings,
+  onGoToBookingsLogWithStatus,
+  onGoToAgents,
+  onGoToReviews,
+  onGoToAnalytics,
+}: DashboardScreenProps) {
   useAdminAuth(); // для шапки (аватар там)
   const cached = getCached<AdminStats>(CACHE_KEYS.ADMIN_STATS);
   const [stats, setStats] = useState<DashboardStats>(cached ?? defaultStats);
@@ -135,26 +143,50 @@ export default function DashboardScreen({ onGoToBookings, onGoToAgents, onGoToRe
             )}
           </button>
 
-          {/* Confirmed Bookings Card */}
-          <div className="admin-card admin-card--success">
+          {/* Confirmed Bookings Card — по нажатию открыть лог с фильтром «Подтверждено» */}
+          <button
+            type="button"
+            className="admin-card admin-card--success admin-card--clickable"
+            onClick={() => { hapticImpact('light'); onGoToBookingsLogWithStatus?.('confirmed'); }}
+            aria-label={`Подтверждено: ${stats.confirmedBookings} заявок. Показать список`}
+          >
             <div className="admin-card__icon"><IconCheck /></div>
             <div className="admin-card__number">{stats.confirmedBookings}</div>
             <div className="admin-card__label">Подтверждено</div>
-          </div>
+            {onGoToBookingsLogWithStatus && stats.confirmedBookings > 0 && (
+              <span className="admin-card__action">Список заявок →</span>
+            )}
+          </button>
 
-          {/* Pending Bookings Card */}
-          <div className="admin-card admin-card--warning">
+          {/* Pending Bookings Card — по нажатию открыть лог с фильтром «В ожидании» */}
+          <button
+            type="button"
+            className="admin-card admin-card--warning admin-card--clickable"
+            onClick={() => { hapticImpact('light'); onGoToBookingsLogWithStatus?.('pending'); }}
+            aria-label={`В ожидании: ${stats.pendingBookings} заявок. Показать список`}
+          >
             <div className="admin-card__icon"><IconClock /></div>
             <div className="admin-card__number">{stats.pendingBookings}</div>
             <div className="admin-card__label">В ожидании</div>
-          </div>
+            {onGoToBookingsLogWithStatus && stats.pendingBookings > 0 && (
+              <span className="admin-card__action">Список заявок →</span>
+            )}
+          </button>
 
-          {/* Cancelled Bookings Card */}
-          <div className="admin-card admin-card--danger">
+          {/* Cancelled Bookings Card — по нажатию открыть лог с фильтром «Отменено» */}
+          <button
+            type="button"
+            className="admin-card admin-card--danger admin-card--clickable"
+            onClick={() => { hapticImpact('light'); onGoToBookingsLogWithStatus?.('cancelled'); }}
+            aria-label={`Отменено: ${stats.cancelledBookings} заявок. Показать список`}
+          >
             <div className="admin-card__icon"><IconX /></div>
             <div className="admin-card__number">{stats.cancelledBookings}</div>
             <div className="admin-card__label">Отменено</div>
-          </div>
+            {onGoToBookingsLogWithStatus && stats.cancelledBookings > 0 && (
+              <span className="admin-card__action">Список заявок →</span>
+            )}
+          </button>
         </div>
 
         {/* Revenue Card */}

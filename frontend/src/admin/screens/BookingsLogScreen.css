@@ -36,6 +36,79 @@
   font-size: 16px;
 }
 
+/* Фильтр по статусу — чипы с счётчиками */
+.bookings-log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.bookings-log-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--admin-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--admin-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.bookings-log-filter-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--admin-text);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.bookings-log-filter-chip--active {
+  color: var(--admin-text);
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bookings-log-filter-chip--active.bookings-log-filter-chip--all {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.bookings-log-filter-chip--active.bookings-log-filter-chip--pending {
+  border-color: var(--admin-warning);
+  background: rgba(255, 204, 0, 0.15);
+  color: var(--admin-warning);
+}
+
+.bookings-log-filter-chip--active.bookings-log-filter-chip--confirmed {
+  border-color: var(--admin-success);
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--admin-success);
+}
+
+.bookings-log-filter-chip--active.bookings-log-filter-chip--cancelled {
+  border-color: var(--admin-danger);
+  background: rgba(255, 59, 48, 0.15);
+  color: var(--admin-danger);
+}
+
+.bookings-log-filter-chip__count {
+  min-width: 1.25em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+}
+
+.bookings-log-filter-chip--active .bookings-log-filter-chip__count {
+  background: rgba(0, 0, 0, 0.35);
+}
+
 .bookings-log__desc {
   font-size: 14px;
   color: var(--admin-text-secondary);
@@ -244,4 +317,22 @@
   width: 90px;
   font-size: 13px;
   padding: 4px 8px;
+}
+
+/* Никнейм TG — кликабельная ссылка на профиль */
+.bookings-log-tg-link {
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: inherit;
+  font-family: inherit;
+  color: var(--admin-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.bookings-log-tg-link:hover {
+  color: #58a6ff;
 }

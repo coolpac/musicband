@@ -1133,16 +1133,19 @@
 .menu-overlay__links {
   position: absolute;
   right: 40px;
-  top: 570px;
+  bottom: clamp(24px, 6vh, 48px);
+  top: auto;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   text-align: right;
   font-size: 30px;
   z-index: 2;
+  max-height: calc(100vh - 180px);
+  overflow-y: auto;
 }
 
-.menu-overlay__links button {
+.menu-overlay__links .menu-overlay__link {
   background: none;
   border: none;
   color: var(--white);
@@ -1150,7 +1153,12 @@
   font-size: 30px;
   font-family: "Geologica", sans-serif;
   cursor: pointer;
-  padding: 0;
+  padding: 2px 0;
+}
+
+.menu-overlay__links .menu-overlay__link--promo {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 @media (max-width: 360px) {
@@ -1158,7 +1166,7 @@
     right: 16px;
     font-size: clamp(18px, 5vw, 24px);
   }
-  .menu-overlay__links button {
+  .menu-overlay__links .menu-overlay__link {
     font-size: clamp(18px, 5vw, 24px);
   }
 }

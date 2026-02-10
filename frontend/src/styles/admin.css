@@ -90,6 +90,11 @@
   font-size: 16px;
 }
 
+/* Тосты под шапкой, чтобы уведомление было видно (не под статус-баром и не поверх заголовка) */
+.admin-toaster {
+  top: calc(72px + env(safe-area-inset-top, 0)) !important;
+}
+
 /* Content */
 .admin-content {
   padding: 12px 16px 20px;

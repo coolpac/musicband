@@ -12,6 +12,7 @@ import {
 } from '../../services/adminBookingService';
 import { getCached, CACHE_KEYS } from '../../services/adminDataCache';
 import { IconCheck, IconX, IconTrash } from '../assets/icons';
+import { openTelegramLink, hapticImpact } from '../../telegram/telegramWebApp';
 import '../../styles/admin.css';
 import './BookingsLogScreen.css';
 
@@ -59,8 +60,14 @@ function mapApiBooking(b: AdminBooking): BookingRow {
   };
 }
 
+export type BookingsLogStatusFilter = 'all' | 'pending' | 'confirmed' | 'cancelled';
+
 type BookingsLogScreenProps = {
   onGoToCalendar?: () => void;
+  /** При переходе с дашборда по карточке — сразу показать этот фильтр */
+  initialStatusFilter?: BookingsLogStatusFilter | null;
+  /** Вызвать после применения initialStatusFilter, чтобы не сбрасывать фильтр при следующем открытии лога */
+  onConsumeInitialFilter?: () => void;
 };
 
 function sortedRows(res: { bookings?: AdminBooking[] }): BookingRow[] {
@@ -69,16 +76,25 @@ function sortedRows(res: { bookings?: AdminBooking[] }): BookingRow[] {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenProps) {
+export default function BookingsLogScreen({
+  onGoToCalendar,
+  initialStatusFilter = null,
+  onConsumeInitialFilter,
+}: BookingsLogScreenProps) {
   const cached = getCached<{ bookings: AdminBooking[]; total: number }>(CACHE_KEYS.ADMIN_BOOKINGS_LIST);
   const [list, setList] = useState<BookingRow[]>(cached ? sortedRows(cached) : []);
   const [loading, setLoading] = useState(!cached);
+  const [statusFilter, setStatusFilter] = useState<BookingsLogStatusFilter>(initialStatusFilter ?? 'all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
   const [incomeEditValue, setIncomeEditValue] = useState('');
   const [savingIncomeId, setSavingIncomeId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialStatusFilter != null) onConsumeInitialFilter?.();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount to clear initial filter
 
   const loadList = async () => {
     if (!getCached(CACHE_KEYS.ADMIN_BOOKINGS_LIST)) setLoading(true);
@@ -97,6 +113,18 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
   useEffect(() => {
     loadList();
   }, []);
+
+  const filteredList =
+    statusFilter === 'all'
+      ? list
+      : list.filter((b) => b.status === statusFilter);
+
+  const counts = {
+    all: list.length,
+    pending: list.filter((b) => b.status === 'pending').length,
+    confirmed: list.filter((b) => b.status === 'confirmed').length,
+    cancelled: list.filter((b) => b.status === 'cancelled').length,
+  };
 
   const handleUpdateStatus = async (bookingId: string, status: 'confirmed' | 'cancelled') => {
     setUpdatingId(bookingId);
@@ -222,10 +250,44 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
           </div>
         )}
 
+        {/* Фильтр по статусу: чипы с счётчиками */}
+        {!loading && list.length > 0 && (
+          <div className="bookings-log-filters" role="group" aria-label="Фильтр по статусу заявок">
+            {(
+              [
+                { key: 'all' as const, label: 'Все', count: counts.all },
+                { key: 'pending' as const, label: 'В ожидании', count: counts.pending },
+                { key: 'confirmed' as const, label: 'Подтверждено', count: counts.confirmed },
+                { key: 'cancelled' as const, label: 'Отменено', count: counts.cancelled },
+              ] as const
+            ).map(({ key, label, count }) => (
+              <button
+                key={key}
+                type="button"
+                className={`bookings-log-filter-chip ${statusFilter === key ? 'bookings-log-filter-chip--active' : ''} bookings-log-filter-chip--${key}`}
+                onClick={() => setStatusFilter(key)}
+                aria-pressed={statusFilter === key}
+                aria-label={`${label}: ${count} заявок`}
+              >
+                <span className="bookings-log-filter-chip__label">{label}</span>
+                <span className="bookings-log-filter-chip__count" aria-hidden>{count}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {loading ? (
           <div className="admin-loading">Загрузка списка...</div>
         ) : list.length === 0 ? (
           <div className="bookings-log__empty">Нет заявок</div>
+        ) : filteredList.length === 0 ? (
+          <div className="bookings-log__empty">
+            Нет заявок со статусом «
+            {statusFilter === 'pending' && 'В ожидании'}
+            {statusFilter === 'confirmed' && 'Подтверждено'}
+            {statusFilter === 'cancelled' && 'Отменено'}
+            »
+          </div>
         ) : (
           <div className="bookings-log-table-wrap bookings-log-table-wrap--scroll" aria-label="Таблица заявок">
             <table className="bookings-log-table">
@@ -246,12 +308,28 @@ export default function BookingsLogScreen({ onGoToCalendar }: BookingsLogScreenP
                 </tr>
               </thead>
               <tbody>
-                {list.map((b) => (
+                {filteredList.map((b) => (
                     <tr key={b.id}>
                       <td>{b.createdAt ? new Date(b.createdAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
                       <td>{b.bookingDate}</td>
                       <td>{b.fullName}</td>
-                      <td>{b.telegramUsername ? `@${b.telegramUsername}` : '—'}</td>
+                      <td>
+                        {b.telegramUsername ? (
+                          <button
+                            type="button"
+                            className="bookings-log-tg-link"
+                            onClick={() => {
+                              hapticImpact('light');
+                              openTelegramLink(`https://t.me/${b.telegramUsername}`);
+                            }}
+                            aria-label={`Открыть @${b.telegramUsername} в Telegram`}
+                          >
+                            @{b.telegramUsername}
+                          </button>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
                       <td>{b.contactValue}</td>
                       <td>{b.contactType || '—'}</td>
                       <td>{b.city || '—'}</td>
