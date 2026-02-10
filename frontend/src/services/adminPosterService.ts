@@ -62,10 +62,11 @@ export async function uploadPosterImage(dataUrl: string): Promise<string> {
     return dataUrl;
   }
 
-  const baseUrl = import.meta.env.VITE_API_URL || '';
+  const apiBase = import.meta.env.VITE_API_URL || '';
+  const uploadUrl = apiBase ? `${apiBase}/upload/image` : '/api/upload/image';
   const token = typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || localStorage.getItem('auth_token')) : null;
 
-  const res = await fetch(`${baseUrl}/upload/image`, {
+  const res = await fetch(uploadUrl, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     credentials: 'include',
