@@ -275,6 +275,35 @@ export default function VotingManagementScreen() {
     return `${minutes}м`;
   };
 
+  const formatSessionDateRange = (start: string, end: string | null) => {
+    const startDate = new Date(start);
+    const endDate = end ? new Date(end) : null;
+    const sameDay = endDate && startDate.toDateString() === endDate.toDateString();
+    const dateStr = new Intl.DateTimeFormat('ru-RU', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(startDate);
+    const timeStr = new Intl.DateTimeFormat('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(startDate);
+    if (sameDay && endDate) {
+      const endTimeStr = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(endDate);
+      return { date: dateStr, time: `${timeStr} – ${endTimeStr}` };
+    }
+    if (endDate) {
+      const endStr = new Intl.DateTimeFormat('ru-RU', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(endDate);
+      return { date: dateStr, time: `${timeStr} – ${endStr}` };
+    }
+    return { date: dateStr, time: timeStr };
+  };
+
   if (isLoading) {
     return (
       <div className="admin-screen">
@@ -374,24 +403,31 @@ export default function VotingManagementScreen() {
 
         {/* История сессий */}
         {history.length > 0 && (
-          <div className="voting-history">
-            <h3 className="admin-section-title">История сессий</h3>
-            <div className="voting-history-list">
-              {history.map((session) => (
-                <div key={session.id} className="admin-list-item">
-                  <div className="admin-list-item__content">
-                    <div className="admin-list-item__title">
-                      {formatDate(session.startedAt)} — {session.endedAt ? formatDate(session.endedAt) : '—'}
+          <section className="voting-history" aria-labelledby="voting-history-title">
+            <h3 id="voting-history-title" className="voting-history__title">История сессий</h3>
+            <ul className="voting-history-list" role="list">
+              {history.map((session) => {
+                const { date, time } = formatSessionDateRange(session.startedAt, session.endedAt);
+                const duration = formatDuration(session.startedAt, session.endedAt ?? undefined);
+                return (
+                  <li key={session.id} className="voting-history-item">
+                    <div className="voting-history-item__main">
+                      <span className="voting-history-item__date">{date}</span>
+                      <span className="voting-history-item__time">{time}</span>
                     </div>
-                    <div className="admin-list-item__subtitle">
-                      Голосов: {session.totalVotes} · Длительность: {formatDuration(session.startedAt, session.endedAt ?? undefined)}
+                    <div className="voting-history-item__meta">
+                      <span className="voting-history-item__votes">{session.totalVotes} голосов</span>
+                      <span className="voting-history-item__sep">·</span>
+                      <span className="voting-history-item__duration">{duration}</span>
                     </div>
-                  </div>
-                  <div className="status-badge status-badge--completed">Завершено</div>
-                </div>
-              ))}
-            </div>
-          </div>
+                    <span className="voting-history-item__badge" aria-label="Сессия завершена">
+                      Завершено
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         )}
       </div>
 
