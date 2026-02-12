@@ -781,6 +781,15 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
       </section>
 
       <section className="section residents">
+        {/* SVG blur сверху — переход от предыдущей секции (как в Лэндинг.svg filter17) */}
+        <svg aria-hidden="true" className="residents-blur-top" viewBox="0 0 509 102" preserveAspectRatio="none">
+          <defs>
+            <filter id="residentsBlurTop" x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="22.6" />
+            </filter>
+          </defs>
+          <rect x="0" y="0" width="509" height="102" fill="#2B2B2B" filter="url(#residentsBlurTop)" />
+        </svg>
         <div className="residents-container">
           <img alt="Резиденты" className="residents-image" src={residentsImage} loading="lazy" decoding="async" />
           <h3 className="residents-subtitle">Резиденты</h3>

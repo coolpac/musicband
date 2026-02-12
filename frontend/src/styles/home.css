@@ -948,6 +948,19 @@
   backface-visibility: hidden;
 }
 
+/* SVG blur сверху — переход от предыдущей секции (без banding, как в Лэндинг.svg) */
+.residents-blur-top {
+  position: absolute;
+  top: -63px;
+  left: 50%;
+  width: 509px;
+  height: 102px;
+  margin-left: -254.5px;
+  pointer-events: none;
+  z-index: 10;
+  overflow: visible;
+}
+
 .residents-container {
   position: relative;
   width: 100vw;
