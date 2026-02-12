@@ -797,10 +797,10 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
           <svg aria-hidden="true" className="residents-blur-bottom" viewBox="0 0 509 97" preserveAspectRatio="none">
             <defs>
               <filter id="residentsBlurBottom" x="-50%" y="-50%" width="200%" height="200%" colorInterpolationFilters="sRGB">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="33.3" />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="24" />
               </filter>
             </defs>
-            <rect x="0" y="0" width="509" height="97" fill="#111111" filter="url(#residentsBlurBottom)" />
+            <rect x="0" y="0" width="509" height="97" fill="#2B2B2B" fillOpacity="0.85" filter="url(#residentsBlurBottom)" />
           </svg>
         </div>
         <button

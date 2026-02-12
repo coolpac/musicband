@@ -971,29 +971,6 @@
   backface-visibility: hidden;
 }
 
-.residents-container::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 50%;
-  background: 
-    radial-gradient(ellipse at center bottom, rgba(0, 0, 0, 0.015) 0%, rgba(0, 0, 0, 0) 50%),
-    linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0) 0%,
-      rgba(0, 0, 0, 0) 60%,
-      rgba(0, 0, 0, 0.01) 80%,
-      rgba(0, 0, 0, 0.02) 90%,
-      rgba(0, 0, 0, 0.03) 100%
-    );
-  backdrop-filter: blur(0.3px);
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  z-index: 2;
-}
-
 /* SVG blur снизу — переход к кнопке (без banding, как в Лэндинг.svg) */
 .residents-blur-bottom {
   position: absolute;
