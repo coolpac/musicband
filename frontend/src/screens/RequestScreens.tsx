@@ -358,8 +358,8 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
             }}
           >
             <span className="request-calendar-no-date__icon">📅</span>
-            <span className="request-calendar-no-date__text">Нет подходящей даты?</span>
-            <span className="request-calendar-no-date__hint">Напишем в Telegram</span>
+            <span className="request-calendar-no-date__text">Ещё не определились с датой?</span>
+            <span className="request-calendar-no-date__hint">Напишите нам в Telegram — подберём вместе</span>
           </button>
         </motion.div>
         )}

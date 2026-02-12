@@ -106,7 +106,6 @@ export class UserBot {
    * Онбординг: вопрос «Если не секрет, кто вы?» с кнопками «Просто Человек» / «Организатор» / «Агент»
    */
   private async sendOnboardingWhoAreYou(chatId: number): Promise<void> {
-    await this.bot.sendMessage(chatId, 'Сбор инфы на старте бота');
     await this.bot.sendMessage(chatId, 'Если не секрет, кто вы?', {
       reply_markup: {
         inline_keyboard: [
@@ -124,7 +123,6 @@ export class UserBot {
   private async sendWelcome(chatId: number): Promise<void> {
     const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
     const welcomeText =
-      '👋 *ПРИВЕТСТВИЕ*\n\n' +
       'Добро пожаловать! Теперь и ты — «В гостях у Лементалия». Располагайся и чувствуй себя как дома.\n' +
       'Cover-группа «ВГУЛ» в твоём распоряжении.\n\n' +
       'Здесь мы познакомимся поближе.\n\n' +

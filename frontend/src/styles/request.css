@@ -273,7 +273,7 @@
    color: rgba(255, 255, 255, 0.3);
  }
 
-/* Кнопка «Нет подходящей даты» — открывает чат с @AnnaKobyak в Telegram */
+/* Кнопка «Ещё не определились с датой» — открывает чат с @AnnaKobyak в Telegram */
 .request-calendar-no-date {
   display: flex;
   flex-direction: column;

@@ -800,7 +800,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                 <feGaussianBlur in="SourceGraphic" stdDeviation="33.3" />
               </filter>
             </defs>
-            <rect x="0" y="0" width="509" height="97" fill="#000000" filter="url(#residentsBlurBottom)" />
+            <rect x="0" y="0" width="509" height="97" fill="#111111" filter="url(#residentsBlurBottom)" />
           </svg>
         </div>
         <button
