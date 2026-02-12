@@ -10,6 +10,7 @@ export * from './ReviewRepository';
 export * from './AgentRepository';
 export * from './ReferralLinkRepository';
 export * from './ReferralEventRepository';
+export * from './OnboardingRepository';
 
 // Экспортируем классы для удобства
 export { PrismaUserRepository } from './UserRepository';
@@ -24,3 +25,4 @@ export { PrismaReviewRepository } from './ReviewRepository';
 export { PrismaAgentRepository } from './AgentRepository';
 export { PrismaReferralLinkRepository } from './ReferralLinkRepository';
 export { PrismaReferralEventRepository } from './ReferralEventRepository';
+export { PrismaOnboardingRepository } from './OnboardingRepository';

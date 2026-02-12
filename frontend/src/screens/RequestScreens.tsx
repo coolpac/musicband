@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { hapticImpact, hapticNotification, hapticSelection } from '../telegram/telegramWebApp';
+import { hapticImpact, hapticNotification, hapticSelection, openTelegramLink } from '../telegram/telegramWebApp';
 import { getBookingFormFromCloud, setBookingFormToCloud, clearBookingFormFromCloud, type BookingFormStorage } from '../telegram/cloudStorage';
 import '../styles/date.css';
 import '../styles/request.css';
@@ -349,6 +349,18 @@ export function RequestCalendarScreen({ onContinue }: RequestCalendarScreenProps
               </motion.button>
             ))}
           </div>
+          <button
+            type="button"
+            className="request-calendar-no-date"
+            onClick={() => {
+              hapticImpact('light');
+              openTelegramLink('https://t.me/AnnaKobyak');
+            }}
+          >
+            <span className="request-calendar-no-date__icon">📅</span>
+            <span className="request-calendar-no-date__text">Нет подходящей даты?</span>
+            <span className="request-calendar-no-date__hint">Напишем в Telegram</span>
+          </button>
         </motion.div>
         )}
         <RequestSelect

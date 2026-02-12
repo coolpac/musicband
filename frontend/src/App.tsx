@@ -142,6 +142,9 @@ export default function App() {
         setCurrentScreen('formats');
         setCurrentFormatId(null);
         window.history.replaceState({}, '', '?screen=formats');
+      } else if (currentScreen === 'form') {
+        setCurrentScreen('calendar');
+        window.history.replaceState({}, '', '?screen=calendar');
       } else {
         setCurrentScreen('home');
         window.history.replaceState({}, '', '?screen=home');

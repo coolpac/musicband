@@ -4,6 +4,7 @@ import { ReferralService } from '../../domain/services/ReferralService';
 import { BookingService } from '../../domain/services/BookingService';
 import { IUserRepository } from '../database/repositories/UserRepository';
 import { IBookingRepository, BookingWithUserAndFormat } from '../database/repositories/BookingRepository';
+import { IOnboardingRepository } from '../database/repositories/OnboardingRepository';
 import { logger } from '../../shared/utils/logger';
 import { prisma } from '../../config/database';
 
@@ -15,7 +16,8 @@ export class BotManager {
     private referralService: ReferralService,
     private bookingService: BookingService,
     private userRepository: IUserRepository,
-    private bookingRepository: IBookingRepository
+    private bookingRepository: IBookingRepository,
+    private onboardingRepository: IOnboardingRepository
   ) {}
 
   getBookingService(): BookingService {
@@ -35,8 +37,8 @@ export class BotManager {
         return;
       }
 
-    // Инициализируем User Bot
-    this.userBot = new UserBot(userBotToken, this.referralService);
+    // Инициализируем User Bot (онбординг «Кто вы?» перед приветствием)
+    this.userBot = new UserBot(userBotToken, this.referralService, this.onboardingRepository);
 
       // Инициализируем Admin Bot
       this.adminBot = new AdminBot(

@@ -16,6 +16,7 @@ import {
   PrismaReviewRepository,
   PrismaReferralLinkRepository,
   PrismaReferralEventRepository,
+  PrismaOnboardingRepository,
 } from '../infrastructure/database/repositories';
 
 import { AuthService } from '../domain/services/AuthService';
@@ -47,6 +48,7 @@ class Container {
   private _reviewRepository?: PrismaReviewRepository;
   private _referralLinkRepository?: PrismaReferralLinkRepository;
   private _referralEventRepository?: PrismaReferralEventRepository;
+  private _onboardingRepository?: PrismaOnboardingRepository;
 
   // Services (singleton instances)
   private _authService?: AuthService;
@@ -144,6 +146,13 @@ class Container {
       this._referralEventRepository = new PrismaReferralEventRepository();
     }
     return this._referralEventRepository;
+  }
+
+  get onboardingRepository(): PrismaOnboardingRepository {
+    if (!this._onboardingRepository) {
+      this._onboardingRepository = new PrismaOnboardingRepository();
+    }
+    return this._onboardingRepository;
   }
 
   // === SERVICES ===

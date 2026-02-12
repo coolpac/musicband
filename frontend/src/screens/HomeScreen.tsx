@@ -816,7 +816,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
         <h2 className="section-title">Наши соц. сети</h2>
         <div className="tile-grid socials-grid">
           <a
-            href="https://t.me/example"
+            href="https://t.me/vgulcover"
             target="_blank"
             rel="noopener noreferrer"
             className="tile social-tile social-tile--telegram"
@@ -825,7 +825,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
               if (isInsideTelegram()) {
                 e.preventDefault();
                 hapticImpact('light');
-                openTelegramLink('https://t.me/example');
+                openTelegramLink('https://t.me/vgulcover');
               }
             }}
           >
@@ -837,7 +837,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
             </span>
           </a>
           <a
-            href="https://vk.com/example"
+            href="https://vk.ru/vgulvgul"
             target="_blank"
             rel="noopener noreferrer"
             className="tile social-tile social-tile--vk"
@@ -852,7 +852,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
             </span>
           </a>
           <a
-            href="https://instagram.com/example"
+            href="https://www.instagram.com/lementaliygroup"
             target="_blank"
             rel="noopener noreferrer"
             className="tile social-tile social-tile--instagram"

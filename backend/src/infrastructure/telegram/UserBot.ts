@@ -1,7 +1,19 @@
+import path from 'path';
+import fs from 'fs';
 import TelegramBot, { Message, CallbackQuery } from 'node-telegram-bot-api';
 import { logger } from '../../shared/utils/logger';
 import { ReferralService } from '../../domain/services/ReferralService';
+import { IOnboardingRepository } from '../database/repositories/OnboardingRepository';
 import { redis } from '../../config/redis';
+
+const REDIS_ONBOARDING_PREFIX = 'onb_pending:';
+const ONBOARDING_TTL = 600; // 10 мин на подтверждение
+
+/** Путь к приветственному видео (при /start). Файл создаётся скриптом scripts/optimize-welcome-video.sh */
+function getWelcomeVideoPath(): string | null {
+  const videoPath = path.join(process.cwd(), 'assets', 'welcome-video', 'welcome.mp4');
+  return fs.existsSync(videoPath) ? videoPath : null;
+}
 
 function getTelegramErrorCode(error: unknown): number | undefined {
   const err = error as any;
@@ -27,13 +39,16 @@ function getTelegramErrorDescription(error: unknown): string | undefined {
 export class UserBot {
   private bot: TelegramBot;
   private referralService: ReferralService;
+  private onboardingRepository: IOnboardingRepository;
 
   constructor(
     token: string,
-    referralService: ReferralService
+    referralService: ReferralService,
+    onboardingRepository: IOnboardingRepository
   ) {
     this.bot = new TelegramBot(token, { polling: true });
     this.referralService = referralService;
+    this.onboardingRepository = onboardingRepository;
 
     this.setupCommands();
     this.setupCallbacks();
@@ -60,29 +75,13 @@ export class UserBot {
           // Обрабатываем реферальную ссылку
           await this.handleReferralLink(chatId, referralCode, msg.from);
         } else {
-          // Обычный старт — приветствие с кнопкой открытия приложения
-          const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
-          const welcomeText =
-            '👋 *ПРИВЕТСТВИЕ*\n\n' +
-            'Добро пожаловать! Теперь и ты — «В гостях у Лементалия». Располагайся и чувствуй себя как дома.\n' +
-            'Cover-группа «ВГУЛ» в твоём распоряжении.\n\n' +
-            'Здесь мы познакомимся поближе.\n\n' +
-            'Ты узнаешь:\n' +
-            '• о наших форматах\n' +
-            '• увидишь наши выступления\n' +
-            '• услышишь, как мы звучим.\n\n' +
-            'А после ты с лёгкостью можешь пригласить нас на своё событие, где мы с огромным удовольствием сделаем его незабываемым, остросюжетным и грандиозным!';
-          await this.bot.sendMessage(chatId, welcomeText, {
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [[
-                {
-                  text: '📱 Открыть приложение',
-                  web_app: { url: miniAppUrl },
-                },
-              ]],
-            },
-          });
+          // Обычный старт: сначала онбординг «Кто вы?», затем приветствие
+          const existing = await this.onboardingRepository.findByTelegramId(BigInt(chatId));
+          if (existing) {
+            await this.sendWelcome(chatId);
+            return;
+          }
+          await this.sendOnboardingWhoAreYou(chatId);
         }
       } catch (error) {
         logger.error('Error handling /start command', { error, chatId: msg.chat.id });
@@ -101,6 +100,62 @@ export class UserBot {
           'Для открытия Mini App нажмите на кнопку меню бота.'
       );
     });
+  }
+
+  /**
+   * Онбординг: вопрос «Если не секрет, кто вы?» с кнопками «Просто Человек» / «Организатор» / «Агент»
+   */
+  private async sendOnboardingWhoAreYou(chatId: number): Promise<void> {
+    await this.bot.sendMessage(chatId, 'Сбор инфы на старте бота');
+    await this.bot.sendMessage(chatId, 'Если не секрет, кто вы?', {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Просто Человек', callback_data: 'onb:person' }],
+          [{ text: 'Организатор', callback_data: 'onb:organizer' }],
+          [{ text: 'Агент', callback_data: 'onb:agent' }],
+        ],
+      },
+    });
+  }
+
+  /**
+   * Приветственное сообщение (с видео, если есть) и кнопка «Открыть приложение»
+   */
+  private async sendWelcome(chatId: number): Promise<void> {
+    const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
+    const welcomeText =
+      '👋 *ПРИВЕТСТВИЕ*\n\n' +
+      'Добро пожаловать! Теперь и ты — «В гостях у Лементалия». Располагайся и чувствуй себя как дома.\n' +
+      'Cover-группа «ВГУЛ» в твоём распоряжении.\n\n' +
+      'Здесь мы познакомимся поближе.\n\n' +
+      'Ты узнаешь:\n' +
+      '• о наших форматах\n' +
+      '• увидишь наши выступления\n' +
+      '• услышишь, как мы звучим.\n\n' +
+      'А после ты с лёгкостью можешь пригласить нас на своё событие, где мы с огромным удовольствием сделаем его незабываемым, остросюжетным и грандиозным!';
+    const keyboard = {
+      reply_markup: {
+        inline_keyboard: [[
+          {
+            text: '📱 Открыть приложение',
+            web_app: { url: miniAppUrl },
+          },
+        ]],
+      },
+    };
+    const welcomeVideoPath = getWelcomeVideoPath();
+    if (welcomeVideoPath) {
+      await this.bot.sendVideo(chatId, welcomeVideoPath, {
+        caption: welcomeText,
+        parse_mode: 'Markdown',
+        ...keyboard,
+      });
+    } else {
+      await this.bot.sendMessage(chatId, welcomeText, {
+        parse_mode: 'Markdown',
+        ...keyboard,
+      });
+    }
   }
 
   /**
@@ -197,10 +252,36 @@ export class UserBot {
         if (!chatId) return;
 
         const data = query.data;
+        await this.bot.answerCallbackQuery(query.id);
+
+        // Онбординг: выбор «Просто Человек» / «Организатор» / «Агент»
+        if (data === 'onb:person' || data === 'onb:organizer' || data === 'onb:agent') {
+          const role = data === 'onb:person' ? 'just_person' : data === 'onb:organizer' ? 'organizer' : 'agent';
+          const key = `${REDIS_ONBOARDING_PREFIX}${chatId}`;
+          await redis.setex(key, ONBOARDING_TTL, role);
+          await this.bot.sendMessage(chatId, 'Точно?', {
+            reply_markup: {
+              inline_keyboard: [[{ text: 'Точно', callback_data: 'onb:confirm' }]],
+            },
+          });
+          return;
+        }
+
+        // Онбординг: подтверждение → сохраняем в БД и отправляем приветствие
+        if (data === 'onb:confirm') {
+          const key = `${REDIS_ONBOARDING_PREFIX}${chatId}`;
+          const role = await redis.get(key);
+          if (!role) {
+            await this.bot.sendMessage(chatId, 'Выбор устарел. Нажмите /start и выберите снова.');
+            return;
+          }
+          await redis.del(key);
+          await this.onboardingRepository.create(BigInt(chatId), role);
+          await this.sendWelcome(chatId);
+          return;
+        }
 
         if (data === 'open_mini_app') {
-          // Открытие Mini App
-          await this.bot.answerCallbackQuery(query.id);
           const miniAppUrl = process.env.MINI_APP_URL || 'https://your-domain.com';
           await this.bot.sendMessage(
             chatId,

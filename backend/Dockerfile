@@ -53,8 +53,9 @@ COPY package.json package-lock.json ./
 COPY prisma ./prisma/
 RUN npm ci --omit=dev && npx prisma generate && npm cache clean --force
 
-# Копируем скомпилированный код
+# Копируем скомпилированный код и статику (приветственное видео для бота)
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/assets ./assets
 
 # Создаём директории для runtime
 RUN mkdir -p uploads/original uploads/webp uploads/avif uploads/thumb \

@@ -297,3 +297,14 @@ model UserActivityLog {
   @@index([actionType])
   @@map("user_activity_logs")
 }
+
+/// Ответы при первом старте бота (до приветственного сообщения): «Кто вы?» → «Просто чел» / «Орг»
+model OnboardingAnswer {
+  id         String   @id @default(uuid())
+  telegramId BigInt   @unique @map("telegram_id")
+  role       String   @map("role") // "just_guy" | "org"
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([telegramId])
+  @@map("onboarding_answers")
+}

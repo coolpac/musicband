@@ -43,6 +43,7 @@ import {
   PrismaReferralLinkRepository,
   PrismaReferralEventRepository,
   PrismaAgentRepository,
+  PrismaOnboardingRepository,
 } from './infrastructure/database/repositories';
 import { BotManager, setBotManager, getBotManager } from './infrastructure/telegram/botManager';
 import { getAllowedOrigins } from './config/cors';
@@ -208,13 +209,21 @@ async function startServer() {
       userRepository
     );
 
+    const onboardingRepository = new PrismaOnboardingRepository();
+
     // Инициализируем Socket.io сервер
     const socketServer = new SocketServer(httpServer, voteService, songService, authService);
     globalThis.socketServer = socketServer;
     logger.info('Socket.io server initialized');
 
     // Инициализируем Telegram Bots
-    const botManager = new BotManager(referralService, bookingService, userRepository, bookingRepository);
+    const botManager = new BotManager(
+      referralService,
+      bookingService,
+      userRepository,
+      bookingRepository,
+      onboardingRepository
+    );
     await botManager.initialize();
     setBotManager(botManager);
     logger.info('Telegram bots initialized');
