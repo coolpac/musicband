@@ -159,6 +159,16 @@ export function openTelegramLink(url: string): void {
   }
 }
 
+/** Открыть внешнюю ссылку из Mini App: в Telegram используем openLink, иначе window.open. */
+export function openExternalLink(url: string): void {
+  const tg = getTelegramWebApp();
+  if (isTelegramWebAppVersionAtLeast('6.1') && tg?.openLink && /^https?:\/\//i.test(url)) {
+    tg.openLink(url);
+    return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 /** start_param из deep link (initDataUnsafe.start_param). */
 export function getStartParam(): string | null {
   return getTelegramWebApp()?.initDataUnsafe?.start_param ?? null;

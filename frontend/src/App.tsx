@@ -32,6 +32,7 @@ type Screen = 'home' | 'nav' | 'calendar' | 'form' | 'success' | 'formats' | 'fo
 type MenuTarget = 'home' | 'formats' | 'live' | 'promo' | 'partners' | 'socials';
 
 export default function App() {
+  const HOME_SCROLL_KEY = 'homeScrollY';
   const searchParams = new URLSearchParams(window.location.search);
   const screenParam = searchParams.get('screen');
   const formatIdParam = searchParams.get('formatId');
@@ -66,6 +67,40 @@ export default function App() {
     localStorage.getItem('auth_token') || localStorage.getItem('admin_token')
   );
   const tg = useTelegramWebApp({ initOnMount: true });
+
+  const saveHomeScroll = () => {
+    try {
+      sessionStorage.setItem(HOME_SCROLL_KEY, String(window.scrollY));
+    } catch {
+      /* ignore storage errors */
+    }
+  };
+
+  const restoreSavedHomeScroll = (): boolean => {
+    try {
+      const raw = sessionStorage.getItem(HOME_SCROLL_KEY);
+      sessionStorage.removeItem(HOME_SCROLL_KEY);
+      if (!raw) return false;
+      const target = parseInt(raw, 10);
+      if (!Number.isFinite(target) || target < 0) return false;
+
+      const restoreWithRetry = (attempt: number) => {
+        const maxTop = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const clampedTop = Math.min(target, maxTop);
+        window.scrollTo({ top: clampedTop, behavior: 'instant' });
+
+        // Если контент ещё дорисовывается (ленивая загрузка/изображения), пробуем ещё раз.
+        if (attempt < 8 && maxTop + 2 < target) {
+          requestAnimationFrame(() => restoreWithRetry(attempt + 1));
+        }
+      };
+
+      requestAnimationFrame(() => restoreWithRetry(0));
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   // Авторизация Mini App через Telegram initData → JWT (cookie + localStorage для сокетов)
   // initData может быть пустой при первом рендере (Telegram заполняет асинхронно) —
@@ -143,25 +178,16 @@ export default function App() {
         setCurrentFormatId(null);
         window.history.replaceState({}, '', '?screen=formats');
       } else if (currentScreen === 'formats') {
-        let savedScroll = '';
-        try {
-          savedScroll = sessionStorage.getItem(HOME_SCROLL_KEY) ?? '';
-          sessionStorage.removeItem(HOME_SCROLL_KEY);
-        } catch {
-          /* ignore */
-        }
         setCurrentScreen('home');
         window.history.replaceState({}, '', '?screen=home');
-        const scrollY = savedScroll ? parseInt(savedScroll, 10) : NaN;
-        setTimeout(() => {
-          if (Number.isFinite(scrollY) && scrollY >= 0) {
-            window.scrollTo({ top: scrollY, behavior: 'instant' });
-          } else {
+        requestAnimationFrame(() => {
+          const restored = restoreSavedHomeScroll();
+          if (!restored) {
             const el = document.getElementById('formats');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             else window.scrollTo({ top: 0, behavior: 'instant' });
           }
-        }, 100);
+        });
       } else if (currentScreen === 'form') {
         setCurrentScreen('calendar');
         window.history.replaceState({}, '', '?screen=calendar');
@@ -419,17 +445,11 @@ export default function App() {
     setRetryTrigger((t) => t + 1);
   };
 
-  const HOME_SCROLL_KEY = 'homeScrollY';
-
   const handleMenuNavigate = (target: MenuTarget) => {
     setMenuOpen(false);
     if (target === 'formats') {
       if (currentScreen === 'home') {
-        try {
-          sessionStorage.setItem(HOME_SCROLL_KEY, String(window.scrollY));
-        } catch {
-          /* ignore */
-        }
+        saveHomeScroll();
       }
       setCurrentScreen('formats');
       setCurrentFormatId(null);
@@ -702,6 +722,12 @@ export default function App() {
         return (
           <HomeScreen
             onMenuOpen={() => setMenuOpen(true)}
+            onGoToFormats={() => {
+              saveHomeScroll();
+              setCurrentScreen('formats');
+              setCurrentFormatId(null);
+              window.history.pushState({}, '', '?screen=formats');
+            }}
             onGoToCalendar={() => {
               setCurrentScreen('calendar');
               window.history.pushState({}, '', '?screen=calendar');

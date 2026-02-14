@@ -26,6 +26,7 @@ declare global {
           [key: string]: unknown;
         };
         openTelegramLink?(url: string): void;
+        openLink?(url: string, options?: { try_instant_view?: boolean; try_browser?: string }): void;
         version: string;
         platform: string;
         colorScheme: 'light' | 'dark';

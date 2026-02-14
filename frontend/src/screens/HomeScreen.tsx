@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { hapticImpact, hapticSelection, openTelegramLink, isInsideTelegram } from '../telegram/telegramWebApp';
+import { hapticImpact, hapticSelection, openTelegramLink, openExternalLink, isInsideTelegram } from '../telegram/telegramWebApp';
 import posterImage from '../assets/figma/poster.webp';
 import promoPlay from '../assets/figma/play-promo.svg';
 import formatImage from '../assets/figma/format.webp';
@@ -39,11 +39,12 @@ import { liveVideos, promoVideos, whyDesktopSlides, whyMobileSlides } from '../d
 
 type HomeScreenProps = {
   onMenuOpen?: () => void;
+  onGoToFormats?: () => void;
   onGoToCalendar?: () => void;
   onGoToResidents?: () => void;
 };
 
-export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents }: HomeScreenProps) {
+export default function HomeScreen({ onMenuOpen, onGoToFormats, onGoToCalendar, onGoToResidents }: HomeScreenProps) {
   const [posters, setPosters] = useState<Poster[]>([]);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [isPromoPlaying, setIsPromoPlaying] = useState(false);
@@ -201,9 +202,8 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
 
   const handleFormatsNavigate = useCallback(() => {
     hapticImpact('light');
-    window.history.pushState({}, '', '?screen=formats');
-    window.dispatchEvent(new Event('pushstate'));
-  }, []);
+    onGoToFormats?.();
+  }, [onGoToFormats]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -308,7 +308,7 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                 if (isInsideTelegram() && /^https:\/\/t\.me\//i.test(url)) {
                   openTelegramLink(url);
                 } else {
-                  window.open(url, '_blank', 'noopener,noreferrer');
+                  openExternalLink(url);
                 }
               };
               return (

@@ -209,20 +209,6 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
                         >
                           <h1 className="format-title">{format.name}</h1>
                           <p className="format-short-description">{format.shortDescription}</p>
-                          <div className="format-pagination-inline">
-                            {formats.map((_, index) => (
-                              <button
-                                key={index}
-                                aria-label={`Формат ${index + 1}`}
-                                aria-selected={activeIndex === index}
-                                className={`format-dot-inline${
-                                  activeIndex === index ? ' format-dot-inline--active' : ''
-                                }`}
-                                onClick={() => handleDotClick(index)}
-                                type="button"
-                              />
-                            ))}
-                          </div>
                         </motion.div>
                       </AnimatePresence>
                     </div>
@@ -231,6 +217,23 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
               );
               })}
             </div>
+
+            {formats.length > 1 && (
+              <div className="format-pagination-fixed">
+                {formats.map((_, index) => (
+                  <button
+                    key={index}
+                    aria-label={`Формат ${index + 1}`}
+                    aria-selected={activeIndex === index}
+                    className={`format-dot-inline${
+                      activeIndex === index ? ' format-dot-inline--active' : ''
+                    }`}
+                    onClick={() => handleDotClick(index)}
+                    type="button"
+                  />
+                ))}
+              </div>
+            )}
 
             {activeFormat && (
               <button
