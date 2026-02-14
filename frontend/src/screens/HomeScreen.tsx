@@ -298,8 +298,19 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
         <div className="section posters">
           <h2 className="section-title">Афиша</h2>
           <div className="poster-slider" onScroll={posterSlider.handleScroll} ref={posterSlider.sliderRef}>
-            {posters.map((poster, index) => {
+            {posters.map((poster) => {
               const imgProps = getOptimizedImageProps(poster.imageUrl) ?? { src: posterImage };
+              const hasLink = Boolean(poster.link?.trim());
+              const handlePosterLink = () => {
+                const url = poster.link?.trim();
+                if (!url) return;
+                hapticImpact('light');
+                if (isInsideTelegram() && /^https:\/\/t\.me\//i.test(url)) {
+                  openTelegramLink(url);
+                } else {
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                }
+              };
               return (
                 <article className="card poster-card poster-slide" key={poster.id}>
                   <div className="card-media">
@@ -315,6 +326,15 @@ export default function HomeScreen({ onMenuOpen, onGoToCalendar, onGoToResidents
                   <div className="card-body glass">
                     <h3 className="card-title">{poster.title}</h3>
                     {poster.description && <p className="card-text">{poster.description}</p>}
+                    {hasLink && (
+                      <button
+                        type="button"
+                        className="poster-card__link-btn"
+                        onClick={handlePosterLink}
+                      >
+                        Перейти
+                      </button>
+                    )}
                   </div>
                 </article>
               );

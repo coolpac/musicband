@@ -142,6 +142,14 @@ export default function App() {
         setCurrentScreen('formats');
         setCurrentFormatId(null);
         window.history.replaceState({}, '', '?screen=formats');
+      } else if (currentScreen === 'formats') {
+        setCurrentScreen('home');
+        window.history.replaceState({}, '', '?screen=home');
+        setTimeout(() => {
+          const el = document.getElementById('formats');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          else window.scrollTo({ top: 0, behavior: 'instant' });
+        }, 100);
       } else if (currentScreen === 'form') {
         setCurrentScreen('calendar');
         window.history.replaceState({}, '', '?screen=calendar');
