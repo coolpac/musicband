@@ -279,11 +279,9 @@ export default function HomeScreen({ onMenuOpen, onGoToFormats, onGoToCalendar, 
         <div className="hero-text-block">
           <div className="hero-copy">
             <p className="hero-headline">
-            <strong>Обязательный элемент</strong> любого
+            Мы не обещаем райского наслаждения.
             <br />
-            мероприятия и причина
-            <br />
-            <strong>незабываемых эмоций</strong> публики
+            Но около того.
           </p>
           <p className="hero-subline">cover-группа</p>
           <p className="hero-title">“В ГОСТЯХ У ЛЕМЕНТАЛИЯ”</p>
