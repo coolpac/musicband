@@ -32,7 +32,6 @@ type Screen = 'home' | 'nav' | 'calendar' | 'form' | 'success' | 'formats' | 'fo
 type MenuTarget = 'home' | 'formats' | 'live' | 'promo' | 'partners' | 'socials';
 
 export default function App() {
-  const HOME_SCROLL_KEY = 'homeScrollY';
   const searchParams = new URLSearchParams(window.location.search);
   const screenParam = searchParams.get('screen');
   const formatIdParam = searchParams.get('formatId');
@@ -67,40 +66,6 @@ export default function App() {
     localStorage.getItem('auth_token') || localStorage.getItem('admin_token')
   );
   const tg = useTelegramWebApp({ initOnMount: true });
-
-  const saveHomeScroll = () => {
-    try {
-      sessionStorage.setItem(HOME_SCROLL_KEY, String(window.scrollY));
-    } catch {
-      /* ignore storage errors */
-    }
-  };
-
-  const restoreSavedHomeScroll = (): boolean => {
-    try {
-      const raw = sessionStorage.getItem(HOME_SCROLL_KEY);
-      sessionStorage.removeItem(HOME_SCROLL_KEY);
-      if (!raw) return false;
-      const target = parseInt(raw, 10);
-      if (!Number.isFinite(target) || target < 0) return false;
-
-      const restoreWithRetry = (attempt: number) => {
-        const maxTop = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-        const clampedTop = Math.min(target, maxTop);
-        window.scrollTo({ top: clampedTop, behavior: 'instant' });
-
-        // Если контент ещё дорисовывается (ленивая загрузка/изображения), пробуем ещё раз.
-        if (attempt < 8 && maxTop + 2 < target) {
-          requestAnimationFrame(() => restoreWithRetry(attempt + 1));
-        }
-      };
-
-      requestAnimationFrame(() => restoreWithRetry(0));
-      return true;
-    } catch {
-      return false;
-    }
-  };
 
   // Авторизация Mini App через Telegram initData → JWT (cookie + localStorage для сокетов)
   // initData может быть пустой при первом рендере (Telegram заполняет асинхронно) —
@@ -173,6 +138,14 @@ export default function App() {
     tg.showBackButton();
     const cleanup = tg.onBackButtonClick(() => {
       hapticImpact('light');
+      // Используем history.back(), чтобы браузер сам восстановил позицию скролла (как в focusApp).
+      if (window.history.length > 1) {
+        if (currentScreen === 'format-detail' || currentScreen === 'formats' || currentScreen === 'form' || currentScreen === 'calendar' || currentScreen === 'nav' || currentScreen === 'success' || currentScreen === 'review-form' || currentScreen === 'review-success' || currentScreen === 'voting' || currentScreen === 'voting-results' || currentScreen === 'winning-song' || currentScreen === 'song-lyrics' || currentScreen === 'residents') {
+          window.history.back();
+          return;
+        }
+      }
+      // Прямой заход на подстраницу (history.length === 1) — переключаем на home вручную.
       if (currentScreen === 'format-detail') {
         setCurrentScreen('formats');
         setCurrentFormatId(null);
@@ -181,12 +154,9 @@ export default function App() {
         setCurrentScreen('home');
         window.history.replaceState({}, '', '?screen=home');
         requestAnimationFrame(() => {
-          const restored = restoreSavedHomeScroll();
-          if (!restored) {
-            const el = document.getElementById('formats');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            else window.scrollTo({ top: 0, behavior: 'instant' });
-          }
+          const el = document.getElementById('formats');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          else window.scrollTo({ top: 0, behavior: 'instant' });
         });
       } else if (currentScreen === 'form') {
         setCurrentScreen('calendar');
@@ -247,14 +217,10 @@ export default function App() {
         } else {
           setCurrentFormatId(null);
         }
-        // Прокрутка к началу при переходе на home — через rAF чтобы не блокировать paint
-        if (screenParam === 'home' || !screenParam) {
-          requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-        }
+        // Не вызываем scrollTo(0): при history.back() браузер сам восстанавливает позицию скролла.
       } else {
         setCurrentScreen('home');
         setCurrentFormatId(null);
-        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       }
     };
 
@@ -448,9 +414,6 @@ export default function App() {
   const handleMenuNavigate = (target: MenuTarget) => {
     setMenuOpen(false);
     if (target === 'formats') {
-      if (currentScreen === 'home') {
-        saveHomeScroll();
-      }
       setCurrentScreen('formats');
       setCurrentFormatId(null);
       window.history.pushState({}, '', '?screen=formats');
@@ -483,9 +446,13 @@ export default function App() {
   };
 
   const handleFormatBack = () => {
-    setCurrentScreen('formats');
-    setCurrentFormatId(null);
-    window.history.pushState({}, '', '?screen=formats');
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      setCurrentScreen('formats');
+      setCurrentFormatId(null);
+      window.history.replaceState({}, '', '?screen=formats');
+    }
   };
 
   const handleRequestPrice = () => {
@@ -723,7 +690,6 @@ export default function App() {
           <HomeScreen
             onMenuOpen={() => setMenuOpen(true)}
             onGoToFormats={() => {
-              saveHomeScroll();
               setCurrentScreen('formats');
               setCurrentFormatId(null);
               window.history.pushState({}, '', '?screen=formats');
