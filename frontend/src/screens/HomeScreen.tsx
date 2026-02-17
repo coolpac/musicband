@@ -695,19 +695,19 @@ export default function HomeScreen({ onMenuOpen, onGoToFormats, onGoToCalendar, 
           </div>
           <div className="card-body glass">
             <p className="format-item">
-              <strong>MAIN SHOW</strong> — основной формат «В гостях у Лементалия»
+              <strong>Main show</strong> — основной формат. Полный состав из 5 музыкантов.
             </p>
             <p className="format-item">
-              <strong>Дуэт</strong> вокал + гитара и беквокал
+              <strong>Welcome</strong> — встреча гостей или гастропаузы. Полный состав.
             </p>
             <p className="format-item">
-              <strong>«Welcome»</strong> Как полным составом так и дуэтом
+              <strong>Дуэт</strong> — подходит под формат велком. Гитара или клавиши с вокалом.
             </p>
             <p className="format-item">
-              <strong>«Welcome 2.0»</strong> Пример текста для описания
+              <strong>Виолончель</strong> — дополнительно к основному составу 1 музыкант.
             </p>
             <p className="format-item">
-              <strong>Виолончель</strong> Пример текста для описания
+              <strong>90-ые. «По-новее русские»</strong> — СКОРО!
             </p>
           </div>
         </article>

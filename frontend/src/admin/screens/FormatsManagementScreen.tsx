@@ -324,21 +324,6 @@ export default function FormatsManagementScreen() {
                     {format.shortDescription}
                   </p>
 
-                  {format.suitableFor.length > 0 && (
-                    <div className="format-card__tags">
-                      {format.suitableFor.slice(0, 3).map((item, index) => (
-                        <span key={index} className="format-tag">
-                          {item}
-                        </span>
-                      ))}
-                      {format.suitableFor.length > 3 && (
-                        <span className="format-tag">
-                          +{format.suitableFor.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
                   <div className="format-card__actions">
                     <button
                       className="admin-btn admin-btn--secondary"

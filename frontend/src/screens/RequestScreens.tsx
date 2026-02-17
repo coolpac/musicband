@@ -131,7 +131,7 @@ export function NavigationScreen() {
         <div className="request-nav-links">
           <button type="button">Главная</button>
           <button type="button">Форматы</button>
-          <button type="button">Лайф</button>
+          <button type="button">Live</button>
           <button type="button">Промо</button>
           <button type="button">Партнеры</button>
           <button type="button">Наши соц. сети</button>

@@ -17,7 +17,7 @@ type MenuItem = {
 const menuItems: MenuItem[] = [
   { label: 'Главная', target: 'home' },
   { label: 'Форматы', target: 'formats' },
-  { label: 'Лайф', target: 'live' },
+  { label: 'Live', target: 'live' },
   { label: 'Промо', target: 'promo' },
   { label: 'Партнеры', target: 'partners' },
   { label: 'Наши соц. сети', target: 'socials' },
