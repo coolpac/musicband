@@ -106,14 +106,14 @@ export default function FormatDetailScreen({
           {format.status === 'available' && (
             <>
               {format.description && (
-                <motion.p
+                <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.2 }}
-                  className="format-detail-description"
+                  className="format-detail-card glass"
                 >
-                  {format.description}
-                </motion.p>
+                  <p className="format-detail-description">{format.description}</p>
+                </motion.div>
               )}
 
               {/* Показываем performers только если есть реальные данные (name и role заполнены) */}
