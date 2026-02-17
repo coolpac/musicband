@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
@@ -32,6 +32,7 @@ type Screen = 'home' | 'nav' | 'calendar' | 'form' | 'success' | 'formats' | 'fo
 type MenuTarget = 'home' | 'formats' | 'live' | 'promo' | 'partners' | 'socials';
 
 export default function App() {
+  const HOME_SCROLL_KEY = 'homeScrollY';
   const searchParams = new URLSearchParams(window.location.search);
   const screenParam = searchParams.get('screen');
   const formatIdParam = searchParams.get('formatId');
@@ -66,6 +67,66 @@ export default function App() {
     localStorage.getItem('auth_token') || localStorage.getItem('admin_token')
   );
   const tg = useTelegramWebApp({ initOnMount: true });
+  const currentScreenRef = useRef<Screen>(initialScreen);
+
+  useEffect(() => {
+    currentScreenRef.current = currentScreen;
+  }, [currentScreen]);
+
+  const saveHomeScroll = () => {
+    try {
+      sessionStorage.setItem(HOME_SCROLL_KEY, String(window.scrollY));
+    } catch {
+      /* ignore storage errors */
+    }
+  };
+
+  const restoreSavedHomeScroll = (): boolean => {
+    try {
+      const raw = sessionStorage.getItem(HOME_SCROLL_KEY);
+      sessionStorage.removeItem(HOME_SCROLL_KEY);
+      if (!raw) return false;
+      const target = parseInt(raw, 10);
+      if (!Number.isFinite(target) || target < 0) return false;
+
+      const restoreWithRetry = (attempt: number, lastMaxTop: number, stableFrames: number) => {
+        const maxTop = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+        const nextStableFrames = Math.abs(maxTop - lastMaxTop) < 2 ? stableFrames + 1 : 0;
+        const canReachTarget = maxTop + 2 >= target;
+
+        // Ждём, пока высота страницы стабилизируется, и скроллим один раз —
+        // так не возникает серии визуальных "подпрыгиваний" при дозагрузке контента.
+        if (!canReachTarget && attempt < 14 && nextStableFrames < 2) {
+          requestAnimationFrame(() => restoreWithRetry(attempt + 1, maxTop, nextStableFrames));
+          return;
+        }
+
+        const clampedTop = Math.min(target, maxTop);
+        window.scrollTo({ top: clampedTop, behavior: 'instant' });
+      };
+
+      requestAnimationFrame(() => restoreWithRetry(0, -1, 0));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const goHomeFromFormats = (historyMode: 'push' | 'replace' = 'push') => {
+    setCurrentScreen('home');
+    setCurrentFormatId(null);
+    if (historyMode === 'replace') {
+      window.history.replaceState({}, '', '?screen=home');
+    } else {
+      window.history.pushState({}, '', '?screen=home');
+    }
+    requestAnimationFrame(() => {
+      const restored = restoreSavedHomeScroll();
+      if (!restored) {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    });
+  };
 
   // Авторизация Mini App через Telegram initData → JWT (cookie + localStorage для сокетов)
   // initData может быть пустой при первом рендере (Telegram заполняет асинхронно) —
@@ -138,26 +199,12 @@ export default function App() {
     tg.showBackButton();
     const cleanup = tg.onBackButtonClick(() => {
       hapticImpact('light');
-      // Используем history.back(), чтобы браузер сам восстановил позицию скролла (как в focusApp).
-      if (window.history.length > 1) {
-        if (currentScreen === 'format-detail' || currentScreen === 'formats' || currentScreen === 'form' || currentScreen === 'calendar' || currentScreen === 'nav' || currentScreen === 'success' || currentScreen === 'review-form' || currentScreen === 'review-success' || currentScreen === 'voting' || currentScreen === 'voting-results' || currentScreen === 'winning-song' || currentScreen === 'song-lyrics' || currentScreen === 'residents') {
-          window.history.back();
-          return;
-        }
-      }
-      // Прямой заход на подстраницу (history.length === 1) — переключаем на home вручную.
       if (currentScreen === 'format-detail') {
         setCurrentScreen('formats');
         setCurrentFormatId(null);
         window.history.replaceState({}, '', '?screen=formats');
       } else if (currentScreen === 'formats') {
-        setCurrentScreen('home');
-        window.history.replaceState({}, '', '?screen=home');
-        requestAnimationFrame(() => {
-          const el = document.getElementById('formats');
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          else window.scrollTo({ top: 0, behavior: 'instant' });
-        });
+        goHomeFromFormats('replace');
       } else if (currentScreen === 'form') {
         setCurrentScreen('calendar');
         window.history.replaceState({}, '', '?screen=calendar');
@@ -217,10 +264,22 @@ export default function App() {
         } else {
           setCurrentFormatId(null);
         }
-        // Не вызываем scrollTo(0): при history.back() браузер сам восстанавливает позицию скролла.
+        // При возврате из форматов восстанавливаем сохранённый скролл home.
+        if (screenParam === 'home' || !screenParam) {
+          requestAnimationFrame(() => {
+            const fromScreen = currentScreenRef.current;
+            if (fromScreen === 'formats' || fromScreen === 'format-detail') {
+              const restored = restoreSavedHomeScroll();
+              if (!restored) window.scrollTo({ top: 0, behavior: 'instant' });
+            } else {
+              window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+          });
+        }
       } else {
         setCurrentScreen('home');
         setCurrentFormatId(null);
+        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       }
     };
 
@@ -414,6 +473,9 @@ export default function App() {
   const handleMenuNavigate = (target: MenuTarget) => {
     setMenuOpen(false);
     if (target === 'formats') {
+      if (currentScreen === 'home') {
+        saveHomeScroll();
+      }
       setCurrentScreen('formats');
       setCurrentFormatId(null);
       window.history.pushState({}, '', '?screen=formats');
@@ -446,13 +508,9 @@ export default function App() {
   };
 
   const handleFormatBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      setCurrentScreen('formats');
-      setCurrentFormatId(null);
-      window.history.replaceState({}, '', '?screen=formats');
-    }
+    setCurrentScreen('formats');
+    setCurrentFormatId(null);
+    window.history.pushState({}, '', '?screen=formats');
   };
 
   const handleRequestPrice = () => {
@@ -500,8 +558,7 @@ export default function App() {
           <FormatScreen
             onFormatClick={handleFormatClick}
             onBack={() => {
-              setCurrentScreen('home');
-              window.history.pushState({}, '', '?screen=home');
+              goHomeFromFormats('push');
             }}
           />
         );
@@ -690,6 +747,7 @@ export default function App() {
           <HomeScreen
             onMenuOpen={() => setMenuOpen(true)}
             onGoToFormats={() => {
+              saveHomeScroll();
               setCurrentScreen('formats');
               setCurrentFormatId(null);
               window.history.pushState({}, '', '?screen=formats');
