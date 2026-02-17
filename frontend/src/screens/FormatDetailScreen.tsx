@@ -105,28 +105,7 @@ export default function FormatDetailScreen({
 
           {format.status === 'available' && (
             <>
-              {format.suitableFor && format.suitableFor.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className="format-detail-card glass"
-                >
-                  <h2 className="format-detail-card-title">Где подходит?</h2>
-                  <ul className="format-detail-list">
-                    {format.suitableFor.map((item, index) => (
-                      <li key={index} className="format-detail-list-item">
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                  {format.description && (
-                    <p className="format-detail-description">{format.description}</p>
-                  )}
-                </motion.div>
-              )}
-
-              {!format.suitableFor && format.description && (
+              {format.description && (
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

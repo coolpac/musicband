@@ -47,14 +47,15 @@
 }
 
 .format-card__content {
-  padding: 20px;
+  padding: 16px;
 }
 
 .format-card__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px 12px;
   margin-bottom: 12px;
 }
 
@@ -64,6 +65,7 @@
   gap: 8px;
   min-width: 0;
   flex: 1;
+  min-width: 0;
 }
 
 .format-card__title {
@@ -92,6 +94,7 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  flex-basis: auto;
 }
 
 .format-badge {
@@ -225,11 +228,55 @@
   transform: scale(0.95);
 }
 
+/* Mobile: шапка карточки в две строки, чтобы бейдж и «#2» не слипались */
+@media (max-width: 480px) {
+  .formats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .format-card__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .format-card__title-wrap {
+    flex: none;
+  }
+
+  .format-card__header-right {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .format-card__content {
+    padding: 14px;
+  }
+
+  .format-card__title {
+    font-size: 18px;
+  }
+
+  .format-card__actions {
+    flex-direction: column;
+  }
+
+  .format-card__actions .admin-btn {
+    width: 100%;
+  }
+}
+
 /* Responsive */
 @media (min-width: 768px) {
   .formats-grid {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 20px;
+  }
+
+  .format-card__content {
+    padding: 20px;
   }
 
   .performer-input {
