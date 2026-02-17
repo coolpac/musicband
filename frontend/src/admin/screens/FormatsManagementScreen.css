@@ -58,12 +58,39 @@
   margin-bottom: 12px;
 }
 
+.format-card__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
 .format-card__title {
   font-size: 20px;
   font-weight: 700;
   color: var(--admin-text);
   margin: 0;
   flex: 1;
+}
+
+.format-order-pill {
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid rgba(147, 197, 253, 0.35);
+  flex-shrink: 0;
+}
+
+.format-card__header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .format-badge {
@@ -84,6 +111,34 @@
 .format-badge--coming-soon {
   background: rgba(251, 191, 36, 0.2);
   color: var(--admin-warning);
+}
+
+.format-order-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.format-order-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--admin-text);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.format-order-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.format-order-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .format-card__description {

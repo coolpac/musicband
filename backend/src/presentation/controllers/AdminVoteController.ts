@@ -4,10 +4,14 @@ import { StartSessionDto } from '../../application/dto/vote.dto';
 import { logger } from '../../shared/utils/logger';
 import { getSocketServer } from '../../app';
 import { getBotManager } from '../../infrastructure/telegram/botManager';
-import { generateVotingSessionQR } from '../../infrastructure/utils/qrcode';
+import { generateVotingSessionQR, normalizeTelegramBotUsername } from '../../infrastructure/utils/qrcode';
 
 export class AdminVoteController {
   constructor(private voteService: VoteService) {}
+
+  private getVotingBotUsername(): string {
+    return normalizeTelegramBotUsername(process.env.TELEGRAM_USER_BOT_USERNAME, 'vgulbot');
+  }
 
   /**
    * GET /api/admin/votes/sessions
@@ -98,7 +102,7 @@ export class AdminVoteController {
       // QR ведёт на t.me/bot?start=vote_SESSION — пользователь сначала попадает в бота,
       // бот сохраняет sessionId в Redis и отправляет web_app кнопку,
       // Mini App проверяет pending session и открывает голосование
-      const botUsername = process.env.TELEGRAM_USER_BOT_USERNAME || 'your_bot';
+      const botUsername = this.getVotingBotUsername();
       const qrData = await generateVotingSessionQR(session.id, botUsername);
 
       res.status(201).json({
@@ -133,7 +137,7 @@ export class AdminVoteController {
       }
 
       // Генерируем QR-код (ведёт на бота: t.me/bot?start=vote_SESSION)
-      const botUsername = process.env.TELEGRAM_USER_BOT_USERNAME || 'your_bot';
+      const botUsername = this.getVotingBotUsername();
       const qrData = await generateVotingSessionQR(session.id, botUsername);
 
       res.json({
@@ -191,6 +195,58 @@ export class AdminVoteController {
       res.json({
         success: true,
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/admin/votes/sessions/:id/qr/send-to-admins
+   * Отправить QR-код сессии всем администраторам в Telegram Admin Bot.
+   */
+  async sendSessionQRToAdmins(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const session = await this.voteService.getSessionById(id);
+      if (!session) {
+        res.status(404).json({
+          success: false,
+          error: { message: 'Session not found', code: 'NOT_FOUND' },
+        });
+        return;
+      }
+
+      const botUsername = this.getVotingBotUsername();
+      const qrData = await generateVotingSessionQR(session.id, botUsername);
+      if (!qrData.qrCodeBuffer) {
+        res.status(500).json({
+          success: false,
+          error: { message: 'QR buffer not generated', code: 'QR_GENERATION_FAILED' },
+        });
+        return;
+      }
+
+      const botManager = getBotManager();
+      const adminBot = botManager?.getAdminBot();
+      if (!adminBot) {
+        res.status(503).json({
+          success: false,
+          error: { message: 'Admin bot is not initialized', code: 'ADMIN_BOT_UNAVAILABLE' },
+        });
+        return;
+      }
+
+      await adminBot.notifyVotingQrToAdmins({
+        sessionId: session.id,
+        deepLink: qrData.deepLink,
+        qrPngBuffer: qrData.qrCodeBuffer,
+        requestedByAdminId: req.user?.userId,
+      });
+
+      res.json({
+        success: true,
+        data: { sent: true },
       });
     } catch (error) {
       next(error);

@@ -41,7 +41,7 @@ export class PrismaFormatRepository implements IFormatRepository {
 
   async findAll(): Promise<Format[]> {
     return this.client.format.findMany({
-      orderBy: { name: 'asc' },
+      orderBy: [{ order: 'asc' }, { name: 'asc' }],
     });
   }
 

@@ -61,6 +61,7 @@ export default function FormatsManagementScreen() {
   const [showModal, setShowModal] = useState(false);
   const [editingFormat, setEditingFormat] = useState<Format | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState<FormatInput>({
@@ -78,11 +79,17 @@ export default function FormatsManagementScreen() {
     loadFormats();
   }, []);
 
+  const sortFormats = (list: Format[]) =>
+    [...list].sort((a, b) => {
+      if (a.order !== b.order) return a.order - b.order;
+      return a.name.localeCompare(b.name, 'ru');
+    });
+
   const loadFormats = async () => {
     setIsLoading(true);
     try {
       const list = await getAdminFormats();
-      setFormats(list.map(fromApi));
+      setFormats(sortFormats(list.map(fromApi)));
     } catch (error) {
       console.warn('Backend unavailable, showing demo data:', error);
       setFormats([]);
@@ -185,6 +192,44 @@ export default function FormatsManagementScreen() {
     setFormData({ ...formData, imageUrl: url });
   };
 
+  const handleMoveFormat = async (formatId: string, direction: 'up' | 'down') => {
+    if (isReordering) return;
+
+    const currentIndex = formats.findIndex((f) => f.id === formatId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= formats.length) return;
+
+    const reordered = [...formats];
+    const temp = reordered[currentIndex];
+    reordered[currentIndex] = reordered[targetIndex];
+    reordered[targetIndex] = temp;
+
+    const normalized = reordered.map((format, index) => ({
+      ...format,
+      order: index + 1,
+    }));
+
+    const changed = normalized.filter((format, index) => format.order !== formats[index].order);
+    setFormats(normalized);
+    setIsReordering(true);
+
+    try {
+      await Promise.all(
+        changed.map((format) =>
+          updateAdminFormat(format.id, { order: format.order })
+        )
+      );
+    } catch (error) {
+      console.error('Error reordering formats:', error);
+      toast.error('Не удалось сохранить порядок форматов');
+      await loadFormats();
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="admin-screen">
@@ -211,7 +256,7 @@ export default function FormatsManagementScreen() {
           </div>
         ) : (
           <div className="formats-grid">
-            {formats.map((format) => {
+            {formats.map((format, index) => {
               const imgProps = getOptimizedImageProps(format.imageUrl);
               return (
               <div key={format.id} className="format-card">
@@ -241,13 +286,38 @@ export default function FormatsManagementScreen() {
 
                 <div className="format-card__content">
                   <div className="format-card__header">
-                    <h3 className="format-card__title">{format.name}</h3>
-                    <span
-                      className={`format-badge format-badge--${format.status}`}
-                      title={format.status === 'available' ? 'Показывается в бронировании' : 'Скрыт из бронирования'}
-                    >
-                      {format.status === 'available' ? 'В бронировании' : 'Скрыт'}
-                    </span>
+                    <div className="format-card__title-wrap">
+                      <h3 className="format-card__title">{format.name}</h3>
+                      <span className="format-order-pill">#{format.order}</span>
+                    </div>
+                    <div className="format-card__header-right">
+                      <span
+                        className={`format-badge format-badge--${format.status}`}
+                        title={format.status === 'available' ? 'Показывается в бронировании' : 'Скрыт из бронирования'}
+                      >
+                        {format.status === 'available' ? 'В бронировании' : 'Скрыт'}
+                      </span>
+                      <div className="format-order-controls">
+                        <button
+                          type="button"
+                          className="format-order-btn"
+                          aria-label={`Поднять ${format.name}`}
+                          disabled={isReordering || index === 0}
+                          onClick={() => handleMoveFormat(format.id, 'up')}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="format-order-btn"
+                          aria-label={`Опустить ${format.name}`}
+                          disabled={isReordering || index === formats.length - 1}
+                          onClick={() => handleMoveFormat(format.id, 'down')}
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <p className="format-card__description">

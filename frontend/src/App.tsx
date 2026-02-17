@@ -73,9 +73,16 @@ export default function App() {
     currentScreenRef.current = currentScreen;
   }, [currentScreen]);
 
+  const getPageScrollTop = () =>
+    Math.max(
+      window.scrollY || 0,
+      document.documentElement?.scrollTop || 0,
+      document.body?.scrollTop || 0
+    );
+
   const saveHomeScroll = () => {
     try {
-      sessionStorage.setItem(HOME_SCROLL_KEY, String(window.scrollY));
+      sessionStorage.setItem(HOME_SCROLL_KEY, String(getPageScrollTop()));
     } catch {
       /* ignore storage errors */
     }
@@ -84,28 +91,30 @@ export default function App() {
   const restoreSavedHomeScroll = (): boolean => {
     try {
       const raw = sessionStorage.getItem(HOME_SCROLL_KEY);
-      sessionStorage.removeItem(HOME_SCROLL_KEY);
       if (!raw) return false;
       const target = parseInt(raw, 10);
       if (!Number.isFinite(target) || target < 0) return false;
 
-      const restoreWithRetry = (attempt: number, lastMaxTop: number, stableFrames: number) => {
+      const RETRY_DELAYS_MS = [0, 40, 120, 260, 480, 760, 1100];
+      const attemptRestore = (attempt: number) => {
         const maxTop = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-        const nextStableFrames = Math.abs(maxTop - lastMaxTop) < 2 ? stableFrames + 1 : 0;
-        const canReachTarget = maxTop + 2 >= target;
+        const clampedTop = Math.min(target, maxTop);
+        window.scrollTo({ top: clampedTop, behavior: 'auto' });
 
-        // Ждём, пока высота страницы стабилизируется, и скроллим один раз —
-        // так не возникает серии визуальных "подпрыгиваний" при дозагрузке контента.
-        if (!canReachTarget && attempt < 14 && nextStableFrames < 2) {
-          requestAnimationFrame(() => restoreWithRetry(attempt + 1, maxTop, nextStableFrames));
+        const currentTop = getPageScrollTop();
+        const reachedTarget = Math.abs(currentTop - clampedTop) <= 2;
+        const canReachOriginalTarget = maxTop + 2 >= target;
+        const isLastAttempt = attempt >= RETRY_DELAYS_MS.length - 1;
+
+        if ((reachedTarget && canReachOriginalTarget) || isLastAttempt) {
+          sessionStorage.removeItem(HOME_SCROLL_KEY);
           return;
         }
 
-        const clampedTop = Math.min(target, maxTop);
-        window.scrollTo({ top: clampedTop, behavior: 'instant' });
+        window.setTimeout(() => attemptRestore(attempt + 1), RETRY_DELAYS_MS[attempt + 1]);
       };
 
-      requestAnimationFrame(() => restoreWithRetry(0, -1, 0));
+      requestAnimationFrame(() => attemptRestore(0));
       return true;
     } catch {
       return false;
@@ -123,7 +132,7 @@ export default function App() {
     requestAnimationFrame(() => {
       const restored = restoreSavedHomeScroll();
       if (!restored) {
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        window.scrollTo({ top: 0, behavior: 'auto' });
       }
     });
   };
@@ -211,7 +220,7 @@ export default function App() {
       } else {
         setCurrentScreen('home');
         window.history.replaceState({}, '', '?screen=home');
-        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
       }
     });
     return () => {
@@ -270,16 +279,16 @@ export default function App() {
             const fromScreen = currentScreenRef.current;
             if (fromScreen === 'formats' || fromScreen === 'format-detail') {
               const restored = restoreSavedHomeScroll();
-              if (!restored) window.scrollTo({ top: 0, behavior: 'instant' });
+              if (!restored) window.scrollTo({ top: 0, behavior: 'auto' });
             } else {
-              window.scrollTo({ top: 0, behavior: 'instant' });
+              window.scrollTo({ top: 0, behavior: 'auto' });
             }
           });
         }
       } else {
         setCurrentScreen('home');
         setCurrentFormatId(null);
-        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
       }
     };
 

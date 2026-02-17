@@ -48,6 +48,7 @@ router.post(
 );
 router.post('/sessions/:id/end', adminVoteController.endSession.bind(adminVoteController));
 router.get('/sessions/:id/qr', adminVoteController.getSessionQR.bind(adminVoteController));
+router.post('/sessions/:id/qr/send-to-admins', adminVoteController.sendSessionQRToAdmins.bind(adminVoteController));
 router.get('/stats', adminVoteController.getStats.bind(adminVoteController));
 router.get('/history', adminVoteController.getHistory.bind(adminVoteController));
 

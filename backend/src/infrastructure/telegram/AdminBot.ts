@@ -952,6 +952,46 @@ export class AdminBot {
   }
 
   /**
+   * Отправка QR-кода сессии голосования всем админам.
+   */
+  async notifyVotingQrToAdmins(payload: {
+    sessionId: string;
+    deepLink: string;
+    qrPngBuffer: Buffer;
+    requestedByAdminId?: string;
+  }): Promise<void> {
+    const caption =
+      '🗳️ QR-код для голосования\n\n' +
+      `Сессия: ${payload.sessionId}\n` +
+      `Ссылка: ${payload.deepLink}\n` +
+      (payload.requestedByAdminId ? `Инициатор: #${payload.requestedByAdminId}` : '');
+
+    for (const adminId of this.adminTelegramIds) {
+      try {
+        await this.bot.sendPhoto(
+          adminId,
+          payload.qrPngBuffer,
+          {
+            caption,
+            reply_markup: {
+              inline_keyboard: [[{ text: 'Открыть ссылку', url: payload.deepLink }]],
+            },
+          },
+          {
+            filename: `voting-qr-${payload.sessionId}.png`,
+            contentType: 'image/png',
+          }
+        );
+      } catch (err: unknown) {
+        const code = getTelegramErrorCode(err);
+        if (code !== 403) {
+          logger.error('Error sending voting QR to admin', { error: err, adminId, sessionId: payload.sessionId });
+        }
+      }
+    }
+  }
+
+  /**
    * Обновление списка админов
    */
   async refreshAdmins(): Promise<void> {

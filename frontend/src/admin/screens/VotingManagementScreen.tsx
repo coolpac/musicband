@@ -43,6 +43,7 @@ export default function VotingManagementScreen() {
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [qrDeepLink, setQrDeepLink] = useState<string>('');
+  const [isSendingQrToAdmins, setIsSendingQrToAdmins] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -180,21 +181,43 @@ export default function VotingManagementScreen() {
   };
 
   const handleDownloadQR = async () => {
-    if (!qrCodeDataUrl) return;
-
     try {
-      const res = await fetch(qrCodeDataUrl);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      let dataUrl = qrCodeDataUrl;
+      let deepLink = qrDeepLink;
+      if ((!dataUrl || !deepLink) && activeSession) {
+        const data = await adminVoteService.getSessionQR(activeSession.id);
+        dataUrl = data.qrCode?.dataURL ?? '';
+        deepLink = data.qrCode?.deepLink ?? '';
+        if (dataUrl) setQrCodeDataUrl(dataUrl);
+        if (deepLink) setQrDeepLink(deepLink);
+      }
+
+      if (!dataUrl) {
+        toast.error('Не удалось получить QR-код');
+        return;
+      }
+
       const link = document.createElement('a');
-      link.href = url;
+      link.href = dataUrl;
       link.download = `voting-qr-${activeSession?.id || 'session'}.png`;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
       toast.success('QR-код скачан');
+
+      if (activeSession) {
+        setIsSendingQrToAdmins(true);
+        try {
+          await adminVoteService.sendSessionQRToAdmins(activeSession.id);
+          toast.success('QR-код отправлен администраторам в Telegram');
+        } catch (sendError) {
+          console.error('Error sending QR to admins:', sendError);
+          toast.error('QR скачан, но отправить в Telegram не удалось');
+        } finally {
+          setIsSendingQrToAdmins(false);
+        }
+      }
     } catch (error) {
       console.error('Error downloading QR:', error);
       toast.error('Не удалось скачать QR-код');
@@ -235,6 +258,7 @@ export default function VotingManagementScreen() {
       try {
         const data = await adminVoteService.getSessionQR(activeSession.id);
         deepLink = data.qrCode?.deepLink ?? '';
+        if (deepLink) setQrDeepLink(deepLink);
       } catch {
         deepLink = '';
       }
@@ -247,7 +271,8 @@ export default function VotingManagementScreen() {
     if (ok) {
       toast.success('Ссылка Telegram скопирована');
     } else {
-      toast.error('Не удалось скопировать (разрешите доступ к буферу или скопируйте ссылку вручную)');
+      window.prompt('Скопируйте ссылку вручную:', deepLink);
+      toast.error('Автокопирование недоступно: скопируйте ссылку вручную');
     }
   };
 
@@ -502,8 +527,12 @@ export default function VotingManagementScreen() {
           )}
 
           <div className="admin-form">
-            <button className="admin-btn admin-btn--full" onClick={() => { hapticImpact('light'); handleDownloadQR(); }}>
-              Скачать PNG
+            <button
+              className="admin-btn admin-btn--full"
+              disabled={isSendingQrToAdmins}
+              onClick={() => { hapticImpact('light'); handleDownloadQR(); }}
+            >
+              {isSendingQrToAdmins ? 'Отправляем в Telegram…' : 'Скачать QR'}
             </button>
             <button className="admin-btn admin-btn--secondary admin-btn--full" onClick={() => { hapticImpact('light'); handleCopyLink(); }}>
               Копировать ссылку

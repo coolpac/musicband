@@ -76,6 +76,10 @@ export async function getSessionQR(id: string): Promise<{ qrCode: { dataURL: str
   return data;
 }
 
+export async function sendSessionQRToAdmins(id: string): Promise<{ sent: boolean }> {
+  return apiPost<{ sent: boolean }>(`${BASE}/sessions/${id}/qr/send-to-admins`);
+}
+
 export async function getStats(sessionId?: string): Promise<VoteStats> {
   const url = sessionId ? `${BASE}/stats?sessionId=${encodeURIComponent(sessionId)}` : `${BASE}/stats`;
   return apiGet<VoteStats>(url);

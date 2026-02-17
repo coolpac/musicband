@@ -11,6 +11,28 @@ export interface QRCodeOptions {
 }
 
 /**
+ * Нормализует username Telegram-бота:
+ * - удаляет @
+ * - поддерживает ввод вида https://t.me/username
+ * - fallback на значение по умолчанию
+ */
+export function normalizeTelegramBotUsername(
+  raw: string | undefined | null,
+  fallback = 'vgulbot'
+): string {
+  const value = (raw || '').trim();
+  if (!value) return fallback;
+
+  const cleaned = value
+    .replace(/^https?:\/\/t\.me\//i, '')
+    .replace(/^t\.me\//i, '')
+    .replace(/^@+/, '')
+    .replace(/\/+$/, '');
+
+  return cleaned || fallback;
+}
+
+/**
  * Генерация QR-кода в виде Data URL (для отображения в браузере)
  */
 export async function generateQRCodeDataURL(
@@ -68,7 +90,8 @@ export function generateTelegramBotDeepLink(
   botUsername: string,
   startParam: string
 ): string {
-  return `https://t.me/${botUsername}?start=${startParam}`;
+  const username = normalizeTelegramBotUsername(botUsername);
+  return `https://t.me/${username}?start=${startParam}`;
 }
 
 /**
@@ -83,7 +106,8 @@ export function generateTelegramMiniAppDirectLink(
   appName: string,
   startParam: string
 ): string {
-  return `https://t.me/${botUsername}/${appName}?startapp=${startParam}`;
+  const username = normalizeTelegramBotUsername(botUsername);
+  return `https://t.me/${username}/${appName}?startapp=${startParam}`;
 }
 
 /**
