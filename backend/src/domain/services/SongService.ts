@@ -1,4 +1,8 @@
-import { ISongRepository, CreateSongData, UpdateSongData } from '../../infrastructure/database/repositories/SongRepository';
+import {
+  ISongRepository,
+  CreateSongData,
+  UpdateSongData,
+} from '../../infrastructure/database/repositories/SongRepository';
 import { NotFoundError, ValidationError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
 import { LIMITS, CACHE_TTL } from '../../shared/constants';
@@ -68,7 +72,7 @@ export class SongService {
   async updateSong(id: string, data: UpdateSongData) {
     await this.getSongById(id);
     const updated = await this.songRepository.update(id, data);
-    
+
     // Инвалидируем кеш если изменилась активность
     if (data.isActive !== undefined) {
       await this.invalidateActiveSongsCache();

@@ -40,7 +40,7 @@ export async function connectRedis(): Promise<void> {
   }
 }
 
-export async function disconnectRedis(): Promise<void> {
+export function disconnectRedis(): void {
   intentionalDisconnect = true;
   redis.disconnect();
   logger.info('Redis disconnected');

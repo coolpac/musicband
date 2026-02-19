@@ -4,11 +4,18 @@
  */
 function getAllowedOrigins(): string[] {
   const origins = process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map((s) => s.trim()).filter(Boolean)
+    ? process.env.FRONTEND_URL.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
     : [];
 
   if (process.env.NODE_ENV !== 'production') {
-    origins.push('http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000');
+    origins.push(
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+      'http://127.0.0.1:3000'
+    );
   }
 
   return origins;

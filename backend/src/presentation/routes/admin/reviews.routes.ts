@@ -1,7 +1,11 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { AdminReviewController } from '../../controllers/AdminReviewController';
 import { ReviewService } from '../../../domain/services/ReviewService';
-import { PrismaReviewRepository, PrismaUserRepository } from '../../../infrastructure/database/repositories';
+import {
+  PrismaReviewRepository,
+  PrismaUserRepository,
+} from '../../../infrastructure/database/repositories';
 import { authenticate, requireAdmin } from '../../middleware/auth';
 import { AuthService } from '../../../domain/services/AuthService';
 import { redis } from '../../../config/redis';
@@ -26,13 +30,13 @@ const authService = new AuthService(
 );
 
 // Все маршруты требуют авторизацию админа
-router.use(authenticate(authService));
+router.use(asyncHandler(authenticate(authService)));
 router.use(requireAdmin);
 
 // Применяем rate limiting для админских endpoints
-router.use(adminRateLimiter);
+router.use(asyncHandler(adminRateLimiter));
 
-router.get('/', adminReviewController.getAllReviews.bind(adminReviewController));
-router.delete('/:id', adminReviewController.deleteReview.bind(adminReviewController));
+router.get('/', asyncHandler(adminReviewController.getAllReviews.bind(adminReviewController)));
+router.delete('/:id', asyncHandler(adminReviewController.deleteReview.bind(adminReviewController)));
 
 export default router;

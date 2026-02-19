@@ -2,7 +2,10 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import type Redis from 'ioredis';
-import { IUserRepository, CreateUserData } from '../../infrastructure/database/repositories/UserRepository';
+import {
+  IUserRepository,
+  CreateUserData,
+} from '../../infrastructure/database/repositories/UserRepository';
 import { validateInitData } from '../../shared/utils/telegram';
 import { UnauthorizedError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
@@ -75,24 +78,26 @@ export class AuthService {
     const telegramUser = initData.user;
     const telegramId = BigInt(telegramUser.id);
 
-    // Ищем или создаем пользователя
-    let user = await this.userRepository.findByTelegramId(telegramId);
+    // Ищем или создаём пользователя (findOrCreate предотвращает duplicate key при race condition)
+    const createData: CreateUserData = {
+      telegramId,
+      username: telegramUser.username,
+      firstName: telegramUser.first_name,
+      lastName: telegramUser.last_name,
+      role: USER_ROLES.USER, // По умолчанию user, админ назначается вручную
+    };
 
-    if (!user) {
-      // Создаем нового пользователя
-      const createData: CreateUserData = {
-        telegramId,
-        username: telegramUser.username,
-        firstName: telegramUser.first_name,
-        lastName: telegramUser.last_name,
-        role: USER_ROLES.USER, // По умолчанию user, админ назначается вручную
-      };
+    const { user: foundOrCreated, created } =
+      await this.userRepository.findOrCreateByTelegramId(createData);
+    let user = foundOrCreated;
 
-      user = await this.userRepository.create(createData);
-      logger.info('New user created from Telegram', { userId: user.id, telegramId: telegramUser.id });
+    if (created) {
+      logger.info('New user created from Telegram', {
+        userId: user.id,
+        telegramId: telegramUser.id,
+      });
 
       // Отправляем уведомление админам о новом пользователе
-      // Импортируем динамически, чтобы избежать циклических зависимостей
       try {
         const { getBotManager } = await import('../../infrastructure/telegram/botManager');
         const botManager = getBotManager();
@@ -105,7 +110,6 @@ export class AuthService {
           });
         }
       } catch (error) {
-        // Игнорируем ошибки уведомлений, чтобы не блокировать регистрацию
         logger.warn('Failed to send new user notification', { error });
       }
     } else {
@@ -231,7 +235,7 @@ export class AuthService {
   async revokeToken(token: string): Promise<void> {
     if (!this.redis) return;
     try {
-      const decoded = jwt.decode(token) as JWTPayload & { exp?: number } | null;
+      const decoded = jwt.decode(token) as (JWTPayload & { exp?: number }) | null;
       if (!decoded?.jti || typeof decoded.exp !== 'number') return;
       const ttlSeconds = Math.max(0, Math.floor(decoded.exp - Date.now() / 1000));
       if (ttlSeconds <= 0) return;

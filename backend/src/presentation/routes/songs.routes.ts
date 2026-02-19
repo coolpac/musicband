@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { SongController } from '../controllers/SongController';
 import { SongService } from '../../domain/services/SongService';
 import { PrismaSongRepository } from '../../infrastructure/database/repositories/SongRepository';
@@ -12,8 +13,20 @@ const songService = new SongService(songRepository);
 const songController = new SongController(songService);
 
 // Публичные маршруты с rate limiting
-router.get('/', publicApiRateLimiter, songController.getAllSongs.bind(songController));
-router.get('/:id', publicApiRateLimiter, songController.getSongById.bind(songController));
-router.get('/:id/lyrics', publicApiRateLimiter, songController.getSongLyrics.bind(songController));
+router.get(
+  '/',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(songController.getAllSongs.bind(songController))
+);
+router.get(
+  '/:id',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(songController.getSongById.bind(songController))
+);
+router.get(
+  '/:id/lyrics',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(songController.getSongLyrics.bind(songController))
+);
 
 export default router;

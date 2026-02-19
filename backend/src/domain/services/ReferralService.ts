@@ -156,7 +156,7 @@ export class ReferralService {
   async createReferralEvent(
     userId: string,
     eventType: 'booking' | 'vote',
-    metadata?: any
+    metadata?: Record<string, unknown>
   ) {
     const user = await this.userRepository.findById(userId);
     if (!user || !user.referrerId) {
@@ -198,12 +198,15 @@ export class ReferralService {
   /**
    * Получение событий агента
    */
-  async getAgentEvents(agentId: string, options?: {
-    page?: number;
-    limit?: number;
-    eventType?: 'click' | 'registration' | 'booking' | 'vote';
-    status?: 'pending' | 'confirmed' | 'rejected';
-  }) {
+  async getAgentEvents(
+    agentId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      eventType?: 'click' | 'registration' | 'booking' | 'vote';
+      status?: 'pending' | 'confirmed' | 'rejected';
+    }
+  ) {
     await this.agentRepository.findById(agentId);
     return this.referralEventRepository.findByAgentId(agentId, options);
   }

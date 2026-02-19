@@ -44,7 +44,7 @@ export class PrismaSongRepository implements ISongRepository {
 
   async findAll(options?: FindSongsOptions): Promise<Song[]> {
     const where = options?.isActive !== undefined ? { isActive: options.isActive } : {};
-    
+
     const orderBy: Record<string, string> = {};
     if (options?.orderBy) {
       orderBy[options.orderBy] = options.orderDirection || 'asc';
@@ -90,7 +90,7 @@ export class PrismaSongRepository implements ISongRepository {
       isActive: data.isActive || false,
       orderIndex: data.orderIndex || 0,
     };
-    
+
     if (data.coverUrl !== undefined && data.coverUrl !== '') {
       createData.coverUrl = data.coverUrl;
     }
@@ -102,13 +102,21 @@ export class PrismaSongRepository implements ISongRepository {
     }
 
     return this.client.song.create({
-      data: createData as any,
+      data: {
+        title: data.title,
+        artist: data.artist,
+        coverUrl: data.coverUrl || undefined,
+        artistImageUrl: data.artistImageUrl || undefined,
+        lyrics: data.lyrics,
+        isActive: data.isActive ?? false,
+        orderIndex: data.orderIndex ?? 0,
+      },
     });
   }
 
   async update(id: string, data: UpdateSongData): Promise<Song> {
     const updateData: Record<string, unknown> = {};
-    
+
     if (data.title !== undefined) updateData.title = data.title;
     if (data.artist !== undefined) updateData.artist = data.artist;
     if (data.coverUrl !== undefined) updateData.coverUrl = data.coverUrl;
@@ -133,7 +141,7 @@ export class PrismaSongRepository implements ISongRepository {
     }
 
     const updateData: Record<string, unknown> = {};
-    
+
     if (data.title !== undefined) updateData.title = data.title;
     if (data.artist !== undefined) updateData.artist = data.artist;
     if (data.coverUrl !== undefined) updateData.coverUrl = data.coverUrl;

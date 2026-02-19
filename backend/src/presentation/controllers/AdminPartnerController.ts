@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { PartnerService } from '../../domain/services/PartnerService';
-import { CreatePartnerDto, UpdatePartnerDto, ReorderPartnersDto } from '../../application/dto/partner.dto';
+import {
+  CreatePartnerDto,
+  UpdatePartnerDto,
+  ReorderPartnersDto,
+} from '../../application/dto/partner.dto';
 import { logger } from '../../shared/utils/logger';
 
 export class AdminPartnerController {

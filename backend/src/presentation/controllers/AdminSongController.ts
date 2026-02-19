@@ -72,7 +72,7 @@ export class AdminSongController {
         if (song.isActive) {
           await socketServer.broadcastSongsUpdate();
         } else {
-          await socketServer.broadcastSongToggled({
+          socketServer.broadcastSongToggled({
             id: song.id,
             title: song.title,
             artist: song.artist,
@@ -126,7 +126,7 @@ export class AdminSongController {
       // Рассылаем событие через Socket.io
       const socketServer = getSocketServer();
       if (socketServer) {
-        await socketServer.broadcastSongToggled({
+        socketServer.broadcastSongToggled({
           id: song.id,
           title: song.title,
           artist: song.artist,

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { AdminSongController } from '../../controllers/AdminSongController';
 import { SongService } from '../../../domain/services/SongService';
 import { PrismaSongRepository } from '../../../infrastructure/database/repositories/SongRepository';
@@ -29,16 +30,24 @@ const authService = new AuthService(
 );
 
 // Все маршруты требуют авторизацию админа
-router.use(authenticate(authService));
+router.use(asyncHandler(authenticate(authService)));
 router.use(requireAdmin);
 
 // Применяем rate limiting для админских endpoints
-router.use(adminRateLimiter);
+router.use(asyncHandler(adminRateLimiter));
 
-router.get('/', adminSongController.getAllSongs.bind(adminSongController));
-router.post('/', validate(CreateSongSchema), adminSongController.createSong.bind(adminSongController));
-router.put('/:id', validate(UpdateSongSchema), adminSongController.updateSong.bind(adminSongController));
-router.delete('/:id', adminSongController.deleteSong.bind(adminSongController));
-router.post('/:id/toggle', adminSongController.toggleSong.bind(adminSongController));
+router.get('/', asyncHandler(adminSongController.getAllSongs.bind(adminSongController)));
+router.post(
+  '/',
+  validate(CreateSongSchema),
+  asyncHandler(adminSongController.createSong.bind(adminSongController))
+);
+router.put(
+  '/:id',
+  validate(UpdateSongSchema),
+  asyncHandler(adminSongController.updateSong.bind(adminSongController))
+);
+router.delete('/:id', asyncHandler(adminSongController.deleteSong.bind(adminSongController)));
+router.post('/:id/toggle', asyncHandler(adminSongController.toggleSong.bind(adminSongController)));
 
 export default router;

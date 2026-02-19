@@ -12,7 +12,10 @@ export interface IVoteRepository {
   // Voting Sessions (start/end делаются в VoteService через prisma.$transaction)
   findActiveSession(): Promise<VotingSession | null>;
   findSessionById(id: string): Promise<VotingSession | null>;
-  getSessionHistory(page: number, limit: number): Promise<{ sessions: VotingSession[]; total: number }>;
+  getSessionHistory(
+    page: number,
+    limit: number
+  ): Promise<{ sessions: VotingSession[]; total: number }>;
 }
 
 export interface CreateVoteData {
@@ -99,10 +102,7 @@ export class PrismaVoteRepository implements IVoteRepository {
     }
 
     // Подсчет общего количества голосов
-    const totalVotes = aggregatedResults.reduce(
-      (sum, result) => sum + result._count.id,
-      0
-    );
+    const totalVotes = aggregatedResults.reduce((sum, result) => sum + result._count.id, 0);
 
     // Формируем результаты с процентами
     const results: VoteResult[] = aggregatedResults.map((result) => ({
@@ -130,7 +130,10 @@ export class PrismaVoteRepository implements IVoteRepository {
     });
   }
 
-  async getSessionHistory(page: number, limit: number): Promise<{ sessions: VotingSession[]; total: number }> {
+  async getSessionHistory(
+    page: number,
+    limit: number
+  ): Promise<{ sessions: VotingSession[]; total: number }> {
     const skip = (page - 1) * limit;
 
     const [sessions, total] = await Promise.all([

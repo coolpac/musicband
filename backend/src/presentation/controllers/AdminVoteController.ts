@@ -4,7 +4,10 @@ import { StartSessionDto } from '../../application/dto/vote.dto';
 import { logger } from '../../shared/utils/logger';
 import { getSocketServer } from '../../app';
 import { getBotManager } from '../../infrastructure/telegram/botManager';
-import { generateVotingSessionQR, normalizeTelegramBotUsername } from '../../infrastructure/utils/qrcode';
+import {
+  generateVotingSessionQR,
+  normalizeTelegramBotUsername,
+} from '../../infrastructure/utils/qrcode';
 
 export class AdminVoteController {
   constructor(private voteService: VoteService) {}
@@ -86,7 +89,7 @@ export class AdminVoteController {
       // Рассылаем событие через Socket.io
       const socketServer = getSocketServer();
       if (socketServer) {
-        await socketServer.broadcastSessionStarted({
+        socketServer.broadcastSessionStarted({
           id: session.id,
           startedAt: session.startedAt,
         });
@@ -166,7 +169,7 @@ export class AdminVoteController {
       // Рассылаем событие через Socket.io
       const socketServer = getSocketServer();
       if (socketServer) {
-        await socketServer.broadcastSessionEnded({
+        socketServer.broadcastSessionEnded({
           sessionId: id,
           results: result.finalResults.map((r) => ({
             song: { id: r.songId },
@@ -181,14 +184,16 @@ export class AdminVoteController {
       // Уведомления проголосовавшим через бота (fire-and-forget)
       const botManager = getBotManager();
       if (botManager && result.winningSong && result.voterTelegramIds.length > 0) {
-        botManager
+        void botManager
           .notifyVotingWinner(result.voterTelegramIds, result.winningSong, id)
-          .catch((err) => logger.error('Failed to notify voters', { err, sessionId: id }));
+          .catch((err: unknown) => logger.error('Failed to notify voters', { err, sessionId: id }));
       }
 
+      const adminUser = req.user;
+      const adminId = adminUser ? adminUser.userId : undefined;
       logger.info('Voting session ended by admin', {
         sessionId: id,
-        adminId: req.user?.userId,
+        adminId,
         totalVoters: result.totalVoters,
       });
 
@@ -282,10 +287,7 @@ export class AdminVoteController {
         ? await this.voteService.getSessionById(sessionId)
         : await this.voteService.getActiveSession();
 
-      const totalVoters =
-        session?.isActive
-          ? results.totalVotes
-          : (session?.totalVoters || 0);
+      const totalVoters = session?.isActive ? results.totalVotes : session?.totalVoters || 0;
 
       res.json({
         success: true,

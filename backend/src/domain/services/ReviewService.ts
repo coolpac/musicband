@@ -1,4 +1,7 @@
-import { IReviewRepository, FindReviewsOptions } from '../../infrastructure/database/repositories/ReviewRepository';
+import {
+  IReviewRepository,
+  FindReviewsOptions,
+} from '../../infrastructure/database/repositories/ReviewRepository';
 import { IUserRepository } from '../../infrastructure/database/repositories/UserRepository';
 import { NotFoundError, ValidationError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
@@ -41,7 +44,9 @@ export class ReviewService {
 
     // Валидация текста
     if (data.text && data.text.length > LIMITS.MAX_REVIEW_TEXT_LENGTH) {
-      throw new ValidationError(`Review text cannot exceed ${LIMITS.MAX_REVIEW_TEXT_LENGTH} characters`);
+      throw new ValidationError(
+        `Review text cannot exceed ${LIMITS.MAX_REVIEW_TEXT_LENGTH} characters`
+      );
     }
 
     const review = await this.reviewRepository.create({

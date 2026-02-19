@@ -1,6 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { BookingService } from '../../domain/services/BookingService';
-import { UpdateBookingStatusDto, UpdateBookingIncomeDto, CompleteBookingDto, BlockDateDto } from '../../application/dto/booking.dto';
+import {
+  UpdateBookingStatusDto,
+  UpdateBookingIncomeDto,
+  CompleteBookingDto,
+  BlockDateDto,
+} from '../../application/dto/booking.dto';
 import { logger } from '../../shared/utils/logger';
 import { getBotManager } from '../../infrastructure/telegram/botManager';
 import { ValidationError } from '../../shared/errors';
@@ -151,16 +156,18 @@ export class AdminBookingController {
       const botManager = getBotManager();
       // Отправляем запрос отзыва при "Выполнено" (включая повторную отправку, если нужно).
       // Важно: сообщение отправляет UserBot — пользователь должен иметь диалог с ботом.
-      if (botManager && (updated as any).user?.telegramId) {
-        const userTelegramId = (updated as any).user.telegramId;
+      const userTelegramId = updated.user?.telegramId;
+      if (botManager && userTelegramId !== undefined && userTelegramId !== null) {
         const userBot = botManager.getUserBot();
+        const telegramIdStr =
+          typeof userTelegramId === 'bigint' ? userTelegramId.toString() : String(userTelegramId);
         if (userBot) {
           try {
-            const result = await userBot.sendReviewRequest(userTelegramId.toString(), {
+            const result = await userBot.sendReviewRequest(telegramIdStr, {
               bookingId: updated.id,
               bookingDate: formatDateInTimezone(updated.bookingDate),
-              formatName: (updated as any).format?.name ?? undefined,
-              fullName: (updated as any).fullName ?? '',
+              formatName: updated.format?.name ?? undefined,
+              fullName: updated.fullName ?? '',
             });
             reviewRequestSent = result.sent;
             if (!result.sent) {
@@ -171,14 +178,14 @@ export class AdminBookingController {
             // Но если что-то пойдёт не так — не блокируем «Выполнено».
             logger.warn('Review request send threw unexpectedly', {
               bookingId: id,
-              telegramId: userTelegramId?.toString?.() ?? String(userTelegramId),
+              telegramId: telegramIdStr,
               error: err,
             });
           }
         } else {
           logger.warn('UserBot not initialized, review request not sent', {
             bookingId: id,
-            telegramId: userTelegramId?.toString?.() ?? String(userTelegramId),
+            telegramId: telegramIdStr,
           });
         }
       }

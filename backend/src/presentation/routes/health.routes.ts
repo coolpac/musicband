@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { asyncHandler } from '../../shared/utils/asyncHandler';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../../config/database';
@@ -11,9 +12,7 @@ const uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), ms)
-    ),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
   ]);
 }
 
@@ -44,16 +43,21 @@ function checkDiskSpace(): { status: 'ok' | 'low'; freeGB: number } {
       fs.mkdirSync(dir, { recursive: true });
     }
     interface FsWithStatFs {
-      statfsSync?(path: string): { bsize?: number; frsize?: number; bavail?: number; bfree?: number };
+      statfsSync?(path: string): {
+        bsize?: number;
+        frsize?: number;
+        bavail?: number;
+        bfree?: number;
+      };
     }
-    const statfsSync = (fs as FsWithStatFs).statfsSync;
+    const statfsSync = (fs as FsWithStatFs).statfsSync?.bind(fs);
     if (typeof statfsSync !== 'function') {
       return { status: 'ok', freeGB: 0 };
     }
     const stats = statfsSync(dir);
     const bsize = Number(stats.bsize ?? stats.frsize ?? 4096);
     const bavail = Number(stats.bavail ?? stats.bfree ?? 0);
-    const freeGB = (bavail * bsize) / (1024 ** 3);
+    const freeGB = (bavail * bsize) / 1024 ** 3;
     return {
       status: freeGB < DISK_LOW_GB ? 'low' : 'ok',
       freeGB: Math.round(freeGB * 100) / 100,
@@ -90,14 +94,12 @@ async function getHealth(_req: Request, res: Response): Promise<void> {
   const checks = { database, redis: redisCheck, diskSpace };
   const status = getOverallStatus(checks);
 
-  res
-    .status(status === 'healthy' ? 200 : 503)
-    .json({
-      status,
-      timestamp: new Date().toISOString(),
-      uptime: Math.floor(process.uptime()),
-      checks,
-    });
+  res.status(status === 'healthy' ? 200 : 503).json({
+    status,
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    checks,
+  });
 }
 
 /**
@@ -105,10 +107,7 @@ async function getHealth(_req: Request, res: Response): Promise<void> {
  * 200 только когда DB и Redis подключены, без деталей
  */
 async function getReady(_req: Request, res: Response): Promise<void> {
-  const [database, redisCheck] = await Promise.all([
-    checkDatabase(),
-    checkRedis(),
-  ]);
+  const [database, redisCheck] = await Promise.all([checkDatabase(), checkRedis()]);
   const ready = database.status === 'up' && redisCheck.status === 'up';
   res.status(ready ? 200 : 503).json({ ready });
 }
@@ -122,8 +121,8 @@ function getLive(_req: Request, res: Response): void {
 }
 
 const router = Router();
-router.get('/', getHealth);
-router.get('/ready', getReady);
-router.get('/live', getLive);
+router.get('/', asyncHandler(getHealth));
+router.get('/ready', asyncHandler(getReady));
+router.get('/live', asyncHandler(getLive));
 
 export default router;

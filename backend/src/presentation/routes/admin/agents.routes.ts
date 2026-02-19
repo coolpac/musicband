@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { AdminAgentController } from '../../controllers/AdminAgentController';
 import { AgentService } from '../../../domain/services/AgentService';
 import { ReferralService } from '../../../domain/services/ReferralService';
@@ -47,16 +48,25 @@ const authService = new AuthService(
 );
 
 // Все маршруты требуют авторизацию админа
-router.use(authenticate(authService));
+router.use(asyncHandler(authenticate(authService)));
 router.use(requireAdmin);
 
 // Применяем rate limiting для админских endpoints
-router.use(adminRateLimiter);
+router.use(asyncHandler(adminRateLimiter));
 
-router.get('/', adminAgentController.getAllAgents.bind(adminAgentController));
-router.post('/', adminAgentController.createAgent.bind(adminAgentController));
-router.put('/:id/status', adminAgentController.updateAgentStatus.bind(adminAgentController));
-router.get('/:id/stats', adminAgentController.getAgentStats.bind(adminAgentController));
-router.get('/:id/events', adminAgentController.getAgentEvents.bind(adminAgentController));
+router.get('/', asyncHandler(adminAgentController.getAllAgents.bind(adminAgentController)));
+router.post('/', asyncHandler(adminAgentController.createAgent.bind(adminAgentController)));
+router.put(
+  '/:id/status',
+  asyncHandler(adminAgentController.updateAgentStatus.bind(adminAgentController))
+);
+router.get(
+  '/:id/stats',
+  asyncHandler(adminAgentController.getAgentStats.bind(adminAgentController))
+);
+router.get(
+  '/:id/events',
+  asyncHandler(adminAgentController.getAgentEvents.bind(adminAgentController))
+);
 
 export default router;

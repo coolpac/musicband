@@ -86,10 +86,7 @@ export async function generateQRCodeBuffer(
  * Генерация deep link для Telegram бота (команда /start)
  * Формат: https://t.me/{bot_username}?start={start_param}
  */
-export function generateTelegramBotDeepLink(
-  botUsername: string,
-  startParam: string
-): string {
+export function generateTelegramBotDeepLink(botUsername: string, startParam: string): string {
   const username = normalizeTelegramBotUsername(botUsername);
   return `https://t.me/${username}?start=${startParam}`;
 }

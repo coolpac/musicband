@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { AgentController } from '../controllers/AgentController';
 import { AgentService } from '../../domain/services/AgentService';
 import { ReferralService } from '../../domain/services/ReferralService';
@@ -49,18 +50,34 @@ const authService = new AuthService(
 );
 
 // Все маршруты требуют авторизацию агента
-router.use(authenticate(authService));
+router.use(asyncHandler(authenticate(authService)));
 // Проверка роли agent будет в контроллере через agentService.getAgentByUserId
 
-router.get('/profile', publicApiRateLimiter, agentController.getProfile.bind(agentController));
-router.get('/links', publicApiRateLimiter, agentController.getLinks.bind(agentController));
+router.get(
+  '/profile',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(agentController.getProfile.bind(agentController))
+);
+router.get(
+  '/links',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(agentController.getLinks.bind(agentController))
+);
 router.post(
   '/links',
-  referralRateLimiter, // Лимит для создания ссылок
+  asyncHandler(referralRateLimiter),
   validate(CreateReferralLinkSchema),
-  agentController.createLink.bind(agentController)
+  asyncHandler(agentController.createLink.bind(agentController))
 );
-router.get('/stats', publicApiRateLimiter, agentController.getStats.bind(agentController));
-router.get('/events', publicApiRateLimiter, agentController.getEvents.bind(agentController));
+router.get(
+  '/stats',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(agentController.getStats.bind(agentController))
+);
+router.get(
+  '/events',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(agentController.getEvents.bind(agentController))
+);
 
 export default router;

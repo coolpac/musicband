@@ -76,7 +76,7 @@ export class CacheService {
 
         logger.debug('Cache pattern deleted', {
           pattern,
-          keysDeleted: keysToDelete.length
+          keysDeleted: keysToDelete.length,
         });
       }
     } catch (error) {
@@ -117,7 +117,8 @@ export const CACHE_KEYS = {
   ACTIVE_SONGS: 'songs:active',
   VOTE_SESSION_ACTIVE: (sessionId: string) => `votes:session:${sessionId}:active`,
   VOTE_RESULTS: (sessionId: string) => `votes:session:${sessionId}:results`,
-  BLOCKED_DATES: (month?: string) => (month ? `bookings:blocked-dates:${month}` : 'bookings:blocked-dates'),
+  BLOCKED_DATES: (month?: string) =>
+    month ? `bookings:blocked-dates:${month}` : 'bookings:blocked-dates',
   /** Кеш результата getAvailableDates (dates + blockedDates) по месяцу */
   AVAILABLE_DATES: (month: string) => `bookings:available:${month}`,
   /** Кеш календаря админки (getCalendar) по месяцу */

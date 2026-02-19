@@ -14,7 +14,11 @@ export class AuthController {
     try {
       const { initData, startParam } = req.body as TelegramAuthDto & { startParam?: string };
 
-      const result = await this.authService.authenticateWithTelegram(initData, undefined, startParam);
+      const result = await this.authService.authenticateWithTelegram(
+        initData,
+        undefined,
+        startParam
+      );
 
       logger.info('User authenticated via Telegram', {
         userId: result.user.id,
@@ -98,7 +102,7 @@ export class AuthController {
    * GET /api/auth/me
    * Получить текущего пользователя (avatarUrl — для загрузки аватарки из Telegram)
    */
-  async getCurrentUser(req: Request, res: Response): Promise<void> {
+  getCurrentUser(req: Request, res: Response): void {
     if (!req.user) {
       res.status(401).json({
         success: false,

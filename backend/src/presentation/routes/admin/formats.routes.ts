@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { AdminFormatController } from '../../controllers/AdminFormatController';
 import { FormatService } from '../../../domain/services/FormatService';
 import { PrismaFormatRepository } from '../../../infrastructure/database/repositories/FormatRepository';
@@ -29,15 +30,23 @@ const authService = new AuthService(
 );
 
 // Все маршруты требуют авторизацию админа
-router.use(authenticate(authService));
+router.use(asyncHandler(authenticate(authService)));
 router.use(requireAdmin);
 
 // Применяем rate limiting для админских endpoints
-router.use(adminRateLimiter);
+router.use(asyncHandler(adminRateLimiter));
 
-router.get('/', adminFormatController.getAllFormats.bind(adminFormatController));
-router.post('/', validate(CreateFormatSchema), adminFormatController.createFormat.bind(adminFormatController));
-router.put('/:id', validate(UpdateFormatSchema), adminFormatController.updateFormat.bind(adminFormatController));
-router.delete('/:id', adminFormatController.deleteFormat.bind(adminFormatController));
+router.get('/', asyncHandler(adminFormatController.getAllFormats.bind(adminFormatController)));
+router.post(
+  '/',
+  validate(CreateFormatSchema),
+  asyncHandler(adminFormatController.createFormat.bind(adminFormatController))
+);
+router.put(
+  '/:id',
+  validate(UpdateFormatSchema),
+  asyncHandler(adminFormatController.updateFormat.bind(adminFormatController))
+);
+router.delete('/:id', asyncHandler(adminFormatController.deleteFormat.bind(adminFormatController)));
 
 export default router;

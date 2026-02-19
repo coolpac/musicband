@@ -3,7 +3,7 @@ import { AdminBot } from './AdminBot';
 import { ReferralService } from '../../domain/services/ReferralService';
 import { BookingService } from '../../domain/services/BookingService';
 import { IUserRepository } from '../database/repositories/UserRepository';
-import { IBookingRepository, BookingWithUserAndFormat } from '../database/repositories/BookingRepository';
+import { IBookingRepository } from '../database/repositories/BookingRepository';
 import { IOnboardingRepository } from '../database/repositories/OnboardingRepository';
 import { logger } from '../../shared/utils/logger';
 import { prisma } from '../../config/database';
@@ -27,18 +27,18 @@ export class BotManager {
   /**
    * Инициализация ботов
    */
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
     try {
       const userBotToken = process.env.TELEGRAM_USER_BOT_TOKEN;
       const adminBotToken = process.env.TELEGRAM_ADMIN_BOT_TOKEN;
 
       if (!userBotToken || !adminBotToken) {
         logger.warn('Telegram bot tokens not configured, bots will not be initialized');
-        return;
+        return Promise.resolve();
       }
 
-    // Инициализируем User Bot (онбординг «Кто вы?» перед приветствием)
-    this.userBot = new UserBot(userBotToken, this.referralService, this.onboardingRepository);
+      // Инициализируем User Bot (онбординг «Кто вы?» перед приветствием)
+      this.userBot = new UserBot(userBotToken, this.referralService, this.onboardingRepository);
 
       // Инициализируем Admin Bot
       this.adminBot = new AdminBot(
@@ -52,9 +52,10 @@ export class BotManager {
       );
 
       logger.info('Telegram bots initialized successfully');
+      return Promise.resolve();
     } catch (error) {
       logger.error('Failed to initialize Telegram bots', { error });
-      throw error;
+      return Promise.reject(error);
     }
   }
 
@@ -124,7 +125,8 @@ export class BotManager {
       .map((user) => Number(user.telegramId))
       .filter((id) => !Number.isNaN(id));
 
-    const baseButtons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }> = payload.buttons;
+    const baseButtons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }> =
+      payload.buttons;
 
     const inlineRows: Array<Array<{ text: string; url: string; kind: 'url' | 'web_app' }>> = [];
     for (let i = 0; i < baseButtons.length; i += 2) {
@@ -168,14 +170,19 @@ export class BotManager {
             });
           }
         } else {
-          await bot.sendMessage(telegramId, payload.text, replyMarkup ? { reply_markup: replyMarkup } : undefined);
+          await bot.sendMessage(
+            telegramId,
+            payload.text,
+            replyMarkup ? { reply_markup: replyMarkup } : undefined
+          );
         }
         sent++;
       } catch (error: unknown) {
         failed++;
-        const code = error && typeof error === 'object' && 'response' in error
-          ? (error as { response?: { error_code?: number } }).response?.error_code
-          : undefined;
+        const code =
+          error && typeof error === 'object' && 'response' in error
+            ? (error as { response?: { error_code?: number } }).response?.error_code
+            : undefined;
         if (code !== 403) {
           logger.error('Broadcast failed', { telegramId, error });
         }
@@ -201,21 +208,27 @@ export class BotManager {
   /**
    * Отправка подтверждения бронирования пользователю
    */
-  async sendBookingConfirmation(telegramId: number, bookingData: {
-    bookingDate: string;
-    formatName?: string;
-    fullName: string;
-  }): Promise<void> {
+  async sendBookingConfirmation(
+    telegramId: number,
+    bookingData: {
+      bookingDate: string;
+      formatName?: string;
+      fullName: string;
+    }
+  ): Promise<void> {
     if (this.userBot) {
       await this.userBot.sendBookingConfirmation(telegramId.toString(), bookingData);
     }
   }
 
-  async sendBookingReceived(telegramId: number, bookingData: {
-    bookingDate: string;
-    formatName?: string;
-    fullName: string;
-  }): Promise<void> {
+  async sendBookingReceived(
+    telegramId: number,
+    bookingData: {
+      bookingDate: string;
+      formatName?: string;
+      fullName: string;
+    }
+  ): Promise<void> {
     if (this.userBot) {
       await this.userBot.sendBookingReceived(telegramId.toString(), bookingData);
     }
@@ -239,9 +252,7 @@ export class BotManager {
     });
 
     for (const row of due) {
-      const telegramIds = Array.isArray(row.telegramIds)
-        ? (row.telegramIds as string[])
-        : [];
+      const telegramIds = Array.isArray(row.telegramIds) ? (row.telegramIds as string[]) : [];
       if (telegramIds.length === 0) {
         await prisma.votingFollowUp.update({
           where: { id: row.id },
@@ -262,7 +273,11 @@ export class BotManager {
           failed,
         });
       } catch (err) {
-        logger.error('Voting follow-up send failed', { followUpId: row.id, sessionId: row.sessionId, error: err });
+        logger.error('Voting follow-up send failed', {
+          followUpId: row.id,
+          sessionId: row.sessionId,
+          error: err,
+        });
       }
     }
   }
@@ -295,7 +310,10 @@ export class BotManager {
         sent++;
       } catch (error) {
         failed++;
-        logger.error('Failed to send winner notification', { telegramId: telegramId.toString(), error });
+        logger.error('Failed to send winner notification', {
+          telegramId: telegramId.toString(),
+          error,
+        });
       }
 
       // Telegram rate limit: ~30 msg/sec. Задержка 1s каждые 25 сообщений = ~25 msg/sec (с запасом)
@@ -324,9 +342,11 @@ export class BotManager {
   }): Promise<void> {
     try {
       // Получаем пользователя по bookingId
-      const booking = (await this.bookingRepository.findById(bookingData.bookingId)) as BookingWithUserAndFormat | null;
+      const booking = await this.bookingRepository.findById(bookingData.bookingId);
       if (!booking || !booking.user) {
-        logger.warn('Booking not found for confirmation notification', { bookingId: bookingData.bookingId });
+        logger.warn('Booking not found for confirmation notification', {
+          bookingId: bookingData.bookingId,
+        });
         return;
       }
 
@@ -342,7 +362,10 @@ export class BotManager {
         });
       }
     } catch (error) {
-      logger.error('Failed to send booking confirmation', { error, bookingId: bookingData.bookingId });
+      logger.error('Failed to send booking confirmation', {
+        error,
+        bookingId: bookingData.bookingId,
+      });
     }
   }
 

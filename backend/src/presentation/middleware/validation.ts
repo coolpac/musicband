@@ -11,10 +11,12 @@ import { logger } from '../../shared/utils/logger';
  * Валидация и клампинг параметров пагинации
  * Защищает от DoS атак через ?limit=9999999
  */
-export function validatePagination(options: {
-  maxLimit?: number;
-  defaultLimit?: number;
-} = {}) {
+export function validatePagination(
+  options: {
+    maxLimit?: number;
+    defaultLimit?: number;
+  } = {}
+) {
   const maxLimit = options.maxLimit || 100;
   const defaultLimit = options.defaultLimit || 50;
 
@@ -84,7 +86,9 @@ export function validatePagination(options: {
  */
 export function validateDateParam(paramName: string) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    const dateStr = (req.query[paramName] || req.body[paramName]) as string | undefined;
+    const q = req.query as Record<string, unknown>;
+    const b = req.body as Record<string, unknown>;
+    const dateStr = (q[paramName] ?? b[paramName]) as string | undefined;
 
     if (!dateStr) {
       return next(); // Опциональный параметр
@@ -117,7 +121,9 @@ export function validateDateParam(paramName: string) {
  */
 export function validateMonthParam(paramName: string) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    const monthStr = (req.query[paramName] || req.body[paramName]) as string | undefined;
+    const q = req.query as Record<string, unknown>;
+    const b = req.body as Record<string, unknown>;
+    const monthStr = (q[paramName] ?? b[paramName]) as string | undefined;
 
     if (!monthStr) {
       return next(); // Опциональный параметр
@@ -152,11 +158,12 @@ export function validateMonthParam(paramName: string) {
  */
 export function sanitizeText(fields: string[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
+    const body = req.body as Record<string, unknown>;
     fields.forEach((field) => {
-      const value = req.body[field];
+      const value = body[field];
 
       if (typeof value === 'string') {
-        req.body[field] = xss(value, {
+        body[field] = xss(value, {
           whiteList: {},
           stripIgnoreTag: true,
         }).trim();
@@ -172,7 +179,7 @@ export function sanitizeText(fields: string[]) {
  */
 export function validateTextLength(field: string, maxLength: number) {
   return (req: Request, _res: Response, next: NextFunction): void => {
-    const value = req.body[field];
+    const value = (req.body as Record<string, unknown>)[field];
 
     if (typeof value === 'string' && value.length > maxLength) {
       throw new ValidationError(

@@ -10,7 +10,8 @@ export class SongController {
    */
   async getAllSongs(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const isActive = req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
+      const isActive =
+        req.query.isActive === 'true' ? true : req.query.isActive === 'false' ? false : undefined;
 
       const songs = await this.songService.getAllSongs(isActive);
 

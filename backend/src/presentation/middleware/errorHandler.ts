@@ -17,12 +17,12 @@ function sanitizeBodyForLog(req: Request): unknown {
     return '[multipart - omitted]';
   }
 
-  let body = req.body;
+  const body = req.body as unknown;
   if (body === undefined || body === null) return body;
   if (typeof body !== 'object') return body;
 
   const redacted: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(body)) {
+  for (const [key, value] of Object.entries(body as Record<string, unknown>)) {
     const lower = key.toLowerCase();
     if (REDACT_KEYS.some((k) => lower.includes(k) || lower === k)) {
       redacted[key] = '[REDACTED]';

@@ -1,4 +1,8 @@
-import { IBookingRepository, CreateBookingData, BookingWithUserAndFormat } from '../../infrastructure/database/repositories/BookingRepository';
+import {
+  IBookingRepository,
+  CreateBookingData,
+  BookingWithUserAndFormat,
+} from '../../infrastructure/database/repositories/BookingRepository';
 import { IBlockedDateRepository } from '../../infrastructure/database/repositories/BlockedDateRepository';
 import { IUserRepository } from '../../infrastructure/database/repositories/UserRepository';
 import { NotFoundError, ValidationError, ConflictError } from '../../shared/errors';
@@ -45,14 +49,17 @@ export class BookingService {
 
     const withRelations = await this.bookingRepository.findById(booking.id);
     if (!withRelations) throw new NotFoundError('Booking');
-    return withRelations as BookingWithUserAndFormat;
+    return withRelations;
   }
 
   /**
    * Получение доступных дат для бронирования (с кешированием в Redis, TTL 5 мин).
    * formats не загружаются — в ответе только dates и blockedDates.
    */
-  async getAvailableDates(_formatId?: string, month?: string): Promise<{
+  async getAvailableDates(
+    _formatId?: string,
+    month?: string
+  ): Promise<{
     dates: string[];
     blockedDates: string[];
   }> {
@@ -89,7 +96,10 @@ export class BookingService {
     const startDate = new Date(year, monthNum - 1, 1);
     const endDate = new Date(year, monthNum, 0);
 
-    const blockedDates = await this.blockedDateRepository.getBlockedDatesInRange(startDate, endDate);
+    const blockedDates = await this.blockedDateRepository.getBlockedDatesInRange(
+      startDate,
+      endDate
+    );
     const blockedDatesStr = blockedDates.map((d) => formatDate(d));
     const blockedSet = new Set(blockedDatesStr);
 
@@ -132,15 +142,18 @@ export class BookingService {
   /**
    * Обновление статуса бронирования
    */
-  async updateBookingStatus(id: string, status: 'confirmed' | 'cancelled'): Promise<BookingWithUserAndFormat> {
+  async updateBookingStatus(
+    id: string,
+    status: 'confirmed' | 'cancelled'
+  ): Promise<BookingWithUserAndFormat> {
     await this.getBookingById(id);
     await this.bookingRepository.updateStatus(id, status);
     const updated = await this.getBookingById(id);
-    const bookingDate = (updated as BookingWithUserAndFormat).bookingDate;
+    const bookingDate = updated.bookingDate;
     const date = bookingDate instanceof Date ? bookingDate : new Date(bookingDate);
     const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(month));
-    return updated as BookingWithUserAndFormat;
+    return updated;
   }
 
   /**
@@ -153,12 +166,13 @@ export class BookingService {
 
     const booking = await this.getBookingById(id);
     await this.bookingRepository.updateIncome(id, income);
-    const bookingDate = booking.bookingDate instanceof Date ? booking.bookingDate : new Date(booking.bookingDate);
+    const bookingDate =
+      booking.bookingDate instanceof Date ? booking.bookingDate : new Date(booking.bookingDate);
     const month = `${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, '0')}`;
     await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(month));
 
     const updated = await this.getBookingById(id);
-    return updated as BookingWithUserAndFormat;
+    return updated;
   }
 
   /**
@@ -169,7 +183,8 @@ export class BookingService {
     await this.bookingRepository.delete(id);
 
     // Инвалидация кешей: доступные даты и календарь админки
-    const bookingDate = booking.bookingDate instanceof Date ? booking.bookingDate : new Date(booking.bookingDate);
+    const bookingDate =
+      booking.bookingDate instanceof Date ? booking.bookingDate : new Date(booking.bookingDate);
     const month = `${bookingDate.getFullYear()}-${String(bookingDate.getMonth() + 1).padStart(2, '0')}`;
     await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(month));
     await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(month));
@@ -329,7 +344,12 @@ export class BookingService {
   private async computeCalendar(
     startDate: Date,
     endDate: Date
-  ): Promise<{ dates: Array<{ date: string; bookings: Awaited<ReturnType<IBookingRepository['findByDateRange']>> }> }> {
+  ): Promise<{
+    dates: Array<{
+      date: string;
+      bookings: Awaited<ReturnType<IBookingRepository['findByDateRange']>>;
+    }>;
+  }> {
     const bookings = await this.bookingRepository.findByDateRange(startDate, endDate);
 
     const bookingsByDate = new Map<string, typeof bookings>();

@@ -55,9 +55,10 @@ export class VoteService {
         songId,
         sessionId: session.id,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Race-condition / double submit: Prisma unique constraint (P2002)
-      if (error && typeof error === 'object' && (error as any).code === 'P2002') {
+      const prismaError = error as { code?: string };
+      if (prismaError?.code === 'P2002') {
         throw new ConflictError('User has already voted in this session');
       }
       throw error;
@@ -94,14 +95,17 @@ export class VoteService {
    * Находит или создаёт пользователя по telegramId, затем создаёт голос.
    * Небезопасно: telegramId можно подставить с другого устройства.
    */
-  async castVoteByTelegramId(telegramId: number, songId: string, sessionId?: string): Promise<string> {
+  async castVoteByTelegramId(
+    telegramId: number,
+    songId: string,
+    sessionId?: string
+  ): Promise<string> {
     const tid = BigInt(telegramId);
-    let user = await this.userRepository.findByTelegramId(tid);
-    if (!user) {
-      user = await this.userRepository.create({
-        telegramId: tid,
-        role: 'user',
-      });
+    const { user, created } = await this.userRepository.findOrCreateByTelegramId({
+      telegramId: tid,
+      role: 'user',
+    });
+    if (created) {
       logger.info('User created from public vote (telegramId)', { userId: user.id, telegramId });
     }
 
@@ -130,8 +134,9 @@ export class VoteService {
         songId,
         sessionId: session.id,
       });
-    } catch (error: any) {
-      if (error?.code === 'P2002') {
+    } catch (error: unknown) {
+      const prismaError = error as { code?: string };
+      if (prismaError?.code === 'P2002') {
         throw new ConflictError('User has already voted in this session');
       }
       throw error;
@@ -184,7 +189,11 @@ export class VoteService {
     const cacheKey = CACHE_KEYS.VOTE_RESULTS(session.id);
     const cached = await CacheService.get<{
       sessionId: string;
-      songs: Array<{ song: { id: string; title: string; artist: string; coverUrl: string | null } | null; votes: number; percentage: number }>;
+      songs: Array<{
+        song: { id: string; title: string; artist: string; coverUrl: string | null } | null;
+        votes: number;
+        percentage: number;
+      }>;
       totalVotes: number;
     }>(cacheKey);
 
@@ -420,7 +429,7 @@ export class VoteService {
       await prisma.votingFollowUp.create({
         data: {
           sessionId,
-          telegramIds: voterTelegramIds.map((tid) => tid.toString()),
+          telegramIds: voterTelegramIds.map((u) => u.telegramId.toString()),
           scheduledAt,
         },
       });

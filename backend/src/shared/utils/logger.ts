@@ -25,7 +25,7 @@ export const logger = winston.createLogger({
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
         process.env.NODE_ENV === 'production'
           ? winston.format.simple()
-          : winston.format.combine(winston.format.colorize(), winston.format.simple()),
+          : winston.format.combine(winston.format.colorize(), winston.format.simple())
       ),
     }),
   ],

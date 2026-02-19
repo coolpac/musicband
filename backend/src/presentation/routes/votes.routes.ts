@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { VoteController } from '../controllers/VoteController';
 import { VoteService } from '../../domain/services/VoteService';
 import { PrismaVoteRepository } from '../../infrastructure/database/repositories/VoteRepository';
@@ -31,17 +32,25 @@ const authService = new AuthService(
 );
 
 // Публичные маршруты
-router.get('/results', publicApiRateLimiter, voteController.getResults.bind(voteController));
+router.get(
+  '/results',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(voteController.getResults.bind(voteController))
+);
 
 // Защищенные маршруты (требуют авторизации)
 router.post(
   '/',
-  authenticate(authService),
-  voteRateLimiter, // Очень строгий лимит: 1 голос в минуту
+  asyncHandler(authenticate(authService)),
+  asyncHandler(voteRateLimiter),
   validate(CastVoteSchema),
-  voteController.castVote.bind(voteController)
+  asyncHandler(voteController.castVote.bind(voteController))
 );
 
-router.get('/my', authenticate(authService), voteController.getMyVote.bind(voteController));
+router.get(
+  '/my',
+  asyncHandler(authenticate(authService)),
+  asyncHandler(voteController.getMyVote.bind(voteController))
+);
 
 export default router;

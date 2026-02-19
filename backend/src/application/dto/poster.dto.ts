@@ -3,7 +3,10 @@ import { z } from 'zod';
 /** URL (с протоколом) или относительный путь вида /uploads/... */
 const urlOrPath = z.union([
   z.string().url(),
-  z.string().min(1).refine((s) => s.startsWith('/'), { message: 'Must be URL or path starting with /' }),
+  z
+    .string()
+    .min(1)
+    .refine((s) => s.startsWith('/'), { message: 'Must be URL or path starting with /' }),
 ]);
 
 export const CreatePosterSchema = z.object({

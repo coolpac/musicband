@@ -33,9 +33,9 @@ export class AdminAgentController {
    */
   async createAgent(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { userId } = req.body;
-
-      if (!userId) {
+      const body = req.body as { userId?: unknown };
+      const userId = body.userId;
+      if (typeof userId !== 'string' || !userId) {
         res.status(400).json({
           success: false,
           error: { message: 'userId is required', code: 'VALIDATION_ERROR' },
@@ -66,10 +66,13 @@ export class AdminAgentController {
    */
   async updateAgentStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id } = req.params;
-      const { status } = req.body;
+      const params = req.params as { id?: string };
+      const body = req.body as { status?: string };
+      const id = params.id;
+      const status = body.status;
+      const validStatuses = ['active', 'inactive', 'suspended'] as const;
 
-      if (!status || !['active', 'inactive', 'suspended'].includes(status)) {
+      if (!id || !status || !validStatuses.includes(status as (typeof validStatuses)[number])) {
         res.status(400).json({
           success: false,
           error: { message: 'Invalid status', code: 'VALIDATION_ERROR' },
@@ -77,7 +80,10 @@ export class AdminAgentController {
         return;
       }
 
-      const agent = await this.agentService.updateAgentStatus(id, status);
+      const agent = await this.agentService.updateAgentStatus(
+        id,
+        status as 'active' | 'inactive' | 'suspended'
+      );
 
       res.json({
         success: true,
@@ -127,7 +133,12 @@ export class AdminAgentController {
       const { id } = req.params;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      const eventType = req.query.eventType as 'click' | 'registration' | 'booking' | 'vote' | undefined;
+      const eventType = req.query.eventType as
+        | 'click'
+        | 'registration'
+        | 'booking'
+        | 'vote'
+        | undefined;
       const status = req.query.status as 'pending' | 'confirmed' | 'rejected' | undefined;
 
       const result = await this.referralService.getAgentEvents(id, {

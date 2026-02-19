@@ -1,10 +1,19 @@
-import { PrismaClient, ReferralEvent, ReferralEventType, ReferralEventStatus } from '@prisma/client';
+import {
+  Prisma,
+  PrismaClient,
+  ReferralEvent,
+  ReferralEventType,
+  ReferralEventStatus,
+} from '@prisma/client';
 import { prisma } from '../../../config/database';
 
 export interface IReferralEventRepository {
   findAll(options?: FindReferralEventsOptions): Promise<{ events: ReferralEvent[]; total: number }>;
   findById(id: string): Promise<ReferralEvent | null>;
-  findByAgentId(agentId: string, options?: FindReferralEventsOptions): Promise<{ events: ReferralEvent[]; total: number }>;
+  findByAgentId(
+    agentId: string,
+    options?: FindReferralEventsOptions
+  ): Promise<{ events: ReferralEvent[]; total: number }>;
   create(data: CreateReferralEventData): Promise<ReferralEvent>;
   updateStatus(id: string, status: ReferralEventStatus): Promise<ReferralEvent>;
   getStats(agentId: string, startDate?: Date, endDate?: Date): Promise<ReferralEventStats>;
@@ -26,7 +35,7 @@ export interface CreateReferralEventData {
   eventType: ReferralEventType;
   ipAddress?: string;
   userAgent?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ReferralEventStats {
@@ -43,7 +52,9 @@ export interface ReferralEventStats {
 export class PrismaReferralEventRepository implements IReferralEventRepository {
   constructor(private client: PrismaClient = prisma) {}
 
-  async findAll(options?: FindReferralEventsOptions): Promise<{ events: ReferralEvent[]; total: number }> {
+  async findAll(
+    options?: FindReferralEventsOptions
+  ): Promise<{ events: ReferralEvent[]; total: number }> {
     const page = options?.page || 1;
     const limit = options?.limit || 10;
     const skip = (page - 1) * limit;
@@ -146,11 +157,19 @@ export class PrismaReferralEventRepository implements IReferralEventRepository {
     });
   }
 
-  async findByAgentId(agentId: string, options?: FindReferralEventsOptions): Promise<{ events: ReferralEvent[]; total: number }> {
+  async findByAgentId(
+    agentId: string,
+    options?: FindReferralEventsOptions
+  ): Promise<{ events: ReferralEvent[]; total: number }> {
     const page = options?.page || 1;
     const limit = options?.limit || 10;
     const skip = (page - 1) * limit;
-    const where: { agentId: string; eventType?: ReferralEventType; status?: ReferralEventStatus; createdAt?: { gte?: Date; lte?: Date } } = { agentId };
+    const where: {
+      agentId: string;
+      eventType?: ReferralEventType;
+      status?: ReferralEventStatus;
+      createdAt?: { gte?: Date; lte?: Date };
+    } = { agentId };
     if (options?.eventType) where.eventType = options.eventType;
     if (options?.status) where.status = options.status;
     if (options?.startDate || options?.endDate) {
@@ -162,7 +181,11 @@ export class PrismaReferralEventRepository implements IReferralEventRepository {
       this.client.referralEvent.findMany({
         where,
         include: {
-          agent: { include: { user: { select: { id: true, username: true, firstName: true, lastName: true } } } },
+          agent: {
+            include: {
+              user: { select: { id: true, username: true, firstName: true, lastName: true } },
+            },
+          },
           referredUser: { select: { id: true, username: true, firstName: true, lastName: true } },
           referralLink: { select: { id: true, linkCode: true, name: true } },
         },
@@ -184,7 +207,7 @@ export class PrismaReferralEventRepository implements IReferralEventRepository {
         eventType: data.eventType,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
-        metadata: data.metadata,
+        metadata: data.metadata as Prisma.InputJsonValue | undefined,
         status: 'pending',
       },
       include: {

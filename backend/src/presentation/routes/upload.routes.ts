@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { ImageController } from '../controllers/ImageController';
 import { ImageStorage } from '../../infrastructure/storage/ImageStorage';
 import { upload, handleUploadError } from '../middleware/upload';
@@ -35,16 +36,16 @@ const authService = new AuthService(
 );
 
 // Все маршруты требуют авторизацию админа
-router.use(authenticate(authService));
+router.use(asyncHandler(authenticate(authService)));
 router.use(requireAdmin);
 
 router.post(
   '/image',
-  uploadRateLimiter, // Строгий лимит: 20 загрузок в час
+  asyncHandler(uploadRateLimiter),
   upload.single('image'),
   handleUploadError,
-  imageController.uploadImage.bind(imageController)
+  asyncHandler(imageController.uploadImage.bind(imageController))
 );
-router.delete('/image', imageController.deleteImage.bind(imageController));
+router.delete('/image', asyncHandler(imageController.deleteImage.bind(imageController)));
 
 export default router;

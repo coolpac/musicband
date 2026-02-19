@@ -24,7 +24,12 @@ export class SocketServer {
   private resultsUpdateTimers: Map<string, NodeJS.Timeout> = new Map();
   private readonly DEBOUNCE_DELAY = 1500; // 1.5 секунды
 
-  constructor(httpServer: HTTPServer, voteService: VoteService, songService: SongService, authService: AuthService) {
+  constructor(
+    httpServer: HTTPServer,
+    voteService: VoteService,
+    songService: SongService,
+    authService: AuthService
+  ) {
     this.voteService = voteService;
     this.songService = songService;
     this.authService = authService;
@@ -69,37 +74,44 @@ export class SocketServer {
    * Middleware для авторизации WebSocket соединений
    */
   private setupAuthMiddleware(): void {
-    this.io.use(async (socket: AuthenticatedSocket, next) => {
-      try {
-        const token = socket.handshake.auth?.token || socket.handshake.headers.authorization?.split(' ')[1];
+    this.io.use((socket: AuthenticatedSocket, next) => {
+      void (async () => {
+        try {
+          const auth = socket.handshake.auth as { token?: string } | undefined;
+          const authHeader = socket.handshake.headers?.authorization;
+          const bearerToken = typeof authHeader === 'string' ? authHeader.split(' ')[1] : undefined;
+          const token = auth?.token ?? bearerToken;
 
-        if (!token) {
-          logger.warn('WebSocket connection rejected: no token');
-          return next(new UnauthorizedError('No token provided'));
+          if (!token) {
+            logger.warn('WebSocket connection rejected: no token');
+            next(new UnauthorizedError('No token provided'));
+            return;
+          }
+
+          // Верифицируем токен
+          const payload = this.authService.verifyToken(token);
+
+          // Проверка blacklist (отзыв токена)
+          if (await this.authService.isRevoked(payload.jti)) {
+            next(new UnauthorizedError('Token has been revoked'));
+            return;
+          }
+
+          // Сохраняем данные пользователя в socket
+          socket.userId = payload.userId;
+          socket.userRole = payload.role;
+
+          logger.info('WebSocket connection authenticated', {
+            userId: payload.userId,
+            socketId: socket.id,
+          });
+
+          next();
+        } catch (error) {
+          logger.warn('WebSocket authentication failed', { error, socketId: socket.id });
+          next(new UnauthorizedError('Invalid token'));
         }
-
-        // Верифицируем токен
-        const payload = this.authService.verifyToken(token);
-
-        // Проверка blacklist (отзыв токена)
-        if (await this.authService.isRevoked(payload.jti)) {
-          return next(new UnauthorizedError('Token has been revoked'));
-        }
-
-        // Сохраняем данные пользователя в socket
-        socket.userId = payload.userId;
-        socket.userRole = payload.role;
-
-        logger.info('WebSocket connection authenticated', {
-          userId: payload.userId,
-          socketId: socket.id,
-        });
-
-        next();
-      } catch (error) {
-        logger.warn('WebSocket authentication failed', { error, socketId: socket.id });
-        next(new UnauthorizedError('Invalid token'));
-      }
+      })();
     });
   }
 
@@ -114,13 +126,13 @@ export class SocketServer {
       });
 
       // Обработка присоединения к голосованию
-      socket.on('vote:join', async (data: { sessionId?: string }) => {
-        await this.handleVoteJoin(socket, data.sessionId);
+      socket.on('vote:join', (data: { sessionId?: string }) => {
+        void this.handleVoteJoin(socket, data.sessionId);
       });
 
       // Обработка голоса
-      socket.on('vote:cast', async (data: { songId: string }) => {
-        await this.handleVoteCast(socket, data.songId);
+      socket.on('vote:cast', (data: { songId: string }) => {
+        void this.handleVoteCast(socket, data.songId);
       });
 
       // Обработка отключения
@@ -173,7 +185,7 @@ export class SocketServer {
 
       // Присоединяемся к комнате голосования
       const roomName = `vote:session:${session.id}`;
-      socket.join(roomName);
+      await socket.join(roomName);
 
       // Получаем состояние
       const songs = await this.songService.getActiveSongs();
@@ -204,7 +216,10 @@ export class SocketServer {
       });
     } catch (error) {
       logger.error('Error handling vote:join', { error, socketId: socket.id });
-      socket.emit('vote:error', { message: 'Failed to join voting session', code: 'INTERNAL_ERROR' });
+      socket.emit('vote:error', {
+        message: 'Failed to join voting session',
+        code: 'INTERNAL_ERROR',
+      });
     }
   }
 
@@ -238,11 +253,16 @@ export class SocketServer {
         songId,
         sessionId: session.id,
       });
-    } catch (error: any) {
-      logger.error('Error handling vote:cast', { error, socketId: socket.id, userId: socket.userId });
+    } catch (error: unknown) {
+      const err = error as { message?: string; code?: string };
+      logger.error('Error handling vote:cast', {
+        error,
+        socketId: socket.id,
+        userId: socket.userId,
+      });
       socket.emit('vote:error', {
-        message: error.message || 'Failed to cast vote',
-        code: error.code || 'INTERNAL_ERROR',
+        message: err?.message ?? 'Failed to cast vote',
+        code: err?.code ?? 'INTERNAL_ERROR',
       });
     }
   }
@@ -253,11 +273,11 @@ export class SocketServer {
   private handleVoteLeave(socket: AuthenticatedSocket): void {
     // Покидаем все комнаты голосования
     const rooms = Array.from(socket.rooms);
-    rooms.forEach((room) => {
+    for (const room of rooms) {
       if (room.startsWith('vote:session:')) {
-        socket.leave(room);
+        void socket.leave(room);
       }
-    });
+    }
   }
 
   /**
@@ -271,9 +291,10 @@ export class SocketServer {
     }
 
     // Создаем новый таймер
-    const timer = setTimeout(async () => {
-      await this.broadcastResultsUpdate(sessionId);
-      this.resultsUpdateTimers.delete(sessionId);
+    const timer = setTimeout(() => {
+      void this.broadcastResultsUpdate(sessionId).finally(() => {
+        this.resultsUpdateTimers.delete(sessionId);
+      });
     }, this.DEBOUNCE_DELAY);
 
     this.resultsUpdateTimers.set(sessionId, timer);
@@ -324,7 +345,12 @@ export class SocketServer {
   /**
    * Рассылка события переключения песни
    */
-  async broadcastSongToggled(song: { id: string; title: string; artist: string; isActive: boolean }): Promise<void> {
+  broadcastSongToggled(song: {
+    id: string;
+    title: string;
+    artist: string;
+    isActive: boolean;
+  }): void {
     try {
       this.io.emit('vote:song:toggled', song);
       logger.info('Song toggled broadcasted', { songId: song.id, isActive: song.isActive });
@@ -336,7 +362,7 @@ export class SocketServer {
   /**
    * Рассылка события начала сессии
    */
-  async broadcastSessionStarted(session: { id: string; startedAt: Date }): Promise<void> {
+  broadcastSessionStarted(session: { id: string; startedAt: Date }): void {
     try {
       this.io.emit('vote:session:started', session);
       logger.info('Session started broadcasted', { sessionId: session.id });
@@ -348,7 +374,7 @@ export class SocketServer {
   /**
    * Рассылка события завершения сессии
    */
-  async broadcastSessionEnded(data: {
+  broadcastSessionEnded(data: {
     sessionId: string;
     results: Array<{
       song: { id: string; title?: string; artist?: string; coverUrl?: string | null } | null;
@@ -357,7 +383,7 @@ export class SocketServer {
     }>;
     totalVoters: number;
     winningSong?: { id: string; title: string; artist: string; coverUrl: string | null } | null;
-  }): Promise<void> {
+  }): void {
     try {
       const roomName = `vote:session:${data.sessionId}`;
       this.io.to(roomName).emit('vote:session:ended', data);

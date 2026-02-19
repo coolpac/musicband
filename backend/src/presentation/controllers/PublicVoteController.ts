@@ -56,11 +56,21 @@ export class PublicVoteController {
 
       // Состояние 2: Завершена, но не истекла — показать победителя
       if (session.expiresAt && new Date(session.expiresAt) > new Date()) {
-        let winningSong: { id: string; title: string; artist: string; coverUrl: string | null } | null = null;
+        let winningSong: {
+          id: string;
+          title: string;
+          artist: string;
+          coverUrl: string | null;
+        } | null = null;
         if (session.winningSongId) {
           try {
             const song = await this.songService.getSongById(session.winningSongId);
-            winningSong = { id: song.id, title: song.title, artist: song.artist, coverUrl: song.coverUrl };
+            winningSong = {
+              id: song.id,
+              title: song.title,
+              artist: song.artist,
+              coverUrl: song.coverUrl,
+            };
           } catch {
             // Песня удалена или не найдена — оставляем winningSong null
           }

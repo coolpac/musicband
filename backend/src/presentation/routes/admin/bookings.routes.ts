@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { AdminBookingController } from '../../controllers/AdminBookingController';
 import { BookingService } from '../../../domain/services/BookingService';
 import {
@@ -24,11 +25,7 @@ const router = Router();
 const bookingRepository = new PrismaBookingRepository();
 const blockedDateRepository = new PrismaBlockedDateRepository();
 const userRepository = new PrismaUserRepository();
-const bookingService = new BookingService(
-  bookingRepository,
-  blockedDateRepository,
-  userRepository
-);
+const bookingService = new BookingService(bookingRepository, blockedDateRepository, userRepository);
 const adminBookingController = new AdminBookingController(bookingService);
 
 // Создаем authService для middleware
@@ -42,40 +39,52 @@ const authService = new AuthService(
 );
 
 // Все маршруты требуют авторизацию админа
-router.use(authenticate(authService));
+router.use(asyncHandler(authenticate(authService)));
 router.use(requireAdmin);
 
 // Применяем rate limiting для админских endpoints
-router.use(adminRateLimiter);
+router.use(asyncHandler(adminRateLimiter));
 
 // Бронирования
-router.get('/', adminBookingController.getAllBookings.bind(adminBookingController));
-router.get('/stats', adminBookingController.getStats.bind(adminBookingController));
+router.get('/', asyncHandler(adminBookingController.getAllBookings.bind(adminBookingController)));
+router.get('/stats', asyncHandler(adminBookingController.getStats.bind(adminBookingController)));
 router.put(
   '/:id/status',
   validate(UpdateBookingStatusSchema),
-  adminBookingController.updateBookingStatus.bind(adminBookingController)
+  asyncHandler(adminBookingController.updateBookingStatus.bind(adminBookingController))
 );
 router.put(
   '/:id/income',
   validate(UpdateBookingIncomeSchema),
-  adminBookingController.updateBookingIncome.bind(adminBookingController)
+  asyncHandler(adminBookingController.updateBookingIncome.bind(adminBookingController))
 );
 router.post(
   '/:id/complete',
   validate(CompleteBookingSchema),
-  adminBookingController.completeBooking.bind(adminBookingController)
+  asyncHandler(adminBookingController.completeBooking.bind(adminBookingController))
 );
-router.delete('/:id', adminBookingController.deleteBooking.bind(adminBookingController));
-router.get('/calendar', adminBookingController.getCalendar.bind(adminBookingController));
-router.get('/blocked-dates', adminBookingController.getBlockedDates.bind(adminBookingController));
+router.delete(
+  '/:id',
+  asyncHandler(adminBookingController.deleteBooking.bind(adminBookingController))
+);
+router.get(
+  '/calendar',
+  asyncHandler(adminBookingController.getCalendar.bind(adminBookingController))
+);
+router.get(
+  '/blocked-dates',
+  asyncHandler(adminBookingController.getBlockedDates.bind(adminBookingController))
+);
 
 // Блокировка дат
 router.post(
   '/block-date',
   validate(BlockDateSchema),
-  adminBookingController.blockDate.bind(adminBookingController)
+  asyncHandler(adminBookingController.blockDate.bind(adminBookingController))
 );
-router.delete('/block-date/:id', adminBookingController.unblockDate.bind(adminBookingController));
+router.delete(
+  '/block-date/:id',
+  asyncHandler(adminBookingController.unblockDate.bind(adminBookingController))
+);
 
 export default router;

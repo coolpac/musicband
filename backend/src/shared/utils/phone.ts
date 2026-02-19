@@ -25,9 +25,12 @@ export function normalizeContactValue(value: string): string {
   if (!looksLikeRussianPhone(digits)) {
     return trimmed;
   }
-  const tenDigits = digits.length === 11
-    ? (digits[0] === '7' || digits[0] === '8' ? digits.slice(1) : digits)
-    : digits;
+  const tenDigits =
+    digits.length === 11
+      ? digits[0] === '7' || digits[0] === '8'
+        ? digits.slice(1)
+        : digits
+      : digits;
   if (tenDigits.length !== 10 || tenDigits[0] !== '9') {
     return trimmed;
   }

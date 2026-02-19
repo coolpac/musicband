@@ -45,7 +45,8 @@ export class FormatService {
       throw new ValidationError('Format name is required');
     }
 
-    const status = data.status && ['available', 'hidden'].includes(data.status) ? data.status : 'available';
+    const status =
+      data.status && ['available', 'hidden'].includes(data.status) ? data.status : 'available';
 
     // Проверяем, не существует ли уже формат с таким именем
     const existing = await this.formatRepository.findByName(data.name);

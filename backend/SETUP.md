@@ -52,12 +52,22 @@ npm start
 
 ## Создание первого админа
 
-После настройки БД, создайте первого админа через Prisma Studio или SQL:
+После настройки БД создайте первого админа через Prisma Studio или SQL.
+
+**Колонка в БД:** `telegram_id` (не telegramId).
+
+Если пользователь уже есть (например, зашёл через бота):
+
+```sql
+UPDATE users SET role = 'admin' WHERE telegram_id = 123456789;
+```
+
+Иначе создайте нового:
 
 ```sql
 INSERT INTO users (id, telegram_id, username, first_name, role, created_at, updated_at)
 VALUES (
-  gen_random_uuid(),
+  gen_random_uuid()::text,
   123456789, -- ваш Telegram ID
   'your_username',
   'Your Name',

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { AdminVoteController } from '../../controllers/AdminVoteController';
 import { VoteService } from '../../../domain/services/VoteService';
 import {
@@ -33,23 +34,35 @@ const authService = new AuthService(
 );
 
 // Все маршруты требуют авторизацию админа
-router.use(authenticate(authService));
+router.use(asyncHandler(authenticate(authService)));
 router.use(requireAdmin);
 
 // Применяем rate limiting для админских endpoints
-router.use(adminRateLimiter);
+router.use(asyncHandler(adminRateLimiter));
 
-router.get('/sessions', adminVoteController.getSessions.bind(adminVoteController));
-router.get('/sessions/:id', adminVoteController.getSessionById.bind(adminVoteController));
+router.get('/sessions', asyncHandler(adminVoteController.getSessions.bind(adminVoteController)));
+router.get(
+  '/sessions/:id',
+  asyncHandler(adminVoteController.getSessionById.bind(adminVoteController))
+);
 router.post(
   '/sessions/start',
   validate(StartSessionSchema),
-  adminVoteController.startSession.bind(adminVoteController)
+  asyncHandler(adminVoteController.startSession.bind(adminVoteController))
 );
-router.post('/sessions/:id/end', adminVoteController.endSession.bind(adminVoteController));
-router.get('/sessions/:id/qr', adminVoteController.getSessionQR.bind(adminVoteController));
-router.post('/sessions/:id/qr/send-to-admins', adminVoteController.sendSessionQRToAdmins.bind(adminVoteController));
-router.get('/stats', adminVoteController.getStats.bind(adminVoteController));
-router.get('/history', adminVoteController.getHistory.bind(adminVoteController));
+router.post(
+  '/sessions/:id/end',
+  asyncHandler(adminVoteController.endSession.bind(adminVoteController))
+);
+router.get(
+  '/sessions/:id/qr',
+  asyncHandler(adminVoteController.getSessionQR.bind(adminVoteController))
+);
+router.post(
+  '/sessions/:id/qr/send-to-admins',
+  asyncHandler(adminVoteController.sendSessionQRToAdmins.bind(adminVoteController))
+);
+router.get('/stats', asyncHandler(adminVoteController.getStats.bind(adminVoteController)));
+router.get('/history', asyncHandler(adminVoteController.getHistory.bind(adminVoteController)));
 
 export default router;

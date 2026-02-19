@@ -108,7 +108,7 @@ export function createRoleBasedRateLimiter(
 ) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const user = (req as any).user;
+      const user = req.user;
       const role = user?.role || 'anonymous';
 
       const limit = userLimits[role] || defaultLimit;
@@ -176,8 +176,8 @@ export const authRateLimiter = createRedisRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 минут
   max: 100, // 100 попыток за 15 минут
   keyGenerator: (req) => {
-    const user = (req as any).user;
-    return user?.userId || req.ip || 'unknown';
+    const user = req.user;
+    return user?.userId ?? req.ip ?? 'unknown';
   },
   message: 'Too many authentication attempts. Please try again in 15 minutes.',
 });

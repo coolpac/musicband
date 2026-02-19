@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { AuthController } from '../controllers/AuthController';
 import { validate } from '../middleware/validator';
 import { TelegramAuthSchema, AdminAuthSchema } from '../../application/dto/auth.dto';
@@ -25,22 +26,34 @@ const authController = new AuthController(authService);
 // Публичные маршруты с rate limiting
 router.post(
   '/telegram',
-  authRateLimiter, // Строгий лимит для защиты от брутфорса
+  asyncHandler(authRateLimiter),
   validate(TelegramAuthSchema),
-  authController.authenticateTelegram.bind(authController)
+  asyncHandler(authController.authenticateTelegram.bind(authController))
 );
 
 router.post(
   '/admin/login',
-  authRateLimiter, // Строгий лимит для защиты от брутфорса
+  asyncHandler(authRateLimiter),
   validate(AdminAuthSchema),
-  authController.authenticateAdmin.bind(authController)
+  asyncHandler(authController.authenticateAdmin.bind(authController))
 );
 
 // Защищенные маршруты
-router.post('/logout', authenticate(authService), authController.logout.bind(authController));
+router.post(
+  '/logout',
+  asyncHandler(authenticate(authService)),
+  asyncHandler(authController.logout.bind(authController))
+);
 
-router.get('/me', authenticate(authService), authController.getCurrentUser.bind(authController));
-router.get('/me/avatar', authenticate(authService), authController.getAvatar.bind(authController));
+router.get(
+  '/me',
+  asyncHandler(authenticate(authService)),
+  asyncHandler(authController.getCurrentUser.bind(authController))
+);
+router.get(
+  '/me/avatar',
+  asyncHandler(authenticate(authService)),
+  asyncHandler(authController.getAvatar.bind(authController))
+);
 
 export default router;

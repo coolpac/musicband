@@ -36,7 +36,10 @@ export class PartnerService {
     return partner;
   }
 
-  async updatePartner(id: string, data: { name?: string; logoUrl?: string; link?: string; order?: number }) {
+  async updatePartner(
+    id: string,
+    data: { name?: string; logoUrl?: string; link?: string; order?: number }
+  ) {
     await this.getPartnerById(id);
     return this.partnerRepository.update(id, data);
   }

@@ -17,7 +17,12 @@ export class PosterService {
     return poster;
   }
 
-  async createPoster(data: { title: string; description?: string; imageUrl?: string; link?: string }) {
+  async createPoster(data: {
+    title: string;
+    description?: string;
+    imageUrl?: string;
+    link?: string;
+  }) {
     if (!data.title || data.title.trim().length === 0) {
       throw new ValidationError('Poster title is required');
     }
@@ -29,7 +34,10 @@ export class PosterService {
     return poster;
   }
 
-  async updatePoster(id: string, data: { title?: string; description?: string; imageUrl?: string; link?: string }) {
+  async updatePoster(
+    id: string,
+    data: { title?: string; description?: string; imageUrl?: string; link?: string }
+  ) {
     await this.getPosterById(id);
     return this.posterRepository.update(id, data);
   }

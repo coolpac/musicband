@@ -12,7 +12,10 @@ export const PublicCastVoteSchema = z.object({
 });
 
 export const StartSessionSchema = z.object({
-  songIds: z.array(z.string().uuid('Invalid song ID')).min(1, 'At least one song is required').max(20, 'Maximum 20 songs allowed'),
+  songIds: z
+    .array(z.string().uuid('Invalid song ID'))
+    .min(1, 'At least one song is required')
+    .max(20, 'Maximum 20 songs allowed'),
 });
 
 export type CastVoteDto = z.infer<typeof CastVoteSchema>;

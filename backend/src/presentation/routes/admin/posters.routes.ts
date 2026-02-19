@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { AdminPosterController } from '../../controllers/AdminPosterController';
 import { PosterService } from '../../../domain/services/PosterService';
 import { PrismaPosterRepository } from '../../../infrastructure/database/repositories/PosterRepository';
@@ -29,15 +30,23 @@ const authService = new AuthService(
 );
 
 // Все маршруты требуют авторизацию админа
-router.use(authenticate(authService));
+router.use(asyncHandler(authenticate(authService)));
 router.use(requireAdmin);
 
 // Применяем rate limiting для админских endpoints
-router.use(adminRateLimiter);
+router.use(asyncHandler(adminRateLimiter));
 
-router.get('/', adminPosterController.getAllPosters.bind(adminPosterController));
-router.post('/', validate(CreatePosterSchema), adminPosterController.createPoster.bind(adminPosterController));
-router.put('/:id', validate(UpdatePosterSchema), adminPosterController.updatePoster.bind(adminPosterController));
-router.delete('/:id', adminPosterController.deletePoster.bind(adminPosterController));
+router.get('/', asyncHandler(adminPosterController.getAllPosters.bind(adminPosterController)));
+router.post(
+  '/',
+  validate(CreatePosterSchema),
+  asyncHandler(adminPosterController.createPoster.bind(adminPosterController))
+);
+router.put(
+  '/:id',
+  validate(UpdatePosterSchema),
+  asyncHandler(adminPosterController.updatePoster.bind(adminPosterController))
+);
+router.delete('/:id', asyncHandler(adminPosterController.deletePoster.bind(adminPosterController)));
 
 export default router;

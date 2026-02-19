@@ -144,9 +144,6 @@ export class AgentService {
     }
 
     // Если за 10 попыток не получилось - что-то очень не так
-    throw new Error(
-      `Failed to create agent with unique code after ${maxAttempts} attempts`
-    );
+    throw new Error(`Failed to create agent with unique code after ${maxAttempts} attempts`);
   }
-
 }

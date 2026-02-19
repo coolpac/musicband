@@ -162,12 +162,22 @@ ADMIN_PASSWORD=your_admin_password
 
 ## Создание первого админа
 
-1. Создайте пользователя в БД с ролью `admin`:
+**Важно:** в PostgreSQL колонка называется `telegram_id` (snake_case), не `telegramId`.
+
+### Вариант 1: Пользователь уже есть (зашёл через бота)
+
+Назначьте роль админа существующему пользователю:
+
+```sql
+UPDATE users SET role = 'admin' WHERE telegram_id = 123456789;
+```
+
+### Вариант 2: Создание нового пользователя-админа
 
 ```sql
 INSERT INTO users (id, telegram_id, username, first_name, role, created_at, updated_at)
 VALUES (
-  gen_random_uuid(),
+  gen_random_uuid()::text,
   123456789, -- ваш Telegram ID
   'your_username',
   'Your Name',
@@ -176,6 +186,8 @@ VALUES (
   NOW()
 );
 ```
+
+Если пользователь с таким `telegram_id` уже есть, получите duplicate key — тогда используйте Вариант 1 (UPDATE).
 
 2. Используйте этот telegramId для входа через `/api/auth/admin/login`
 

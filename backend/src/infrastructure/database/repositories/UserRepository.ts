@@ -5,8 +5,15 @@ export interface IUserRepository {
   findByTelegramId(telegramId: bigint): Promise<User | null>;
   findById(id: string): Promise<User | null>;
   create(data: CreateUserData): Promise<User>;
+  /**
+   * Находит или создаёт пользователя по telegramId. Использует upsert для атомарности
+   * и предотвращения duplicate key при параллельных запросах.
+   */
+  findOrCreateByTelegramId(data: CreateUserData): Promise<{ user: User; created: boolean }>;
   update(id: string, data: UpdateUserData): Promise<User>;
   updateRole(id: string, role: UserRole): Promise<User>;
+  /** Обновление роли по telegram_id (для назначения админа без знания id). */
+  updateRoleByTelegramId(telegramId: bigint, role: UserRole): Promise<User | null>;
 }
 
 export interface CreateUserData {
@@ -52,6 +59,37 @@ export class PrismaUserRepository implements IUserRepository {
     });
   }
 
+  async findOrCreateByTelegramId(data: CreateUserData): Promise<{ user: User; created: boolean }> {
+    const existing = await this.client.user.findUnique({
+      where: { telegramId: data.telegramId },
+    });
+    if (existing) {
+      return { user: existing, created: false };
+    }
+    try {
+      const user = await this.client.user.create({
+        data: {
+          telegramId: data.telegramId,
+          username: data.username,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          role: data.role || 'user',
+          referrerId: data.referrerId,
+        },
+      });
+      return { user, created: true };
+    } catch (error: unknown) {
+      const prismaError = error as { code?: string };
+      if (prismaError.code === 'P2002') {
+        const user = await this.client.user.findUniqueOrThrow({
+          where: { telegramId: data.telegramId },
+        });
+        return { user, created: false };
+      }
+      throw error;
+    }
+  }
+
   async update(id: string, data: UpdateUserData): Promise<User> {
     return this.client.user.update({
       where: { id },
@@ -68,5 +106,18 @@ export class PrismaUserRepository implements IUserRepository {
       where: { id },
       data: { role },
     });
+  }
+
+  async updateRoleByTelegramId(telegramId: bigint, role: UserRole): Promise<User | null> {
+    try {
+      return await this.client.user.update({
+        where: { telegramId },
+        data: { role },
+      });
+    } catch (error: unknown) {
+      const prismaError = error as { code?: string };
+      if (prismaError.code === 'P2025') return null;
+      throw error;
+    }
   }
 }

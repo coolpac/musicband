@@ -146,7 +146,12 @@ export class AgentController {
 
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      const eventType = req.query.eventType as 'click' | 'registration' | 'booking' | 'vote' | undefined;
+      const eventType = req.query.eventType as
+        | 'click'
+        | 'registration'
+        | 'booking'
+        | 'vote'
+        | undefined;
       const status = req.query.status as 'pending' | 'confirmed' | 'rejected' | undefined;
 
       const result = await this.referralService.getAgentEvents(agent.id, {

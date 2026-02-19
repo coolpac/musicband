@@ -17,8 +17,9 @@ export function authenticate(authService: AuthService) {
 
       if (authHeader && authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
-      } else if (req.cookies && req.cookies.token) {
-        token = req.cookies.token;
+      } else {
+        const cookieToken = (req as { cookies?: { token?: string } }).cookies?.token;
+        if (typeof cookieToken === 'string') token = cookieToken;
       }
 
       if (!token) {
@@ -100,7 +101,7 @@ export const requireAdminOrAgent = authorize(USER_ROLES.ADMIN, USER_ROLES.AGENT)
  * (проверяет не только роль, но и наличие записи в Agents)
  */
 export function requireAgentRecord(_authService: AuthService) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({
         success: false,

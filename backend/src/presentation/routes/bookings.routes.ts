@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { BookingController } from '../controllers/BookingController';
 import { BookingService } from '../../domain/services/BookingService';
 import {
@@ -19,11 +20,7 @@ const router = Router();
 const bookingRepository = new PrismaBookingRepository();
 const blockedDateRepository = new PrismaBlockedDateRepository();
 const userRepository = new PrismaUserRepository();
-const bookingService = new BookingService(
-  bookingRepository,
-  blockedDateRepository,
-  userRepository
-);
+const bookingService = new BookingService(bookingRepository, blockedDateRepository, userRepository);
 const bookingController = new BookingController(bookingService);
 
 // Создаем authService для middleware
@@ -37,17 +34,25 @@ const authService = new AuthService(
 );
 
 // Публичные маршруты
-router.get('/available-dates', publicApiRateLimiter, bookingController.getAvailableDates.bind(bookingController));
+router.get(
+  '/available-dates',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(bookingController.getAvailableDates.bind(bookingController))
+);
 
 // Защищенные маршруты (требуют авторизации)
 router.post(
   '/',
-  authenticate(authService),
-  bookingRateLimiter, // Средний лимит: 10 бронирований в час
+  asyncHandler(authenticate(authService)),
+  asyncHandler(bookingRateLimiter),
   validate(CreateBookingSchema),
-  bookingController.createBooking.bind(bookingController)
+  asyncHandler(bookingController.createBooking.bind(bookingController))
 );
 
-router.get('/my', authenticate(authService), bookingController.getMyBookings.bind(bookingController));
+router.get(
+  '/my',
+  asyncHandler(authenticate(authService)),
+  asyncHandler(bookingController.getMyBookings.bind(bookingController))
+);
 
 export default router;

@@ -114,9 +114,10 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// BigInt serialization replacer для JSON.stringify
-// Преобразует BigInt в строку для безопасной сериализации
-(BigInt.prototype as any).toJSON = function () {
+// BigInt serialization для JSON.stringify (Express JSON)
+(Object.getPrototypeOf(BigInt(0)) as Record<string, (this: bigint) => string>).toJSON = function (
+  this: bigint
+) {
   return this.toString();
 };
 
@@ -231,14 +232,14 @@ async function startServer() {
     // Рассылка участникам голосования через 24ч — проверка каждые 15 минут
     const FOLLOW_UP_INTERVAL_MS = 15 * 60 * 1000;
     setInterval(() => {
-      getBotManager()
+      void getBotManager()
         ?.processScheduledVotingFollowUps()
-        ?.catch((err) => logger.error('Voting follow-up job failed', { error: err }));
+        ?.catch((err: unknown) => logger.error('Voting follow-up job failed', { error: err }));
     }, FOLLOW_UP_INTERVAL_MS);
     setTimeout(() => {
-      getBotManager()
+      void getBotManager()
         ?.processScheduledVotingFollowUps()
-        ?.catch((err) => logger.error('Voting follow-up job failed', { error: err }));
+        ?.catch((err: unknown) => logger.error('Voting follow-up job failed', { error: err }));
     }, 60 * 1000);
 
     // Запускаем сервер
@@ -251,7 +252,7 @@ async function startServer() {
   }
 }
 
-startServer();
+void startServer();
 
 /**
  * Graceful Shutdown Handler
@@ -296,7 +297,7 @@ async function gracefulShutdown(signal: string): Promise<void> {
     }
 
     // 4. Закрываем Redis соединение
-    await disconnectRedis();
+    disconnectRedis();
     logger.info('Redis connection closed');
 
     // 5. Закрываем Prisma соединение
@@ -316,8 +317,12 @@ async function gracefulShutdown(signal: string): Promise<void> {
 }
 
 // Обработчики сигналов
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => {
+  void gracefulShutdown('SIGTERM');
+});
+process.on('SIGINT', () => {
+  void gracefulShutdown('SIGINT');
+});
 
 // Обработчик необработанных ошибок
 process.on('unhandledRejection', (reason, promise) => {
@@ -326,7 +331,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', { error });
-  gracefulShutdown('UNCAUGHT_EXCEPTION');
+  void gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
 export default app;

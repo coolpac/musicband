@@ -1,21 +1,11 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { logger } from '../../shared/utils/logger';
+import { runAsync } from '../../shared/utils/asyncHandler';
+import { getTelegramErrorCode } from '../../shared/utils/telegramErrors';
 import { IUserRepository } from '../database/repositories/UserRepository';
 import { IBookingRepository } from '../database/repositories/BookingRepository';
 import { USER_ROLES } from '../../shared/constants';
 import { prisma } from '../../config/database';
-
-function getTelegramErrorCode(error: unknown): number | undefined {
-  const err = error as any;
-  const code = err?.response?.body?.error_code ?? err?.response?.error_code;
-  if (typeof code === 'number') return code;
-  if (typeof code === 'string') {
-    const parsed = Number(code);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  const statusCode = err?.response?.statusCode ?? err?.statusCode;
-  return typeof statusCode === 'number' ? statusCode : undefined;
-}
 
 export class AdminBot {
   private bot: TelegramBot;
@@ -93,8 +83,10 @@ export class AdminBot {
     this.onBroadcast = onBroadcast;
     this.chatsWithKeyboard = new Set();
 
-    this.loadAdmins();
-    setInterval(() => this.loadAdmins(), AdminBot.ADMIN_RELOAD_INTERVAL_MS);
+    void this.loadAdmins();
+    setInterval(() => {
+      void this.loadAdmins();
+    }, AdminBot.ADMIN_RELOAD_INTERVAL_MS);
     this.setupCommands();
     this.setupCallbacks();
 
@@ -137,504 +129,539 @@ export class AdminBot {
    */
   private setupCommands(): void {
     // Команда /start - ссылка на админку
-    this.bot.onText(/\/start/, async (msg) => {
-      try {
-        const chatId = msg.chat.id;
-        const telegramId = msg.from?.id;
+    this.bot.onText(
+      /\/start/,
+      runAsync(async (msg) => {
+        try {
+          const chatId = msg.chat.id;
+          const telegramId = msg.from?.id;
 
-        if (!telegramId || !this.isAdmin(telegramId)) {
-          await this.bot.sendMessage(
-            chatId,
-            '❌ У вас нет доступа к админ-панели.\n\nОбратитесь к администратору для получения доступа.'
-          );
-          return;
+          if (!telegramId || !this.isAdmin(telegramId)) {
+            await this.bot.sendMessage(
+              chatId,
+              '❌ У вас нет доступа к админ-панели.\n\nОбратитесь к администратору для получения доступа.'
+            );
+            return;
+          }
+
+          await this.sendAdminMenu(chatId);
+          await this.sendAdminPanelLink(chatId);
+        } catch (error) {
+          logger.error('Error handling /start command', { error, chatId: msg.chat.id });
         }
-
-        await this.sendAdminMenu(chatId);
-        await this.sendAdminPanelLink(chatId);
-      } catch (error) {
-        logger.error('Error handling /start command', { error, chatId: msg.chat.id });
-      }
-    });
+      })
+    );
 
     // Команда /admin - получение ссылки на админку
-    this.bot.onText(/\/admin/, async (msg) => {
-      try {
-        const chatId = msg.chat.id;
-        const telegramId = msg.from?.id;
+    this.bot.onText(
+      /\/admin/,
+      runAsync(async (msg) => {
+        try {
+          const chatId = msg.chat.id;
+          const telegramId = msg.from?.id;
 
-        if (!telegramId || !this.isAdmin(telegramId)) {
-          await this.bot.sendMessage(chatId, '❌ У вас нет доступа.');
-          return;
+          if (!telegramId || !this.isAdmin(telegramId)) {
+            await this.bot.sendMessage(chatId, '❌ У вас нет доступа.');
+            return;
+          }
+
+          await this.sendAdminMenu(chatId);
+          await this.sendAdminPanelLink(chatId, { compact: true });
+        } catch (error) {
+          logger.error('Error handling /admin command', { error, chatId: msg.chat.id });
         }
-
-        await this.sendAdminMenu(chatId);
-        await this.sendAdminPanelLink(chatId, { compact: true });
-      } catch (error) {
-        logger.error('Error handling /admin command', { error, chatId: msg.chat.id });
-      }
-    });
+      })
+    );
 
     // Команда /stats - статистика
-    this.bot.onText(/\/stats/, async (msg) => {
-      try {
-        const chatId = msg.chat.id;
-        const telegramId = msg.from?.id;
+    this.bot.onText(
+      /\/stats/,
+      runAsync(async (msg) => {
+        try {
+          const chatId = msg.chat.id;
+          const telegramId = msg.from?.id;
 
-        if (!telegramId || !this.isAdmin(telegramId)) {
-          await this.bot.sendMessage(chatId, '❌ У вас нет доступа.');
-          return;
-        }
-
-        // Получаем статистику
-        await this.sendStatsMessage(chatId);
-      } catch (error) {
-        logger.error('Error handling /stats command', { error, chatId: msg.chat.id });
-      }
-    });
-
-    this.bot.onText(/\/broadcast$/, async (msg) => {
-      try {
-        const chatId = msg.chat.id;
-        const telegramId = msg.from?.id;
-
-        if (!telegramId || !this.isAdmin(telegramId)) {
-          await this.bot.sendMessage(chatId, '❌ У вас нет доступа.');
-          return;
-        }
-
-        await this.initiateBroadcastFlow(chatId, telegramId);
-      } catch (error) {
-        logger.error('Error handling /broadcast command', { error, chatId: msg.chat.id });
-      }
-    });
-
-    this.bot.onText(/\/broadcast_cancel$/, async (msg) => {
-      const chatId = msg.chat.id;
-      const telegramId = msg.from?.id;
-      if (!telegramId) return;
-      this.awaitingBroadcastText.delete(telegramId);
-      this.awaitingBroadcastButtons.delete(telegramId);
-      this.awaitingBroadcastMedia.delete(telegramId);
-      this.pendingBroadcasts.delete(telegramId);
-      await this.bot.sendMessage(chatId, 'Рассылка отменена.');
-    });
-
-    this.bot.on('message', async (msg) => {
-      try {
-        const chatId = msg.chat.id;
-        const telegramId = msg.from?.id;
-        if (!telegramId || !this.isAdmin(telegramId)) return;
-        const textContent = msg.text?.trim();
-
-        if (textContent && this.awaitingBroadcastText.has(telegramId)) {
-          this.awaitingBroadcastText.delete(telegramId);
-          this.awaitingBroadcastButtons.delete(telegramId);
-          this.awaitingBroadcastMedia.delete(telegramId);
-
-          const existing = this.pendingBroadcasts.get(telegramId);
-          const nextDraft = existing
-            ? {
-                ...existing,
-                text: textContent,
-                includeDefaultButton: existing.includeDefaultButton ?? false,
-              }
-            : { text: textContent, buttons: [], includeDefaultButton: false };
-          this.pendingBroadcasts.set(telegramId, nextDraft);
-
-          await this.sendBroadcastPreview(chatId, telegramId);
-          return;
-        }
-
-        if (this.awaitingBroadcastButtons.has(telegramId) && textContent) {
-          const draft = this.pendingBroadcasts.get(telegramId);
-          if (!draft) return;
-
-          const parsed = this.parseBroadcastButtons(textContent);
-          if (parsed.buttons.length === 0) {
-            await this.bot.sendMessage(
-              chatId,
-              'Не получилось распознать кнопки. Формат: Текст | ссылка'
-            );
+          if (!telegramId || !this.isAdmin(telegramId)) {
+            await this.bot.sendMessage(chatId, '❌ У вас нет доступа.');
             return;
           }
 
-          this.awaitingBroadcastButtons.delete(telegramId);
-          this.pendingBroadcasts.set(telegramId, { ...draft, buttons: parsed.buttons });
-
-          await this.sendBroadcastPreview(chatId, telegramId);
-          return;
-        }
-
-        if (this.awaitingBroadcastMedia.has(telegramId)) {
-          const draft = this.pendingBroadcasts.get(telegramId);
-          if (!draft) return;
-
-          if (msg.photo?.length) {
-            const fileId = msg.photo[msg.photo.length - 1].file_id;
-            this.awaitingBroadcastMedia.delete(telegramId);
-            this.pendingBroadcasts.set(telegramId, {
-              ...draft,
-              media: { type: 'photo', fileId },
-            });
-            await this.bot.sendMessage(chatId, '📸 Фото прикреплено.');
-            await this.sendBroadcastPreview(chatId, telegramId);
-            return;
-          }
-
-          if (msg.video) {
-            this.awaitingBroadcastMedia.delete(telegramId);
-            this.pendingBroadcasts.set(telegramId, {
-              ...draft,
-              media: { type: 'video', fileId: msg.video.file_id },
-            });
-            await this.bot.sendMessage(chatId, '🎬 Видео прикреплено.');
-            await this.sendBroadcastPreview(chatId, telegramId);
-            return;
-          }
-
-          await this.bot.sendMessage(chatId, 'Пришлите фото или видео для рассылки.');
-        }
-
-        if (!textContent) return;
-        if (textContent.startsWith('/')) return;
-
-        if (textContent === AdminBot.BUTTON_LABELS.adminPanel) {
-          await this.sendAdminPanelLink(chatId, { compact: true });
-          return;
-        }
-
-        if (textContent === AdminBot.BUTTON_LABELS.stats) {
+          // Получаем статистику
           await this.sendStatsMessage(chatId);
-          return;
+        } catch (error) {
+          logger.error('Error handling /stats command', { error, chatId: msg.chat.id });
         }
+      })
+    );
 
-        if (textContent === AdminBot.BUTTON_LABELS.broadcast) {
-          await this.initiateBroadcastFlow(chatId, telegramId);
-          return;
-        }
+    this.bot.onText(
+      /\/broadcast$/,
+      runAsync(async (msg) => {
+        try {
+          const chatId = msg.chat.id;
+          const telegramId = msg.from?.id;
 
-        if (textContent === AdminBot.BUTTON_LABELS.refreshAdmins) {
-          try {
-            await this.loadAdmins();
-            await this.bot.sendMessage(
-              chatId,
-              `✅ Список админов обновлён.\nВсего админов: ${this.adminTelegramIds.size}`
-            );
-          } catch (error) {
-            logger.error('Error reloading admins manually', { error });
-            await this.bot.sendMessage(chatId, '⚠️ Не получилось обновить список админов.');
+          if (!telegramId || !this.isAdmin(telegramId)) {
+            await this.bot.sendMessage(chatId, '❌ У вас нет доступа.');
+            return;
           }
-          return;
-        }
 
-        if (textContent === AdminBot.BUTTON_LABELS.help) {
-          await this.sendHelpMessage(chatId);
-          return;
+          await this.initiateBroadcastFlow(chatId, telegramId);
+        } catch (error) {
+          logger.error('Error handling /broadcast command', { error, chatId: msg.chat.id });
         }
-      } catch (error) {
-        logger.error('Error handling broadcast draft message', { error, chatId: msg.chat.id });
-      }
-    });
+      })
+    );
+
+    this.bot.onText(
+      /\/broadcast_cancel$/,
+      runAsync(async (msg) => {
+        const chatId = msg.chat.id;
+        const telegramId = msg.from?.id;
+        if (!telegramId) return;
+        this.awaitingBroadcastText.delete(telegramId);
+        this.awaitingBroadcastButtons.delete(telegramId);
+        this.awaitingBroadcastMedia.delete(telegramId);
+        this.pendingBroadcasts.delete(telegramId);
+        await this.bot.sendMessage(chatId, 'Рассылка отменена.');
+      })
+    );
+
+    this.bot.on(
+      'message',
+      runAsync(async (msg) => {
+        try {
+          const chatId = msg.chat.id;
+          const telegramId = msg.from?.id;
+          if (!telegramId || !this.isAdmin(telegramId)) return;
+          const textContent = msg.text?.trim();
+
+          if (textContent && this.awaitingBroadcastText.has(telegramId)) {
+            this.awaitingBroadcastText.delete(telegramId);
+            this.awaitingBroadcastButtons.delete(telegramId);
+            this.awaitingBroadcastMedia.delete(telegramId);
+
+            const existing = this.pendingBroadcasts.get(telegramId);
+            const nextDraft = existing
+              ? {
+                  ...existing,
+                  text: textContent,
+                  includeDefaultButton: existing.includeDefaultButton ?? false,
+                }
+              : { text: textContent, buttons: [], includeDefaultButton: false };
+            this.pendingBroadcasts.set(telegramId, nextDraft);
+
+            await this.sendBroadcastPreview(chatId, telegramId);
+            return;
+          }
+
+          if (this.awaitingBroadcastButtons.has(telegramId) && textContent) {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) return;
+
+            const parsed = this.parseBroadcastButtons(textContent);
+            if (parsed.buttons.length === 0) {
+              await this.bot.sendMessage(
+                chatId,
+                'Не получилось распознать кнопки. Формат: Текст | ссылка'
+              );
+              return;
+            }
+
+            this.awaitingBroadcastButtons.delete(telegramId);
+            this.pendingBroadcasts.set(telegramId, { ...draft, buttons: parsed.buttons });
+
+            await this.sendBroadcastPreview(chatId, telegramId);
+            return;
+          }
+
+          if (this.awaitingBroadcastMedia.has(telegramId)) {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) return;
+
+            if (msg.photo?.length) {
+              const fileId = msg.photo[msg.photo.length - 1].file_id;
+              this.awaitingBroadcastMedia.delete(telegramId);
+              this.pendingBroadcasts.set(telegramId, {
+                ...draft,
+                media: { type: 'photo', fileId },
+              });
+              await this.bot.sendMessage(chatId, '📸 Фото прикреплено.');
+              await this.sendBroadcastPreview(chatId, telegramId);
+              return;
+            }
+
+            if (msg.video) {
+              this.awaitingBroadcastMedia.delete(telegramId);
+              this.pendingBroadcasts.set(telegramId, {
+                ...draft,
+                media: { type: 'video', fileId: msg.video.file_id },
+              });
+              await this.bot.sendMessage(chatId, '🎬 Видео прикреплено.');
+              await this.sendBroadcastPreview(chatId, telegramId);
+              return;
+            }
+
+            await this.bot.sendMessage(chatId, 'Пришлите фото или видео для рассылки.');
+          }
+
+          if (!textContent) return;
+          if (textContent.startsWith('/')) return;
+
+          if (textContent === AdminBot.BUTTON_LABELS.adminPanel) {
+            await this.sendAdminPanelLink(chatId, { compact: true });
+            return;
+          }
+
+          if (textContent === AdminBot.BUTTON_LABELS.stats) {
+            await this.sendStatsMessage(chatId);
+            return;
+          }
+
+          if (textContent === AdminBot.BUTTON_LABELS.broadcast) {
+            await this.initiateBroadcastFlow(chatId, telegramId);
+            return;
+          }
+
+          if (textContent === AdminBot.BUTTON_LABELS.refreshAdmins) {
+            try {
+              await this.loadAdmins();
+              await this.bot.sendMessage(
+                chatId,
+                `✅ Список админов обновлён.\nВсего админов: ${this.adminTelegramIds.size}`
+              );
+            } catch (error) {
+              logger.error('Error reloading admins manually', { error });
+              await this.bot.sendMessage(chatId, '⚠️ Не получилось обновить список админов.');
+            }
+            return;
+          }
+
+          if (textContent === AdminBot.BUTTON_LABELS.help) {
+            await this.sendHelpMessage(chatId);
+            return;
+          }
+        } catch (error) {
+          logger.error('Error handling broadcast draft message', { error, chatId: msg.chat.id });
+        }
+      })
+    );
 
     // Команда /help
-    this.bot.onText(/\/help/, async (msg) => {
-      const chatId = msg.chat.id;
-      await this.sendHelpMessage(chatId);
-    });
+    this.bot.onText(
+      /\/help/,
+      runAsync(async (msg) => {
+        const chatId = msg.chat.id;
+        await this.sendHelpMessage(chatId);
+      })
+    );
   }
 
   /**
    * Настройка callback обработчиков
    */
   private setupCallbacks(): void {
-    this.bot.on('callback_query', async (query) => {
-      try {
-        const chatId = query.message?.chat.id;
-        if (!chatId) return;
+    this.bot.on(
+      'callback_query',
+      runAsync(async (query) => {
+        try {
+          const chatId = query.message?.chat.id;
+          if (!chatId) return;
 
-        const telegramId = query.from.id;
-        if (!this.isAdmin(telegramId)) {
-          await this.bot.answerCallbackQuery(query.id, { text: '❌ У вас нет доступа.' });
-          return;
-        }
-
-        const data = query.data;
-
-        if (data === 'open_admin_panel') {
-          const adminUrl = this.getAdminPanelUrl();
-          await this.bot.answerCallbackQuery(query.id);
-          await this.bot.sendMessage(chatId, `🔗 ${adminUrl}`);
-        }
-
-        if (!data) return;
-
-        if (data === 'broadcast_cancel') {
-          this.awaitingBroadcastText.delete(telegramId);
-          this.awaitingBroadcastButtons.delete(telegramId);
-          this.pendingBroadcasts.delete(telegramId);
-          await this.bot.answerCallbackQuery(query.id, { text: 'Рассылка отменена' });
-          return;
-        }
-
-        if (data === 'broadcast_buttons_yes') {
-          const draft = this.pendingBroadcasts.get(telegramId);
-          if (!draft) {
-            await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
-            return;
-          }
-          this.awaitingBroadcastButtons.add(telegramId);
-          await this.bot.answerCallbackQuery(query.id);
-          await this.bot.sendMessage(
-            chatId,
-            'Отправьте кнопки в формате:\n' +
-              'Текст | ссылка\n' +
-              'Например:\n' +
-              'Связаться | https://t.me/username\n' +
-              'Упомянуть | tg://user?id=123456789'
-          );
-          return;
-        }
-
-        if (data === 'broadcast_toggle_app') {
-          const draft = this.pendingBroadcasts.get(telegramId);
-          if (!draft) {
-            await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
-            return;
-          }
-          this.pendingBroadcasts.set(telegramId, {
-            ...draft,
-            includeDefaultButton: !draft.includeDefaultButton,
-          });
-          await this.bot.answerCallbackQuery(query.id, {
-            text: draft.includeDefaultButton ? 'Кнопка отключена' : 'Кнопка будет добавлена',
-          });
-          await this.sendBroadcastPreview(chatId, telegramId);
-          return;
-        }
-
-        if (data === 'broadcast_media_prompt') {
-          const draft = this.pendingBroadcasts.get(telegramId);
-          if (!draft) {
-            await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
-            return;
-          }
-          this.awaitingBroadcastMedia.add(telegramId);
-          await this.bot.answerCallbackQuery(query.id);
-          await this.bot.sendMessage(chatId, 'Пришлите фото или видео для рассылки (одно вложение).');
-          return;
-        }
-
-        if (data === 'broadcast_media_clear') {
-          const draft = this.pendingBroadcasts.get(telegramId);
-          if (!draft) {
-            await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
-            return;
-          }
-          if (draft.media) {
-            this.pendingBroadcasts.set(telegramId, { ...draft, media: undefined });
-          }
-          await this.bot.answerCallbackQuery(query.id, { text: 'Медиа удалено' });
-          await this.sendBroadcastPreview(chatId, telegramId);
-          return;
-        }
-
-        if (data === 'broadcast_edit_text') {
-          const draft = this.pendingBroadcasts.get(telegramId);
-          if (!draft) {
-            await this.bot.answerCallbackQuery(query.id, { text: 'Нет черновика рассылки.' });
-            return;
-          }
-          this.awaitingBroadcastText.add(telegramId);
-          await this.bot.answerCallbackQuery(query.id);
-          await this.bot.sendMessage(chatId, 'Отправьте новый текст для рассылки одним сообщением.');
-          return;
-        }
-
-        if (data === 'broadcast_edit_buttons') {
-          const draft = this.pendingBroadcasts.get(telegramId);
-          if (!draft) {
-            await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
-            return;
-          }
-          this.awaitingBroadcastButtons.add(telegramId);
-          await this.bot.answerCallbackQuery(query.id);
-          await this.bot.sendMessage(chatId, 'Отправьте новый список кнопок (Текст | ссылка).');
-          return;
-        }
-
-        if (data === 'broadcast_send') {
-          const draft = this.pendingBroadcasts.get(telegramId);
-          if (!draft) {
-            await this.bot.answerCallbackQuery(query.id, { text: 'Нет черновика рассылки.' });
+          const telegramId = query.from.id;
+          if (!this.isAdmin(telegramId)) {
+            await this.bot.answerCallbackQuery(query.id, { text: '❌ У вас нет доступа.' });
             return;
           }
 
-          if (!this.onBroadcast) {
-            await this.bot.answerCallbackQuery(query.id, { text: 'Рассылка недоступна.' });
+          const data = query.data;
+
+          if (data === 'open_admin_panel') {
+            const adminUrl = this.getAdminPanelUrl();
+            await this.bot.answerCallbackQuery(query.id);
+            await this.bot.sendMessage(chatId, `🔗 ${adminUrl}`);
+          }
+
+          if (!data) return;
+
+          if (data === 'broadcast_cancel') {
+            this.awaitingBroadcastText.delete(telegramId);
+            this.awaitingBroadcastButtons.delete(telegramId);
+            this.pendingBroadcasts.delete(telegramId);
+            await this.bot.answerCallbackQuery(query.id, { text: 'Рассылка отменена' });
             return;
           }
 
-          const miniAppUrl = this.getMiniAppUrl();
-          const finalButtons = [
-            ...draft.buttons,
-            ...(draft.includeDefaultButton
-              ? [{ text: 'Открыть приложение', url: miniAppUrl, kind: 'web_app' as const }]
-              : []),
-          ];
+          if (data === 'broadcast_buttons_yes') {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
+              return;
+            }
+            this.awaitingBroadcastButtons.add(telegramId);
+            await this.bot.answerCallbackQuery(query.id);
+            await this.bot.sendMessage(
+              chatId,
+              'Отправьте кнопки в формате:\n' +
+                'Текст | ссылка\n' +
+                'Например:\n' +
+                'Связаться | https://t.me/username\n' +
+                'Упомянуть | tg://user?id=123456789'
+            );
+            return;
+          }
 
-          await this.bot.answerCallbackQuery(query.id, { text: 'Запускаю рассылку...' });
-          this.pendingBroadcasts.delete(telegramId);
+          if (data === 'broadcast_toggle_app') {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
+              return;
+            }
+            this.pendingBroadcasts.set(telegramId, {
+              ...draft,
+              includeDefaultButton: !draft.includeDefaultButton,
+            });
+            await this.bot.answerCallbackQuery(query.id, {
+              text: draft.includeDefaultButton ? 'Кнопка отключена' : 'Кнопка будет добавлена',
+            });
+            await this.sendBroadcastPreview(chatId, telegramId);
+            return;
+          }
 
-          const statusMessage = await this.bot.sendMessage(chatId, 'Рассылка запускается...');
-          const spinner = ['|', '/', '-', '\\'];
-          let spinnerIndex = 0;
-          let lastProgress = { sent: 0, failed: 0, total: 0 };
+          if (data === 'broadcast_media_prompt') {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
+              return;
+            }
+            this.awaitingBroadcastMedia.add(telegramId);
+            await this.bot.answerCallbackQuery(query.id);
+            await this.bot.sendMessage(
+              chatId,
+              'Пришлите фото или видео для рассылки (одно вложение).'
+            );
+            return;
+          }
 
-          const isMessageNotModifiedError = (err: unknown): boolean => {
-            const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: unknown }).message) : '';
-            return msg.toLowerCase().includes('message is not modified');
-          };
+          if (data === 'broadcast_media_clear') {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
+              return;
+            }
+            if (draft.media) {
+              this.pendingBroadcasts.set(telegramId, { ...draft, media: undefined });
+            }
+            await this.bot.answerCallbackQuery(query.id, { text: 'Медиа удалено' });
+            await this.sendBroadcastPreview(chatId, telegramId);
+            return;
+          }
 
-          const updateStatus = async (force = false) => {
-            if (!force && lastProgress.total === 0) return;
-            const frame = spinner[spinnerIndex % spinner.length];
-            spinnerIndex += 1;
-            const text =
-              `Рассылка ${frame}\n` +
-              `Отправлено: ${lastProgress.sent} из ${lastProgress.total}\n` +
-              `Ошибок: ${lastProgress.failed}`;
+          if (data === 'broadcast_edit_text') {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет черновика рассылки.' });
+              return;
+            }
+            this.awaitingBroadcastText.add(telegramId);
+            await this.bot.answerCallbackQuery(query.id);
+            await this.bot.sendMessage(
+              chatId,
+              'Отправьте новый текст для рассылки одним сообщением.'
+            );
+            return;
+          }
+
+          if (data === 'broadcast_edit_buttons') {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет текста рассылки.' });
+              return;
+            }
+            this.awaitingBroadcastButtons.add(telegramId);
+            await this.bot.answerCallbackQuery(query.id);
+            await this.bot.sendMessage(chatId, 'Отправьте новый список кнопок (Текст | ссылка).');
+            return;
+          }
+
+          if (data === 'broadcast_send') {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет черновика рассылки.' });
+              return;
+            }
+
+            if (!this.onBroadcast) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Рассылка недоступна.' });
+              return;
+            }
+
+            const miniAppUrl = this.getMiniAppUrl();
+            const finalButtons = [
+              ...draft.buttons,
+              ...(draft.includeDefaultButton
+                ? [{ text: 'Открыть приложение', url: miniAppUrl, kind: 'web_app' as const }]
+                : []),
+            ];
+
+            await this.bot.answerCallbackQuery(query.id, { text: 'Запускаю рассылку...' });
+            this.pendingBroadcasts.delete(telegramId);
+
+            const statusMessage = await this.bot.sendMessage(chatId, 'Рассылка запускается...');
+            const spinner = ['|', '/', '-', '\\'];
+            let spinnerIndex = 0;
+            let lastProgress = { sent: 0, failed: 0, total: 0 };
+
+            const isMessageNotModifiedError = (err: unknown): boolean => {
+              const msg =
+                err && typeof err === 'object' && 'message' in err
+                  ? String((err as { message?: unknown }).message)
+                  : '';
+              return msg.toLowerCase().includes('message is not modified');
+            };
+
+            const updateStatus = async (force = false) => {
+              if (!force && lastProgress.total === 0) return;
+              const frame = spinner[spinnerIndex % spinner.length];
+              spinnerIndex += 1;
+              const text =
+                `Рассылка ${frame}\n` +
+                `Отправлено: ${lastProgress.sent} из ${lastProgress.total}\n` +
+                `Ошибок: ${lastProgress.failed}`;
+              try {
+                await this.bot.editMessageText(text, {
+                  chat_id: chatId,
+                  message_id: statusMessage.message_id,
+                });
+              } catch (err: unknown) {
+                // Это частая, безопасная ситуация при конкурентных обновлениях статуса
+                // (Telegram 400: message is not modified). Не ломаем рассылку и не спамим error-логами.
+                if (isMessageNotModifiedError(err)) return;
+                logger.warn('Failed to update broadcast status message', {
+                  chatId,
+                  messageId: statusMessage.message_id,
+                  error: err,
+                });
+              }
+            };
+
+            const timer = setInterval(() => {
+              updateStatus().catch(() => null);
+            }, 1200);
+
+            let result: { sent: number; failed: number; total: number };
             try {
-              await this.bot.editMessageText(text, {
-                chat_id: chatId,
-                message_id: statusMessage.message_id,
+              result = await this.onBroadcast({
+                text: draft.text,
+                buttons: finalButtons,
+                media: draft.media,
+                onProgress: async (progress) => {
+                  lastProgress = progress;
+                  if (progress.sent === progress.total) {
+                    await updateStatus(true);
+                  }
+                },
               });
-            } catch (err: unknown) {
-              // Это частая, безопасная ситуация при конкурентных обновлениях статуса
-              // (Telegram 400: message is not modified). Не ломаем рассылку и не спамим error-логами.
-              if (isMessageNotModifiedError(err)) return;
-              logger.warn('Failed to update broadcast status message', {
-                chatId,
-                messageId: statusMessage.message_id,
-                error: err,
+            } finally {
+              clearInterval(timer);
+            }
+
+            await this.bot.sendMessage(
+              chatId,
+              `✅ Рассылка завершена\n\nОтправлено: ${result.sent}\nОшибок: ${result.failed}`
+            );
+            return;
+          }
+
+          const confirmPrefix = 'booking_confirm:';
+          const cancelPrefix = 'booking_cancel:';
+
+          if (data.startsWith(confirmPrefix) || data.startsWith(cancelPrefix)) {
+            const bookingId = data.replace(confirmPrefix, '').replace(cancelPrefix, '');
+            const isConfirm = data.startsWith(confirmPrefix);
+
+            const booking = await this.bookingRepository.findById(bookingId);
+            if (!booking) {
+              await this.bot.answerCallbackQuery(query.id, { text: '❌ Заявка не найдена.' });
+              return;
+            }
+
+            if (booking.status !== 'pending') {
+              const statusLabel =
+                booking.status === 'confirmed' ? '✅ Уже подтверждена' : '❌ Уже отменена';
+              await this.bot.answerCallbackQuery(query.id, { text: statusLabel });
+              return;
+            }
+
+            await this.bookingRepository.updateStatus(
+              bookingId,
+              isConfirm ? 'confirmed' : 'cancelled'
+            );
+
+            if (isConfirm && this.onBookingConfirmed) {
+              await this.onBookingConfirmed({
+                bookingId: booking.id,
+                bookingDate: booking.bookingDate.toISOString().split('T')[0],
+                formatName: booking.format?.name || 'Не указан',
+                fullName: booking.fullName,
+                contactValue: booking.contactValue,
               });
             }
-          };
 
-          const timer = setInterval(() => {
-            updateStatus().catch(() => null);
-          }, 1200);
+            const statusLine = isConfirm ? 'Статус: ✅ Подтверждена' : 'Статус: ❌ Отменена';
+            if (query.message?.text) {
+              await this.bot.editMessageText(`${query.message.text}\n\n${statusLine}`, {
+                chat_id: chatId,
+                message_id: query.message.message_id,
+              });
+            }
 
-          let result: { sent: number; failed: number; total: number };
-          try {
-            result = await this.onBroadcast({
-              text: draft.text,
-              buttons: finalButtons,
-              media: draft.media,
-              onProgress: async (progress) => {
-                lastProgress = progress;
-                if (progress.sent === progress.total) {
-                  await updateStatus(true);
-                }
-              },
+            await this.bot.editMessageReplyMarkup(
+              { inline_keyboard: [] },
+              { chat_id: chatId, message_id: query.message?.message_id }
+            );
+
+            await this.bot.answerCallbackQuery(query.id, {
+              text: isConfirm ? '✅ Заявка подтверждена' : '❌ Заявка отменена',
             });
-          } finally {
-            clearInterval(timer);
           }
-
-          await this.bot.sendMessage(
-            chatId,
-            `✅ Рассылка завершена\n\nОтправлено: ${result.sent}\nОшибок: ${result.failed}`
-          );
-          return;
+        } catch (error) {
+          logger.error('Error handling callback query', { error, queryId: query.id });
         }
-
-        const confirmPrefix = 'booking_confirm:';
-        const cancelPrefix = 'booking_cancel:';
-
-        if (data.startsWith(confirmPrefix) || data.startsWith(cancelPrefix)) {
-          const bookingId = data.replace(confirmPrefix, '').replace(cancelPrefix, '');
-          const isConfirm = data.startsWith(confirmPrefix);
-
-          const booking = await this.bookingRepository.findById(bookingId);
-          if (!booking) {
-            await this.bot.answerCallbackQuery(query.id, { text: '❌ Заявка не найдена.' });
-            return;
-          }
-
-          if (booking.status !== 'pending') {
-            const statusLabel = booking.status === 'confirmed' ? '✅ Уже подтверждена' : '❌ Уже отменена';
-            await this.bot.answerCallbackQuery(query.id, { text: statusLabel });
-            return;
-          }
-
-          await this.bookingRepository.updateStatus(bookingId, isConfirm ? 'confirmed' : 'cancelled');
-
-          if (isConfirm && this.onBookingConfirmed) {
-            await this.onBookingConfirmed({
-              bookingId: booking.id,
-              bookingDate: booking.bookingDate.toISOString().split('T')[0],
-              formatName: booking.format?.name || 'Не указан',
-              fullName: booking.fullName,
-              contactValue: booking.contactValue,
-            });
-          }
-
-          const statusLine = isConfirm ? 'Статус: ✅ Подтверждена' : 'Статус: ❌ Отменена';
-          if (query.message?.text) {
-            await this.bot.editMessageText(`${query.message.text}\n\n${statusLine}`, {
-              chat_id: chatId,
-              message_id: query.message.message_id,
-            });
-          }
-
-          await this.bot.editMessageReplyMarkup(
-            { inline_keyboard: [] },
-            { chat_id: chatId, message_id: query.message?.message_id }
-          );
-
-          await this.bot.answerCallbackQuery(query.id, {
-            text: isConfirm ? '✅ Заявка подтверждена' : '❌ Заявка отменена',
-          });
-        }
-      } catch (error) {
-        logger.error('Error handling callback query', { error, queryId: query.id });
-      }
-    });
+      })
+    );
   }
 
   private async sendBroadcastPreview(chatId: number, telegramId: number): Promise<void> {
     const draft = this.pendingBroadcasts.get(telegramId);
     if (!draft) return;
 
-    await this.bot.sendMessage(
-      chatId,
-      this.buildBroadcastPreview(draft),
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '🚀 Отправить', callback_data: 'broadcast_send' }],
-            [
-              { text: '✏️ Изменить текст', callback_data: 'broadcast_edit_text' },
-              { text: '➕ Кнопки', callback_data: 'broadcast_buttons_yes' },
-            ],
-            [
-              {
-                text: draft.includeDefaultButton ? '📱 Кнопка Mini App: ВКЛ' : '📱 Кнопка Mini App: ВЫКЛ',
-                callback_data: 'broadcast_toggle_app',
-              },
-            ],
-            [
-              {
-                text: draft.media ? '🗑 Удалить медиа' : '🖼 Прикрепить медиа',
-                callback_data: draft.media ? 'broadcast_media_clear' : 'broadcast_media_prompt',
-              },
-            ],
-            [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
+    await this.bot.sendMessage(chatId, this.buildBroadcastPreview(draft), {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🚀 Отправить', callback_data: 'broadcast_send' }],
+          [
+            { text: '✏️ Изменить текст', callback_data: 'broadcast_edit_text' },
+            { text: '➕ Кнопки', callback_data: 'broadcast_buttons_yes' },
           ],
-        },
-      }
-    );
+          [
+            {
+              text: draft.includeDefaultButton
+                ? '📱 Кнопка Mini App: ВКЛ'
+                : '📱 Кнопка Mini App: ВЫКЛ',
+              callback_data: 'broadcast_toggle_app',
+            },
+          ],
+          [
+            {
+              text: draft.media ? '🗑 Удалить медиа' : '🖼 Прикрепить медиа',
+              callback_data: draft.media ? 'broadcast_media_clear' : 'broadcast_media_prompt',
+            },
+          ],
+          [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
+        ],
+      },
+    });
   }
 
   private buildBroadcastPreview(draft: {
@@ -646,7 +673,9 @@ export class AdminBot {
     const buttonLines: string[] = [];
     if (draft.buttons.length) {
       draft.buttons.forEach((button) =>
-        buttonLines.push(`• ${button.text} → ${button.url}${button.kind === 'web_app' ? ' (Mini App)' : ''}`)
+        buttonLines.push(
+          `• ${button.text} → ${button.url}${button.kind === 'web_app' ? ' (Mini App)' : ''}`
+        )
       );
     }
     if (draft.includeDefaultButton) {
@@ -666,7 +695,10 @@ export class AdminBot {
   private parseBroadcastButtons(input: string): {
     buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
   } {
-    const lines = input.split('\n').map((line) => line.trim()).filter(Boolean);
+    const lines = input
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
     const buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }> = [];
 
     for (const line of lines) {
@@ -686,7 +718,9 @@ export class AdminBot {
     return { buttons };
   }
 
-  private normalizeBroadcastButton(rawUrl: string): { url: string; kind: 'url' | 'web_app' } | null {
+  private normalizeBroadcastButton(
+    rawUrl: string
+  ): { url: string; kind: 'url' | 'web_app' } | null {
     const value = rawUrl.trim();
     if (!value) return null;
 
@@ -694,7 +728,9 @@ export class AdminBot {
 
     if (value.startsWith('app:') || value.startsWith('webapp:')) {
       const suffix = value.replace(/^app:|^webapp:/, '').trim();
-      const url = suffix ? `${miniAppUrl}${suffix.startsWith('/') || suffix.startsWith('?') ? '' : '/'}${suffix}` : miniAppUrl;
+      const url = suffix
+        ? `${miniAppUrl}${suffix.startsWith('/') || suffix.startsWith('?') ? '' : '/'}${suffix}`
+        : miniAppUrl;
       return { url, kind: 'web_app' };
     }
 
@@ -985,7 +1021,11 @@ export class AdminBot {
       } catch (err: unknown) {
         const code = getTelegramErrorCode(err);
         if (code !== 403) {
-          logger.error('Error sending voting QR to admin', { error: err, adminId, sessionId: payload.sessionId });
+          logger.error('Error sending voting QR to admin', {
+            error: err,
+            adminId,
+            sessionId: payload.sessionId,
+          });
         }
       }
     }
@@ -1002,7 +1042,7 @@ export class AdminBot {
    * Остановка polling (для graceful shutdown)
    */
   async stop(): Promise<void> {
-    this.bot.stopPolling();
+    await this.bot.stopPolling();
   }
 
   /**

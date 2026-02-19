@@ -141,10 +141,7 @@ export class ImageStorage {
     if (!metadata.width || !metadata.height) {
       throw new Error('Invalid image file');
     }
-    if (
-      metadata.width > IMAGE_LIMITS.MAX_WIDTH ||
-      metadata.height > IMAGE_LIMITS.MAX_HEIGHT
-    ) {
+    if (metadata.width > IMAGE_LIMITS.MAX_WIDTH || metadata.height > IMAGE_LIMITS.MAX_HEIGHT) {
       throw new Error('Image dimensions exceed maximum allowed size');
     }
 
@@ -237,8 +234,10 @@ export class ImageStorage {
       .map((w) => `${writtenAvif[w].url} ${w}w`)
       .join(', ');
 
-    const defaultWebp = writtenWebp[DEFAULT_RESPONSIVE_WIDTH]?.url ?? Object.values(writtenWebp)[0]?.url;
-    const defaultAvif = writtenAvif[DEFAULT_RESPONSIVE_WIDTH]?.url ?? Object.values(writtenAvif)[0]?.url;
+    const defaultWebp =
+      writtenWebp[DEFAULT_RESPONSIVE_WIDTH]?.url ?? Object.values(writtenWebp)[0]?.url;
+    const defaultAvif =
+      writtenAvif[DEFAULT_RESPONSIVE_WIDTH]?.url ?? Object.values(writtenAvif)[0]?.url;
     const optimizedPath = writtenWebp[DEFAULT_RESPONSIVE_WIDTH]?.path;
 
     return {

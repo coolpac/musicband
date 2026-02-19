@@ -56,7 +56,7 @@ export function validateInitData(
     // Парсим initData
     const params = new URLSearchParams(rawInitData);
     const hash = params.get('hash');
-    
+
     if (!hash) {
       warn('InitData validation failed: missing hash');
       return null;
@@ -87,20 +87,13 @@ export function validateInitData(
     params.delete('hash');
 
     // Сортируем параметры по ключу
-    const sortedParams = Array.from(params.entries()).sort(([a], [b]) =>
-      a.localeCompare(b)
-    );
+    const sortedParams = Array.from(params.entries()).sort(([a], [b]) => a.localeCompare(b));
 
     // Формируем data_check_string
-    const dataCheckString = sortedParams
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
+    const dataCheckString = sortedParams.map(([key, value]) => `${key}=${value}`).join('\n');
 
     // Вычисляем секретный ключ
-    const secretKey = crypto
-      .createHmac('sha256', 'WebAppData')
-      .update(botToken)
-      .digest();
+    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
 
     // Вычисляем HMAC-SHA256
     const calculatedHash = crypto

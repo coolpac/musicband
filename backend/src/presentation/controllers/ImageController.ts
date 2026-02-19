@@ -52,12 +52,8 @@ export class ImageController {
           avifUrl: result.avifUrl ?? undefined,
           thumbnailUrl: result.thumbnailUrl ?? undefined,
           srcSet: result.srcSet ?? undefined,
-          optimized: result.optimizedUrl
-            ? { url: result.optimizedUrl }
-            : undefined,
-          thumbnail: result.thumbnailUrl
-            ? { url: result.thumbnailUrl }
-            : undefined,
+          optimized: result.optimizedUrl ? { url: result.optimizedUrl } : undefined,
+          thumbnail: result.thumbnailUrl ? { url: result.thumbnailUrl } : undefined,
         },
       });
     } catch (error: unknown) {
@@ -71,9 +67,9 @@ export class ImageController {
    */
   async deleteImage(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { url } = req.body;
-
-      if (!url) {
+      const body = req.body as { url?: unknown } | undefined;
+      const url = body?.url;
+      if (typeof url !== 'string' || !url) {
         res.status(400).json({
           success: false,
           error: {

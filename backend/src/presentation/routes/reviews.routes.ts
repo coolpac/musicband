@@ -1,7 +1,11 @@
 import { Router } from 'express';
+import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { ReviewController } from '../controllers/ReviewController';
 import { ReviewService } from '../../domain/services/ReviewService';
-import { PrismaReviewRepository, PrismaUserRepository } from '../../infrastructure/database/repositories';
+import {
+  PrismaReviewRepository,
+  PrismaUserRepository,
+} from '../../infrastructure/database/repositories';
 import { validate } from '../middleware/validator';
 import { CreateReviewSchema } from '../../application/dto/review.dto';
 import { authenticate } from '../middleware/auth';
@@ -28,15 +32,19 @@ const authService = new AuthService(
 );
 
 // Публичные маршруты
-router.get('/', publicApiRateLimiter, reviewController.getReviews.bind(reviewController));
+router.get(
+  '/',
+  asyncHandler(publicApiRateLimiter),
+  asyncHandler(reviewController.getReviews.bind(reviewController))
+);
 
 // Защищенные маршруты
 router.post(
   '/',
-  authenticate(authService),
-  reviewRateLimiter, // Лимит: 5 отзывов в день
+  asyncHandler(authenticate(authService)),
+  asyncHandler(reviewRateLimiter),
   validate(CreateReviewSchema),
-  reviewController.createReview.bind(reviewController)
+  asyncHandler(reviewController.createReview.bind(reviewController))
 );
 
 export default router;
