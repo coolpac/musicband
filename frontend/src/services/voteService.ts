@@ -62,7 +62,27 @@ export async function castVote(songId: string): Promise<void> {
 }
 
 /**
- * Временное: голосование по telegramId без initData. POST /api/public/vote.
+ * Голосование с initData (проверка Admin/User Bot). Возвращает JWT для сокета.
+ */
+export async function castVoteWithInitData(
+  songId: string,
+  initData: string,
+  sessionId?: string
+): Promise<{ token: string; sessionId: string }> {
+  if (isMockMode()) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return { token: 'mock', sessionId: 'mock' };
+  }
+  const res = await apiPost<{ sessionId: string; token: string }>('/api/public/vote/with-initdata', {
+    initData,
+    songId,
+    ...(sessionId ? { sessionId } : {}),
+  });
+  return { token: res.token, sessionId: res.sessionId };
+}
+
+/**
+ * Fallback: голосование по telegramId без initData. POST /api/public/vote.
  */
 export async function castVotePublic(
   songId: string,
@@ -85,4 +105,24 @@ export async function castVotePublic(
  */
 export async function getMyVote(): Promise<MyVoteResponse> {
   return apiGet<MyVoteResponse>('/api/votes/my');
+}
+
+export type VoteSessionStatus = 'active' | 'ended_with_winner' | 'ended' | 'expired';
+
+export type VoteSessionInfo = {
+  status: VoteSessionStatus;
+  winningSong?: { id: string; title: string; artist: string; coverUrl: string | null };
+};
+
+/** Информация о сессии голосования (публичный эндпоинт, не требует auth) */
+export async function getVoteSessionInfo(sessionId: string): Promise<VoteSessionInfo | null> {
+  if (isMockMode()) return null;
+  const base = import.meta.env.VITE_API_URL || '';
+  const res = await fetch(`${base}/api/public/vote/session/${sessionId}`);
+  const data = await res.json();
+  if (!data?.success || !data?.data) return null;
+  return {
+    status: data.data.status,
+    winningSong: data.data.winningSong,
+  };
 }

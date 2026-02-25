@@ -11,6 +11,13 @@ export const PublicCastVoteSchema = z.object({
   sessionId: z.string().uuid('Invalid session ID').optional(),
 });
 
+/** Голосование с проверкой initData (Admin Bot или User Bot). Возвращает JWT для сокета. */
+export const VoteWithInitDataSchema = z.object({
+  initData: z.string().min(1, 'InitData is required'),
+  songId: z.string().uuid('Invalid song ID'),
+  sessionId: z.string().uuid('Invalid session ID').optional(),
+});
+
 export const StartSessionSchema = z.object({
   songIds: z
     .array(z.string().uuid('Invalid song ID'))

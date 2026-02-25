@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { VoteService } from '../../domain/services/VoteService';
 import { SongService } from '../../domain/services/SongService';
+import { AuthService } from '../../domain/services/AuthService';
 import { redis } from '../../config/redis';
 import { logger } from '../../shared/utils/logger';
 import { getSocketServer } from '../../app';
@@ -12,7 +13,8 @@ import { getSocketServer } from '../../app';
 export class PublicVoteController {
   constructor(
     private voteService: VoteService,
-    private songService: SongService
+    private songService: SongService,
+    private authService?: AuthService
   ) {}
 
   /**
@@ -191,6 +193,40 @@ export class PublicVoteController {
       res.json({
         success: true,
         data: { sessionId },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/public/vote/with-initdata
+   * Голосование с проверкой initData (Admin Bot или User Bot). Возвращает JWT для real-time сокета.
+   */
+  async castVoteWithInitData(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!this.authService) {
+        res.status(501).json({
+          success: false,
+          error: { message: 'InitData voting not configured', code: 'NOT_IMPLEMENTED' },
+        });
+        return;
+      }
+
+      const { initData, songId } = req.body as { initData: string; songId: string; sessionId?: string };
+
+      const authResult = await this.authService.authenticateWithTelegram(initData);
+      const sessionId = await this.voteService.castVote(authResult.user.id, songId);
+
+      const socketServer = getSocketServer();
+      socketServer?.requestResultsUpdate(sessionId);
+
+      res.status(201).json({
+        success: true,
+        data: {
+          sessionId,
+          token: authResult.token,
+        },
       });
     } catch (error) {
       next(error);

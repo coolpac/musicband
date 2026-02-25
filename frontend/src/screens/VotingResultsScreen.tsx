@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { hapticImpact } from '../telegram/telegramWebApp';
 import { Song } from '../types/vote';
 import { getSongs } from '../services/songService';
-import { getVoteResults, VoteResult } from '../services/voteService';
+import { getVoteResults, getVoteSessionInfo, VoteResult } from '../services/voteService';
 import NetworkError from '../components/NetworkError';
 import votingBg from '../assets/figma/voting-bg-only.svg';
 import { OptimizedImage } from '../components/OptimizedImage';
@@ -30,6 +30,10 @@ type VotingResultsScreenProps = {
   onRetryConnection?: () => void;
   /** Голосование завершено — можно просматривать песни */
   sessionEnded?: boolean;
+  /** sessionId для polling статуса — если сессия завершена, редирект на победителя */
+  sessionId?: string | null;
+  /** Вызывается при завершении голосования с победителем (админ завершил) */
+  onSessionEnded?: (winningSongId: string) => void;
 };
 
 export default function VotingResultsScreen({
@@ -39,14 +43,18 @@ export default function VotingResultsScreen({
   retryTrigger = 0,
   onRetryConnection,
   sessionEnded = false,
+  sessionId = null,
+  onSessionEnded,
 }: VotingResultsScreenProps) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [results, setResults] = useState<VoteResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const hasLiveSocket = socketStatus === 'connected';
+
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const [songsData, resultsData] = await Promise.all([
@@ -56,10 +64,12 @@ export default function VotingResultsScreen({
       setSongs(songsData);
       setResults(resultsData);
     } catch (err) {
-      console.error('Failed to load voting results:', err);
-      setError(err instanceof Error ? err : new Error(String(err)));
+      if (!silent) {
+        console.error('Failed to load voting results:', err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -77,8 +87,29 @@ export default function VotingResultsScreen({
     if (retryTrigger > 0) loadData();
   }, [retryTrigger, loadData]);
 
+  // Polling fallback: когда сокета нет или он отключён — периодически обновляем результаты
+  useEffect(() => {
+    if (hasLiveSocket || error) return;
+    const POLL_INTERVAL_MS = 8000;
+    const id = setInterval(() => loadData(true), POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [hasLiveSocket, error, loadData]);
+
+  // Polling статуса сессии: если админ завершил голосование — редирект на победителя (работает без сокета)
+  useEffect(() => {
+    if (!sessionId || !onSessionEnded) return;
+    const SESSION_POLL_MS = 6000;
+    const id = setInterval(async () => {
+      const info = await getVoteSessionInfo(sessionId);
+      if (info?.status === 'ended_with_winner' && info.winningSong?.id) {
+        onSessionEnded(info.winningSong.id);
+      }
+    }, SESSION_POLL_MS);
+    return () => clearInterval(id);
+  }, [sessionId, onSessionEnded]);
+
   const getSongPercentage = (songId: string) => {
-    if (liveResults?.songs) {
+    if (hasLiveSocket && liveResults?.songs) {
       const item = liveResults.songs.find((s) => s.song.id === songId);
       return item?.percentage ?? 0;
     }
@@ -86,8 +117,8 @@ export default function VotingResultsScreen({
     return result?.percentage || 0;
   };
 
-  // При liveResults используем данные из сокета (уже отсортированы по percentage); иначе — из API
-  const sortedSongs: Song[] = liveResults?.songs?.length
+  // При активном сокете — данные из vote:results:updated; иначе — из API (в т.ч. polling)
+  const sortedSongs: Song[] = hasLiveSocket && liveResults?.songs?.length
     ? [...liveResults.songs]
         .sort((a, b) => b.percentage - a.percentage)
         .map((item) => ({

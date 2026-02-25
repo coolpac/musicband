@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
 import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId, getTelegramWebApp } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
-import { castVote, castVotePublic, getMyVote } from './services/voteService';
+import { castVote, castVotePublic, castVoteWithInitData, getMyVote } from './services/voteService';
 import { submitReview } from './services/reviewService';
 import { apiPost, ApiError } from './services/apiClient';
 import HomeScreen from './screens/HomeScreen';
@@ -304,8 +304,8 @@ export default function App() {
     };
   }, []);
 
-  // Загрузить сессию голосования по sessionId и перейти на нужный экран
-  const loadVotingSession = (sessionId: string) => {
+  /** Загрузить сессию и перейти на нужный экран. fromScreen: не переключать на voting, если уже смотрим результаты. */
+  const loadVotingSession = (sessionId: string, fromScreen?: 'voting' | 'voting-results') => {
     setVotingSessionId(sessionId);
 
     const base = import.meta.env.VITE_API_URL || '';
@@ -314,8 +314,6 @@ export default function App() {
       .then((data) => {
         if (!data.success) {
           console.warn('Vote session not found or error:', data);
-          // Если сессия не найдена, но мы уже на экране voting — оставляем там
-          // (возможно API ещё не вернул данные или сессия создаётся)
           return;
         }
 
@@ -323,8 +321,11 @@ export default function App() {
         console.log('Vote session loaded:', { sessionId, status, winningSong });
 
         if (status === 'active') {
-          setCurrentScreen('voting');
-          window.history.replaceState({}, '', `?screen=voting&sessionId=${sessionId}`);
+          // Уже на voting-results (после голоса) — не переключать на форму
+          if (fromScreen !== 'voting-results') {
+            setCurrentScreen('voting');
+            window.history.replaceState({}, '', `?screen=voting&sessionId=${sessionId}`);
+          }
         } else if (status === 'ended_with_winner' && winningSong) {
           setCurrentScreen('winning-song');
           window.history.replaceState(
@@ -333,15 +334,15 @@ export default function App() {
             `?screen=winning-song&songId=${winningSong.id}&sessionId=${sessionId}`
           );
         } else if (status === 'ended') {
-          // Голосование завершено без победителя — показываем результаты
           setCurrentScreen('voting-results');
           window.history.replaceState({}, '', `?screen=voting-results&sessionId=${sessionId}`);
+        } else if (status === 'expired') {
+          setCurrentScreen('home');
+          window.history.replaceState({}, '', '?screen=home');
         }
-        // Не переключаем на home если статус неизвестен
       })
       .catch((err) => {
         console.error('Failed to load voting session:', err);
-        // При ошибке сети не переключаем экран — возможно пользователь уже на voting
       });
   };
 
@@ -352,12 +353,14 @@ export default function App() {
     const urlSessionId = params.get('sessionId');
     const urlScreen = params.get('screen');
 
-    // Если URL уже содержит screen=voting или voting-results с sessionId — сохраняем для socket
-    if (urlSessionId && (urlScreen === 'voting' || urlScreen === 'voting-results')) {
-      console.log('Voting session already in URL, saving sessionId:', urlSessionId);
+    // voting-results + sessionId: проверяем статус — если завершено, редирект на победителя
+    if (urlSessionId && urlScreen === 'voting-results') {
       setVotingSessionId(urlSessionId);
-      if (urlScreen === 'voting') return; // voting: не делаем лишний fetch
-      // voting-results: не вызываем loadVotingSession — иначе active сессия переключит на форму голосования
+      loadVotingSession(urlSessionId, 'voting-results');
+      return;
+    }
+    if (urlSessionId && urlScreen === 'voting') {
+      setVotingSessionId(urlSessionId);
       return;
     }
 
@@ -456,11 +459,12 @@ export default function App() {
       setLiveResults(data);
     });
 
-    newSocket.on('vote:session:ended', (data: { winningSong?: { id: string; title: string; artist: string; coverUrl: string | null } }) => {
-      const { winningSong } = data;
+    newSocket.on('vote:session:ended', (data: { winningSong?: { id: string; title: string; artist: string; coverUrl: string | null }; sessionId?: string }) => {
+      const { winningSong, sessionId: evtSessionId } = data;
       if (winningSong) {
         setCurrentScreen('winning-song');
-        window.history.pushState({}, '', `?screen=winning-song&songId=${winningSong.id}`);
+        const sid = evtSessionId || votingSessionId || new URLSearchParams(window.location.search).get('sessionId');
+        window.history.replaceState({}, '', sid ? `?screen=winning-song&songId=${winningSong.id}&sessionId=${sid}` : `?screen=winning-song&songId=${winningSong.id}`);
       }
     });
 
@@ -631,8 +635,34 @@ export default function App() {
                 }
               };
 
-              // Нет токена: пробуем публичное голосование по telegramId (временное решение)
+              // Нет токена: пробуем голосование с initData (проверка обоих ботов, возвращает JWT для сокета)
               if (!authToken) {
+                const initData = getTelegramWebApp()?.initData;
+                if (initData) {
+                  try {
+                    const { token, sessionId: sid } = await castVoteWithInitData(
+                      songId,
+                      initData,
+                      votingSessionId || undefined
+                    );
+                    localStorage.setItem('auth_token', token);
+                    setAuthToken(token);
+                    hapticNotification('success');
+                    setCurrentScreen('voting-results');
+                    const qs = sid ? `?screen=voting-results&sessionId=${sid}` : '?screen=voting-results';
+                    window.history.pushState({}, '', qs);
+                    return;
+                  } catch (err) {
+                    if (err instanceof ApiError && err.statusCode === 409) {
+                      hapticNotification('success');
+                      setCurrentScreen('voting-results');
+                      const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
+                      window.history.pushState({}, '', qs);
+                      return;
+                    }
+                    // initData не прошёл — fallback на telegramId
+                  }
+                }
                 const ok = await tryPublicVote();
                 if (ok) {
                   hapticNotification('success');
@@ -661,7 +691,26 @@ export default function App() {
               } catch (error) {
                 console.error('Failed to submit vote:', error);
                 if (error instanceof ApiError && error.statusCode === 401) {
-                  // Токен протух — пробуем публичное голосование по telegramId
+                  // Токен протух — пробуем initData (свежий JWT) или telegramId
+                  const initData = getTelegramWebApp()?.initData;
+                  if (initData) {
+                    try {
+                      const { token, sessionId: sid } = await castVoteWithInitData(
+                        songId,
+                        initData,
+                        votingSessionId || undefined
+                      );
+                      localStorage.setItem('auth_token', token);
+                      setAuthToken(token);
+                      hapticNotification('success');
+                      setCurrentScreen('voting-results');
+                      const qs = sid ? `?screen=voting-results&sessionId=${sid}` : '?screen=voting-results';
+                      window.history.pushState({}, '', qs);
+                      return;
+                    } catch {
+                      /* fallback */
+                    }
+                  }
                   const ok = await tryPublicVote();
                   if (ok) {
                     hapticNotification('success');
@@ -718,13 +767,20 @@ export default function App() {
             }}
             onSongClick={(songId) => {
               setCurrentScreen('winning-song');
-              window.history.pushState({}, '', `?screen=winning-song&songId=${songId}`);
+              const sid = votingSessionId || new URLSearchParams(window.location.search).get('sessionId');
+              window.history.pushState({}, '', sid ? `?screen=winning-song&songId=${songId}&sessionId=${sid}` : `?screen=winning-song&songId=${songId}`);
+            }}
+            onSessionEnded={(winningSongId) => {
+              setCurrentScreen('winning-song');
+              const sid = votingSessionId || new URLSearchParams(window.location.search).get('sessionId');
+              window.history.replaceState({}, '', sid ? `?screen=winning-song&songId=${winningSongId}&sessionId=${sid}` : `?screen=winning-song&songId=${winningSongId}`);
             }}
             liveResults={liveResults}
             socketStatus={currentScreen === 'voting-results' ? socketStatus : null}
             retryTrigger={retryTrigger}
             onRetryConnection={handleRetryConnection}
             sessionEnded={false}
+            sessionId={votingSessionId}
           />
         );
       case 'winning-song': {
