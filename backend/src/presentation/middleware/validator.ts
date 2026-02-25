@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 import { ValidationError } from '../../shared/errors';
+import { logger } from '../../shared/utils/logger';
 
 /**
  * Middleware для валидации данных запроса с помощью Zod схем
@@ -19,6 +20,15 @@ export function validate(schema: ZodSchema) {
             message: err.message,
           }))
         );
+        if (req.path?.includes('auth/telegram')) {
+          const initData = req.body?.initData;
+          logger.warn('auth/telegram validation failed', {
+            path: req.path,
+            hasInitData: initData != null,
+            initDataLength: typeof initData === 'string' ? initData.length : 0,
+            errors: validationError.errors,
+          });
+        }
         res.status(400).json({
           success: false,
           error: {

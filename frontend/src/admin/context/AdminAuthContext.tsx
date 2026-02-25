@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback, type ReactNode } from 'react';
 import { apiGet, apiPost } from '../../services/apiClient';
-import { getTelegramWebApp } from '../../telegram/telegramWebApp';
+import { getTelegramWebApp, getInitData } from '../../telegram/telegramWebApp';
 
 const API_BASE = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? '';
 const TOKEN_KEY = 'admin_token';
@@ -75,9 +75,9 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = async () => {
       // 1. Если есть initData от Admin Bot — авторизуемся по нему
       const tg = getTelegramWebApp();
-      const initData = tg?.initData;
+      const initData = getInitData();
 
-      if (initData && initData.length > 0) {
+      if (initData) {
         try {
           const response = await apiPost<{ user: AdminUser; token: string }>('/api/auth/telegram', {
             initData,

@@ -69,6 +69,10 @@ export class AuthService {
     }
 
     if (!initData || !initData.user) {
+      logger.warn('auth/telegram initData validation failed', {
+        hadUserBot: !!this.userBotToken,
+        rawLength: typeof rawInitData === 'string' ? rawInitData.length : 0,
+      });
       throw new UnauthorizedError('Invalid or expired initData');
     }
 

@@ -16,6 +16,17 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body style="background:#111111;margin:0;min-height:100vh">
+    <!-- Сохраняем tgWebAppData из hash при первой загрузке — при навигации SPA hash теряется -->
+    <script>
+      try {
+        var h = window.location.hash.slice(1);
+        if (h) {
+          var p = new URLSearchParams(h);
+          var d = p.get('tgWebAppData');
+          if (d) sessionStorage.setItem('tg_webapp_init_data', d);
+        }
+      } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

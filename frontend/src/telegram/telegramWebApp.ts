@@ -169,6 +169,34 @@ export function openExternalLink(url: string): void {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+/**
+ * Получить initData для авторизации. Fallback для Android/refresh:
+ * 1. window.Telegram.WebApp.initData
+ * 2. tgWebAppData из window.location.hash (launch params)
+ * 3. sessionStorage (сохранён при первой загрузке — hash теряется при pushState)
+ * @see https://docs.telegram-mini-apps.com/platform/launch-parameters
+ */
+export function getInitData(): string | null {
+  const fromTg = getTelegramWebApp()?.initData?.trim();
+  if (fromTg) return fromTg;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const hash = window.location.hash.slice(1);
+      if (hash) {
+        const params = new URLSearchParams(hash);
+        const fromHash = params.get('tgWebAppData')?.trim();
+        if (fromHash) return fromHash;
+      }
+      const fromStorage = sessionStorage.getItem('tg_webapp_init_data')?.trim();
+      if (fromStorage) return fromStorage;
+    } catch {
+      /* ignore */
+    }
+  }
+  return null;
+}
+
 /** start_param из deep link (initDataUnsafe.start_param). */
 export function getStartParam(): string | null {
   return getTelegramWebApp()?.initDataUnsafe?.start_param ?? null;

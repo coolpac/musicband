@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
-import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId, getTelegramWebApp } from './telegram/telegramWebApp';
+import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId, getInitData } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
 import { useVoteSubmit } from './hooks/useVoteSubmit';
 import { submitReview } from './services/reviewService';
@@ -144,28 +144,25 @@ export default function App() {
   };
 
   // Авторизация Mini App через Telegram initData → JWT (cookie + localStorage для сокетов)
-  // initData может быть пустой при первом рендере (Telegram заполняет асинхронно) —
-  // retry с задержкой до 3-х попыток
+  // initData может быть пустой при первом рендере — на Android особенно часто (WebView асинхронно)
   useEffect(() => {
     if (!tg.isTelegram) return;
     if (authToken) return;
 
     let cancelled = false;
     let attempt = 0;
-    const MAX_ATTEMPTS = 5;
-    const RETRY_DELAY = 500; // ms
+    const MAX_ATTEMPTS = 12; // Android: до ~10 сек ожидания
+    const RETRY_DELAY = 800; // ms
 
     const tryAuth = () => {
       if (cancelled) return;
       attempt++;
 
-      const initData = getTelegramWebApp()?.initData;
+      const initData = getInitData();
       if (!initData) {
         if (attempt < MAX_ATTEMPTS) {
-          console.warn(`Telegram initData empty, retry ${attempt}/${MAX_ATTEMPTS} in ${RETRY_DELAY}ms`);
+          if (import.meta.env.DEV) console.warn(`Telegram initData empty, retry ${attempt}/${MAX_ATTEMPTS}`);
           setTimeout(tryAuth, RETRY_DELAY);
-        } else {
-          console.error('Telegram initData still empty after all retries');
         }
         return;
       }

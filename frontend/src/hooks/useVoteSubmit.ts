@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { hapticNotification, showAlert, getTelegramUserId, getTelegramWebApp } from '../telegram/telegramWebApp';
+import { hapticNotification, showAlert, getTelegramUserId, getInitData } from '../telegram/telegramWebApp';
 import { castVote, castVotePublic, castVoteWithInitData, getMyVote } from '../services/voteService';
 import { ApiError } from '../services/apiClient';
 
@@ -52,7 +52,7 @@ export function useVoteSubmit({
 
   const tryInitDataVote = useCallback(
     async (songId: string): Promise<{ token: string; sessionId: string } | null> => {
-      const initData = getTelegramWebApp()?.initData;
+      const initData = getInitData();
       if (!initData) return null;
       try {
         return await castVoteWithInitData(songId, initData, sid);
