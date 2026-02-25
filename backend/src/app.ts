@@ -72,6 +72,9 @@ const app: Express = express();
 const httpServer: HTTPServer = createServer(app);
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy: nginx передаёт X-Forwarded-For — без этого req.ip = 172.18.0.5 (все пользователи один IP)
+app.set('trust proxy', 1);
+
 // Middleware: Helmet с CSP и HSTS
 app.use(
   helmet({

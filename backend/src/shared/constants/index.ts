@@ -1,6 +1,10 @@
 // Rate limiting (запросов в указанный период)
+// API: ~40 req/мин на юзера (polling 6s+8s, getSongs, init). При trust proxy — лимит на IP.
+// 500/мин — до 12 вкладок на юзера; 300 человек = 300×500 через разные IP.
+const API_LIMIT = process.env.RATE_LIMIT_API ? parseInt(process.env.RATE_LIMIT_API, 10) : 500;
+
 export const RATE_LIMIT = {
-  API: 100, // запросов в минуту (public API)
+  API: Number.isFinite(API_LIMIT) && API_LIMIT > 0 ? API_LIMIT : 500, // public API, per IP (trust proxy)
   AUTH: 5, // попыток входа за 15 минут
   VOTE: 1, // голосов в минуту
   BOOKING: 10, // бронирований в час

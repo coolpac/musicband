@@ -145,7 +145,7 @@ logger.warn('Rate limit exceeded', {
 
 ```typescript
 export const RATE_LIMIT = {
-  API: 100,        // запросов в минуту (public API)
+  API: 500,        // запросов в минуту (public API, per IP). RATE_LIMIT_API=1000 — override
   AUTH: 5,         // попыток входа за 15 минут
   VOTE: 1,         // голосов в минуту
   BOOKING: 10,     // бронирований в час

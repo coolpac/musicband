@@ -10,6 +10,13 @@ export async function getSongs(options?: ApiRequestOptions): Promise<Song[]> {
 }
 
 /**
+ * Get song by ID (публичный эндпоинт, не требует auth)
+ */
+export async function getSongById(songId: string, options?: ApiRequestOptions): Promise<Song> {
+  return apiGet<Song>(`/api/songs/${songId}`, options);
+}
+
+/**
  * Get lyrics for a specific song
  */
 export async function getSongLyrics(
