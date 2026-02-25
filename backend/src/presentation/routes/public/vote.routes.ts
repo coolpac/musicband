@@ -8,7 +8,7 @@ import {
   PrismaSongRepository,
   PrismaUserRepository,
 } from '../../../infrastructure/database/repositories';
-import { publicApiRateLimiter } from '../../middleware/rateLimit';
+import { publicApiRateLimiter, publicVotePostRateLimiter } from '../../middleware/rateLimit';
 import { validate } from '../../middleware/validator';
 import { PublicCastVoteSchema } from '../../../application/dto/vote.dto';
 
@@ -39,10 +39,10 @@ router.get(
   asyncHandler(publicApiRateLimiter),
   asyncHandler(publicVoteController.getPendingSession.bind(publicVoteController))
 );
-// Временное: голосование по telegramId без initData
+// Голосование по telegramId (концерт: все в зале, initData не обязателен)
 router.post(
   '/',
-  asyncHandler(publicApiRateLimiter),
+  asyncHandler(publicVotePostRateLimiter),
   validate(PublicCastVoteSchema),
   asyncHandler(publicVoteController.castVote.bind(publicVoteController))
 );

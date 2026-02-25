@@ -3,6 +3,7 @@ import { VoteService } from '../../domain/services/VoteService';
 import { SongService } from '../../domain/services/SongService';
 import { redis } from '../../config/redis';
 import { logger } from '../../shared/utils/logger';
+import { getSocketServer } from '../../app';
 
 /**
  * Публичный контроллер для страницы голосования в Mini App
@@ -213,6 +214,11 @@ export class PublicVoteController {
         songId,
         sessionId
       );
+
+      // Real-time: рассылаем обновление результатов всем в комнате vote:session:{sessionId}
+      const socketServer = getSocketServer();
+      socketServer?.requestResultsUpdate(sessionIdResult);
+
       res.status(201).json({
         success: true,
         data: { sessionId: sessionIdResult },

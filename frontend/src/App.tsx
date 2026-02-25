@@ -352,11 +352,12 @@ export default function App() {
     const urlSessionId = params.get('sessionId');
     const urlScreen = params.get('screen');
 
-    // Если URL уже содержит screen=voting и sessionId — экран уже установлен через handlePopState
-    // Просто сохраняем sessionId для socket подключения, не делаем лишний fetch
-    if (urlScreen === 'voting' && urlSessionId) {
-      console.log('Voting screen already set via URL, saving sessionId:', urlSessionId);
+    // Если URL уже содержит screen=voting или voting-results с sessionId — сохраняем для socket
+    if (urlSessionId && (urlScreen === 'voting' || urlScreen === 'voting-results')) {
+      console.log('Voting session already in URL, saving sessionId:', urlSessionId);
       setVotingSessionId(urlSessionId);
+      if (urlScreen === 'voting') return; // voting: не делаем лишний fetch
+      // voting-results: не вызываем loadVotingSession — иначе active сессия переключит на форму голосования
       return;
     }
 
@@ -636,7 +637,8 @@ export default function App() {
                 if (ok) {
                   hapticNotification('success');
                   setCurrentScreen('voting-results');
-                  window.history.pushState({}, '', '?screen=voting-results');
+                  const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
+                  window.history.pushState({}, '', qs);
                   return;
                 }
                 const telegramId = getTelegramUserId();
@@ -654,7 +656,8 @@ export default function App() {
                 await castVote(songId);
                 hapticNotification('success');
                 setCurrentScreen('voting-results');
-                window.history.pushState({}, '', '?screen=voting-results');
+                const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
+                window.history.pushState({}, '', qs);
               } catch (error) {
                 console.error('Failed to submit vote:', error);
                 if (error instanceof ApiError && error.statusCode === 401) {
@@ -663,7 +666,8 @@ export default function App() {
                   if (ok) {
                     hapticNotification('success');
                     setCurrentScreen('voting-results');
-                    window.history.pushState({}, '', '?screen=voting-results');
+                    const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
+                    window.history.pushState({}, '', qs);
                     return;
                   }
                   localStorage.removeItem('auth_token');
@@ -675,14 +679,16 @@ export default function App() {
                 if (error instanceof ApiError && error.statusCode === 409) {
                   hapticNotification('success');
                   setCurrentScreen('voting-results');
-                  window.history.pushState({}, '', '?screen=voting-results');
+                  const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
+                  window.history.pushState({}, '', qs);
                   return;
                 }
                 const ok = await tryPublicVote();
                 if (ok) {
                   hapticNotification('success');
                   setCurrentScreen('voting-results');
-                  window.history.pushState({}, '', '?screen=voting-results');
+                  const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
+                  window.history.pushState({}, '', qs);
                   return;
                 }
                 try {
@@ -690,7 +696,8 @@ export default function App() {
                   if (mine?.votedSongId) {
                     hapticNotification('success');
                     setCurrentScreen('voting-results');
-                    window.history.pushState({}, '', '?screen=voting-results');
+                    const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
+                    window.history.pushState({}, '', qs);
                     return;
                   }
                 } catch (e) {
@@ -727,7 +734,9 @@ export default function App() {
             songId={songIdParam || undefined}
             onBack={() => {
               setCurrentScreen('voting-results');
-              window.history.pushState({}, '', '?screen=voting-results');
+              const sid = new URLSearchParams(window.location.search).get('sessionId') || votingSessionId;
+              const qs = sid ? `?screen=voting-results&sessionId=${sid}` : '?screen=voting-results';
+              window.history.pushState({}, '', qs);
             }}
             onViewLyrics={() => {
               setCurrentScreen('song-lyrics');

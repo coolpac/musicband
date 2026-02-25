@@ -256,6 +256,14 @@ export const publicApiRateLimiter = createRedisRateLimiter({
   message: 'Too many requests. Please slow down.',
 });
 
+/** POST /api/public/vote — выше лимит: на концерте десятки людей с одного WiFi (общий IP) */
+export const publicVotePostRateLimiter = createRedisRateLimiter({
+  windowMs: 60 * 1000,
+  max: RATE_LIMIT.PUBLIC_VOTE,
+  keyGenerator: (req) => `public_vote:${req.ip || 'unknown'}`,
+  message: 'Слишком много голосов. Подождите минуту.',
+});
+
 // Referral endpoints - средний лимит
 export const referralRateLimiter = createRedisRateLimiter({
   windowMs: 60 * 1000, // 1 минута
