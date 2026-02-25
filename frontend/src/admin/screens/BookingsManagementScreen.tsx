@@ -4,7 +4,7 @@ import AdminHeader from '../components/AdminHeader';
 import { CalendarDayCell } from '../components/CalendarDayCell';
 import { SectionLoader } from '../components/SectionLoader';
 import Modal from '../components/Modal';
-import { ApiError } from '../../services/apiClient';
+import { ApiError, formatApiErrorMessage } from '../../services/apiClient';
 import {
   getAdminBookingCalendarCached,
   getAdminBlockedDatesCached,
@@ -330,11 +330,7 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
       console.error('Error completing booking:', error);
       let errorMessage = 'Неизвестная ошибка';
       if (error instanceof ApiError) {
-        const code =
-          (error.data && typeof error.data === 'object' && 'error' in error.data && (error.data as any).error?.code)
-            ? String((error.data as any).error.code)
-            : undefined;
-        errorMessage = `${error.message}${code ? ` (${code})` : ''}${error.statusCode ? ` [${error.statusCode}]` : ''}`;
+        errorMessage = formatApiErrorMessage(error);
       } else if (error instanceof Error) {
         errorMessage =
           error.name === 'AbortError'

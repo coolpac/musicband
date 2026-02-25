@@ -26,7 +26,11 @@ export default function ResidentsScreen() {
     if (!hintVisible) return;
     const t = setTimeout(() => {
       setHintVisible(false);
-      sessionStorage.setItem(HINT_HIDE_KEY, '1');
+      try {
+        sessionStorage.setItem(HINT_HIDE_KEY, '1');
+      } catch (e) {
+        if (import.meta.env.DEV) console.warn('ResidentsScreen: sessionStorage.setItem failed', e);
+      }
     }, 5000);
     return () => clearTimeout(t);
   }, [hintVisible]);
@@ -35,7 +39,11 @@ export default function ResidentsScreen() {
     hapticSelection();
     if (hintVisible) {
       setHintVisible(false);
-      try { sessionStorage.setItem(HINT_HIDE_KEY, '1'); } catch {}
+      try {
+        sessionStorage.setItem(HINT_HIDE_KEY, '1');
+      } catch (e) {
+        if (import.meta.env.DEV) console.warn('ResidentsScreen: sessionStorage.setItem failed', e);
+      }
     }
     setOpenId((prev) => (prev === id ? null : id));
   }, [hintVisible]);

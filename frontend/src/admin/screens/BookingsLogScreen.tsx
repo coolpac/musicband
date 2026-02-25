@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
-import { ApiError } from '../../services/apiClient';
+import { ApiError, formatApiErrorMessage } from '../../services/apiClient';
 import {
   getAdminBookingsCached,
   updateAdminBookingStatus,
@@ -56,7 +56,7 @@ function mapApiBooking(b: AdminBooking): BookingRow {
     status: b.status,
     createdAt: b.createdAt,
     telegramUsername: b.user?.username ?? null,
-    income: coerceIncome((b as any).income),
+    income: coerceIncome(b.income),
   };
 }
 
@@ -203,11 +203,7 @@ export default function BookingsLogScreen({
       console.error('Complete booking failed:', error);
       let errorMessage = 'Неизвестная ошибка';
       if (error instanceof ApiError) {
-        const code =
-          (error.data && typeof error.data === 'object' && 'error' in error.data && (error.data as any).error?.code)
-            ? String((error.data as any).error.code)
-            : undefined;
-        errorMessage = `${error.message}${code ? ` (${code})` : ''}${error.statusCode ? ` [${error.statusCode}]` : ''}`;
+        errorMessage = formatApiErrorMessage(error);
       } else if (error instanceof Error) {
         errorMessage =
           error.name === 'AbortError'

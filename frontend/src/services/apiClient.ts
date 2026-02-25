@@ -13,6 +13,49 @@ export class ApiError extends Error {
   }
 }
 
+/** Формат тела ошибки API: message или error.message */
+type ApiErrorBody =
+  | { message?: string; error?: { message?: string; code?: string } }
+  | Record<string, unknown>;
+
+/** Извлекает code из тела ошибки API (для ошибок типа { error: { code: string } }) */
+export function getApiErrorCode(data: unknown): string | undefined {
+  if (!data || typeof data !== 'object' || !('error' in data)) return undefined;
+  const err = (data as { error?: { code?: unknown } }).error;
+  if (!err || typeof err !== 'object') return undefined;
+  const code = (err as { code?: unknown }).code;
+  return code != null ? String(code) : undefined;
+}
+
+/** Форматирует сообщение об ошибке для ApiError (message + code + statusCode) */
+export function formatApiErrorMessage(error: ApiError): string {
+  const code = getApiErrorCode(error.data);
+  return `${error.message}${code ? ` (${code})` : ''}${error.statusCode ? ` [${error.statusCode}]` : ''}`;
+}
+
+/** Извлекает message из тела ошибки API (для raw fetch без apiClient) */
+export function getMessageFromErrorBody(body: unknown, fallback: string): string {
+  if (!body || typeof body !== 'object') return fallback;
+  const b = body as Record<string, unknown>;
+  if (typeof b.message === 'string') return b.message;
+  if (b.error && typeof b.error === 'object') {
+    const msg = (b.error as { message?: string }).message;
+    if (typeof msg === 'string') return msg;
+  }
+  return fallback;
+}
+
+function getErrorMessage(errorData: ApiErrorBody, status: number): string {
+  if (errorData && typeof errorData === 'object' && 'message' in errorData && typeof (errorData as { message?: string }).message === 'string') {
+    return (errorData as { message: string }).message;
+  }
+  if (errorData && typeof errorData === 'object' && 'error' in errorData) {
+    const err = (errorData as { error?: { message?: string } }).error;
+    if (err && typeof err === 'object' && typeof err.message === 'string') return err.message;
+  }
+  return `HTTP error ${status}`;
+}
+
 /** Опции запроса: таймаут и внешний signal (например для отмены при unmount) */
 export interface ApiRequestOptions {
   timeout?: number;
@@ -99,15 +142,9 @@ async function fetchWithAbort(
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const message =
-      (errorData && typeof errorData === 'object' && 'message' in errorData && (errorData as any).message)
-        ? (errorData as any).message
-        : (errorData && typeof errorData === 'object' && 'error' in errorData && (errorData as any).error?.message)
-          ? (errorData as any).error.message
-          : `HTTP error ${response.status}`;
+    const errorData = await response.json().catch(() => ({})) as ApiErrorBody;
     throw new ApiError(
-      message,
+      getErrorMessage(errorData, response.status),
       response.status,
       errorData
     );

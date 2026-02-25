@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete } from './apiClient';
+import { apiGet, apiPost, apiPut, apiDelete, getMessageFromErrorBody } from './apiClient';
 
 const BASE = '/api/admin/posters';
 
@@ -86,8 +86,7 @@ export async function uploadPosterImage(dataUrl: string): Promise<string> {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    const msg = (err && typeof err === 'object' && (err as any).error?.message) || (err as any).message || `HTTP ${res.status}`;
-    throw new Error(msg);
+    throw new Error(getMessageFromErrorBody(err, `HTTP ${res.status}`));
   }
 
   const json = await res.json();

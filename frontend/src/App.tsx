@@ -4,9 +4,9 @@ import { AnimatePresence } from 'framer-motion';
 import { useTelegramWebApp } from './telegram/useTelegramWebApp';
 import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId, getTelegramWebApp } from './telegram/telegramWebApp';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
-import { castVote, castVotePublic, castVoteWithInitData, getMyVote } from './services/voteService';
+import { useVoteSubmit } from './hooks/useVoteSubmit';
 import { submitReview } from './services/reviewService';
-import { apiPost, ApiError } from './services/apiClient';
+import { apiPost } from './services/apiClient';
 import HomeScreen from './screens/HomeScreen';
 import Header from './components/Header';
 import MenuOverlay from './components/MenuOverlay';
@@ -68,6 +68,12 @@ export default function App() {
   );
   const tg = useTelegramWebApp({ initOnMount: true });
   const currentScreenRef = useRef<Screen>(initialScreen);
+  const handleVoteSubmit = useVoteSubmit({
+    authToken,
+    votingSessionId,
+    setAuthToken,
+    setCurrentScreen,
+  });
 
   useEffect(() => {
     currentScreenRef.current = currentScreen;
@@ -318,7 +324,7 @@ export default function App() {
         }
 
         const { status, winningSong } = data.data;
-        console.log('Vote session loaded:', { sessionId, status, winningSong });
+        if (import.meta.env.DEV) console.log('Vote session loaded:', { sessionId, status, winningSong });
 
         if (status === 'active') {
           // Уже на voting-results (после голоса) — не переключать на форму
@@ -367,14 +373,14 @@ export default function App() {
     // 1. Проверяем start_param (direct link t.me/bot/app?startapp=vote_SESSION)
     if (startParam && startParam.startsWith('vote_')) {
       const sessionId = startParam.substring(5);
-      console.log('Found vote session in start_param:', sessionId);
+      if (import.meta.env.DEV) console.log('Found vote session in start_param:', sessionId);
       loadVotingSession(sessionId);
       return;
     }
 
     // 2. Проверяем URL параметр sessionId (если screen не voting — нужно загрузить сессию)
     if (urlSessionId && urlScreen !== 'voting') {
-      console.log('Found sessionId in URL, loading session:', urlSessionId);
+      if (import.meta.env.DEV) console.log('Found sessionId in URL, loading session:', urlSessionId);
       loadVotingSession(urlSessionId);
       return;
     }
@@ -387,7 +393,7 @@ export default function App() {
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.data.sessionId) {
-            console.log('Found pending vote session:', data.data.sessionId);
+            if (import.meta.env.DEV) console.log('Found pending vote session:', data.data.sessionId);
             loadVotingSession(data.data.sessionId);
           }
         })
@@ -622,140 +628,7 @@ export default function App() {
               setCurrentScreen('home');
               window.history.pushState({}, '', '?screen=home');
             }}
-            onSubmit={async (songId) => {
-              const tryPublicVote = async (): Promise<boolean> => {
-                const telegramId = getTelegramUserId();
-                if (telegramId == null) return false;
-                try {
-                  await castVotePublic(songId, telegramId, votingSessionId || undefined);
-                  return true;
-                } catch (err) {
-                  if (err instanceof ApiError && err.statusCode === 409) return true;
-                  return false;
-                }
-              };
-
-              // Нет токена: пробуем голосование с initData (проверка обоих ботов, возвращает JWT для сокета)
-              if (!authToken) {
-                const initData = getTelegramWebApp()?.initData;
-                if (initData) {
-                  try {
-                    const { token, sessionId: sid } = await castVoteWithInitData(
-                      songId,
-                      initData,
-                      votingSessionId || undefined
-                    );
-                    localStorage.setItem('auth_token', token);
-                    setAuthToken(token);
-                    hapticNotification('success');
-                    setCurrentScreen('voting-results');
-                    const qs = sid ? `?screen=voting-results&sessionId=${sid}` : '?screen=voting-results';
-                    window.history.pushState({}, '', qs);
-                    return;
-                  } catch (err) {
-                    if (err instanceof ApiError && err.statusCode === 409) {
-                      hapticNotification('success');
-                      setCurrentScreen('voting-results');
-                      const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
-                      window.history.pushState({}, '', qs);
-                      return;
-                    }
-                    // initData не прошёл — fallback на telegramId
-                  }
-                }
-                const ok = await tryPublicVote();
-                if (ok) {
-                  hapticNotification('success');
-                  setCurrentScreen('voting-results');
-                  const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
-                  window.history.pushState({}, '', qs);
-                  return;
-                }
-                const telegramId = getTelegramUserId();
-                if (telegramId == null) {
-                  hapticNotification('error');
-                  showAlert('Откройте приложение через Telegram, чтобы проголосовать.');
-                  return;
-                }
-                hapticNotification('error');
-                showAlert('Не удалось отправить голос. Попробуйте ещё раз.');
-                return;
-              }
-
-              try {
-                await castVote(songId);
-                hapticNotification('success');
-                setCurrentScreen('voting-results');
-                const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
-                window.history.pushState({}, '', qs);
-              } catch (error) {
-                console.error('Failed to submit vote:', error);
-                if (error instanceof ApiError && error.statusCode === 401) {
-                  // Токен протух — пробуем initData (свежий JWT) или telegramId
-                  const initData = getTelegramWebApp()?.initData;
-                  if (initData) {
-                    try {
-                      const { token, sessionId: sid } = await castVoteWithInitData(
-                        songId,
-                        initData,
-                        votingSessionId || undefined
-                      );
-                      localStorage.setItem('auth_token', token);
-                      setAuthToken(token);
-                      hapticNotification('success');
-                      setCurrentScreen('voting-results');
-                      const qs = sid ? `?screen=voting-results&sessionId=${sid}` : '?screen=voting-results';
-                      window.history.pushState({}, '', qs);
-                      return;
-                    } catch {
-                      /* fallback */
-                    }
-                  }
-                  const ok = await tryPublicVote();
-                  if (ok) {
-                    hapticNotification('success');
-                    setCurrentScreen('voting-results');
-                    const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
-                    window.history.pushState({}, '', qs);
-                    return;
-                  }
-                  localStorage.removeItem('auth_token');
-                  setAuthToken(null);
-                  hapticNotification('error');
-                  showAlert('Сессия истекла. Попробуйте проголосовать ещё раз.');
-                  return;
-                }
-                if (error instanceof ApiError && error.statusCode === 409) {
-                  hapticNotification('success');
-                  setCurrentScreen('voting-results');
-                  const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
-                  window.history.pushState({}, '', qs);
-                  return;
-                }
-                const ok = await tryPublicVote();
-                if (ok) {
-                  hapticNotification('success');
-                  setCurrentScreen('voting-results');
-                  const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
-                  window.history.pushState({}, '', qs);
-                  return;
-                }
-                try {
-                  const mine = await getMyVote();
-                  if (mine?.votedSongId) {
-                    hapticNotification('success');
-                    setCurrentScreen('voting-results');
-                    const qs = votingSessionId ? `?screen=voting-results&sessionId=${votingSessionId}` : '?screen=voting-results';
-                    window.history.pushState({}, '', qs);
-                    return;
-                  }
-                } catch (e) {
-                  console.warn('Failed to verify my vote after error:', e);
-                }
-                hapticNotification('error');
-                showAlert('Не удалось отправить голос. Попробуйте ещё раз.');
-              }
-            }}
+            onSubmit={handleVoteSubmit}
           />
         );
       case 'voting-results':

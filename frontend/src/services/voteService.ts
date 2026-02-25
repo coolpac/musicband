@@ -117,12 +117,16 @@ export type VoteSessionInfo = {
 /** Информация о сессии голосования (публичный эндпоинт, не требует auth) */
 export async function getVoteSessionInfo(sessionId: string): Promise<VoteSessionInfo | null> {
   if (isMockMode()) return null;
-  const base = import.meta.env.VITE_API_URL || '';
-  const res = await fetch(`${base}/api/public/vote/session/${sessionId}`);
-  const data = await res.json();
-  if (!data?.success || !data?.data) return null;
-  return {
-    status: data.data.status,
-    winningSong: data.data.winningSong,
-  };
+  try {
+    const base = import.meta.env.VITE_API_URL || '';
+    const res = await fetch(`${base}/api/public/vote/session/${sessionId}`);
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data?.success || !data?.data) return null;
+    return {
+      status: data.data.status,
+      winningSong: data.data.winningSong,
+    };
+  } catch {
+    return null;
+  }
 }
