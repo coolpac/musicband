@@ -621,6 +621,7 @@ export default function App() {
       case 'voting':
         return (
           <VotingScreen
+            sessionId={votingSessionId || new URLSearchParams(window.location.search).get('sessionId')}
             onBack={() => {
               setCurrentScreen('home');
               window.history.pushState({}, '', '?screen=home');

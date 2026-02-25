@@ -130,3 +130,53 @@ export async function getVoteSessionInfo(sessionId: string): Promise<VoteSession
     return null;
   }
 }
+
+export type VoteSessionSongsResult = {
+  status: VoteSessionStatus;
+  songs: Array<{ id: string; title: string; artist: string; coverUrl: string | null }>;
+};
+
+/**
+ * Загрузить сессию голосования с песнями (публично, без auth).
+ * Используется на экране голосования — один запрос вместо getSongs + session.
+ * На Android может работать стабильнее, т.к. эндпоинт оптимизирован для этого потока.
+ */
+export async function getVoteSessionWithSongs(
+  sessionId: string,
+  options?: { signal?: AbortSignal; timeoutMs?: number }
+): Promise<VoteSessionSongsResult> {
+  if (isMockMode()) {
+    return { status: 'active', songs: [] };
+  }
+  const base = import.meta.env.VITE_API_URL || '';
+  const timeoutMs = options?.timeoutMs ?? 10000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  if (options?.signal) {
+    options.signal.addEventListener('abort', () => controller.abort());
+  }
+
+  try {
+    const res = await fetch(`${base}/api/public/vote/session/${sessionId}`, {
+      signal: controller.signal,
+    });
+    const data = await res.json().catch(() => null);
+    clearTimeout(timeoutId);
+    if (!res.ok || !data?.success || !data?.data) {
+      throw new Error('Session not found');
+    }
+    const d = data.data;
+    const songs = Array.isArray(d.songs)
+      ? d.songs.map((s: { id: string; title: string; artist: string; coverUrl?: string | null }) => ({
+          id: s.id,
+          title: s.title || '',
+          artist: s.artist || '',
+          coverUrl: s.coverUrl ?? null,
+        }))
+      : [];
+    return { status: d.status, songs };
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw e;
+  }
+}

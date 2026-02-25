@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { hapticImpact, hapticSelection } from '../telegram/telegramWebApp';
 import { Song } from '../types/vote';
 import { getSongs } from '../services/songService';
+import { getVoteSessionWithSongs } from '../services/voteService';
 import { useApiRequest } from '../hooks/useApiRequest';
 import NetworkError from '../components/NetworkError';
 import votingBg from '../assets/figma/voting-bg-only.svg';
@@ -10,25 +11,59 @@ import { OptimizedImage } from '../components/OptimizedImage';
 import { getOptimizedImageProps } from '../types/image';
 import '../styles/voting.css';
 
+const SESSION_TIMEOUT_MS = 8000;
+const SLOW_LOADING_MS = 5000;
+
 type VotingScreenProps = {
+  /** sessionId из URL — загружаем песни через эндпоинт сессии (стабильнее на Android) */
+  sessionId?: string | null;
   /** Не используется: навигация назад — кнопка Telegram. */
   onBack?: () => void;
   onSubmit?: (songId: string) => void | Promise<void>;
 };
 
-export default function VotingScreen({ onSubmit }: VotingScreenProps) {
+function toSong(s: { id: string; title: string; artist: string; coverUrl: string | null }): Song {
+  return {
+    id: s.id,
+    title: s.title,
+    artist: s.artist,
+    coverUrl: s.coverUrl ?? undefined,
+    isActive: true,
+    orderIndex: 0,
+  };
+}
+
+export default function VotingScreen({ sessionId, onSubmit }: VotingScreenProps) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [slowLoading, setSlowLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { execute } = useApiRequest<Song[]>();
   const mountedRef = useRef(true);
+  const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadingRef = useRef(false);
 
   const loadSongs = useCallback(() => {
     setError(null);
     setLoading(true);
-    execute(async (signal) => getSongs({ signal }))
+    setSlowLoading(false);
+    loadingRef.current = true;
+    slowTimerRef.current && clearTimeout(slowTimerRef.current);
+    slowTimerRef.current = setTimeout(() => {
+      if (mountedRef.current && loadingRef.current) setSlowLoading(true);
+    }, SLOW_LOADING_MS);
+
+    const fetcher = sessionId
+      ? (signal: AbortSignal) =>
+          getVoteSessionWithSongs(sessionId, { signal, timeoutMs: SESSION_TIMEOUT_MS }).then((r) => {
+            if (r.status !== 'active') return [];
+            return r.songs.map(toSong);
+          })
+      : (signal: AbortSignal) => getSongs({ signal });
+
+    execute(fetcher)
       .then((data) => {
         if (mountedRef.current) setSongs(data);
       })
@@ -38,15 +73,19 @@ export default function VotingScreen({ onSubmit }: VotingScreenProps) {
         }
       })
       .finally(() => {
+        loadingRef.current = false;
+        slowTimerRef.current && clearTimeout(slowTimerRef.current);
+        slowTimerRef.current = null;
         if (mountedRef.current) setLoading(false);
       });
-  }, [execute]);
+  }, [execute, sessionId]);
 
   useEffect(() => {
     mountedRef.current = true;
     loadSongs();
     return () => {
       mountedRef.current = false;
+      slowTimerRef.current && clearTimeout(slowTimerRef.current);
     };
   }, [loadSongs]);
 
@@ -91,7 +130,20 @@ export default function VotingScreen({ onSubmit }: VotingScreenProps) {
           Выберите финальную<br />композицию
         </h1>
         {loading ? (
-          <div className="voting-loading">Загрузка...</div>
+          <div className="voting-loading">
+            <span>Загрузка...</span>
+            {slowLoading && (
+              <button
+                type="button"
+                className="voting-loading-retry"
+                onClick={() => {
+                  loadSongs();
+                }}
+              >
+                Медленное соединение. Повторить?
+              </button>
+            )}
+          </div>
         ) : songs.length === 0 ? (
           <div className="voting-empty">
             <p>Список композиций пуст.</p>
