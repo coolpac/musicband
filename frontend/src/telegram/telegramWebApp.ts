@@ -203,17 +203,18 @@ export function applyTelegramViewportAndSafeArea(): void {
     root.style.setProperty('--tg-safe-area-inset-left', `${tg.safeAreaInset.left}px`);
     root.style.setProperty('--tg-safe-area-inset-right', `${tg.safeAreaInset.right}px`);
   }
-  if (typeof tg.viewportStableHeight === 'number') {
+  // Android: viewportStableHeight может быть 0 до готовности WebView — не перезаписывать 100dvh
+  if (typeof tg.viewportStableHeight === 'number' && tg.viewportStableHeight > 0) {
     root.style.setProperty('--tg-viewport-stable-height', `${tg.viewportStableHeight}px`);
   }
-  if (typeof tg.viewportHeight === 'number') {
+  if (typeof tg.viewportHeight === 'number' && tg.viewportHeight > 0) {
     root.style.setProperty('--tg-viewport-height', `${tg.viewportHeight}px`);
   }
   tg.onEvent?.('viewportChanged', () => {
-    if (typeof tg.viewportStableHeight === 'number') {
+    if (typeof tg.viewportStableHeight === 'number' && tg.viewportStableHeight > 0) {
       root.style.setProperty('--tg-viewport-stable-height', `${tg.viewportStableHeight}px`);
     }
-    if (typeof tg.viewportHeight === 'number') {
+    if (typeof tg.viewportHeight === 'number' && tg.viewportHeight > 0) {
       root.style.setProperty('--tg-viewport-height', `${tg.viewportHeight}px`);
     }
   });

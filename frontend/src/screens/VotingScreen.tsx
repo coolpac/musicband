@@ -92,6 +92,13 @@ export default function VotingScreen({ onSubmit }: VotingScreenProps) {
         </h1>
         {loading ? (
           <div className="voting-loading">Загрузка...</div>
+        ) : songs.length === 0 ? (
+          <div className="voting-empty">
+            <p>Список композиций пуст.</p>
+            <button type="button" className="btn btn-secondary" onClick={loadSongs}>
+              Повторить загрузку
+            </button>
+          </div>
         ) : (
           <div className="voting-songs-list">
           {songs.map((song, index) => {

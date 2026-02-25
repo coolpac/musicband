@@ -65,6 +65,21 @@
   padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 }
 
+.voting-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.voting-empty p {
+  margin: 0 0 16px;
+  font-size: 16px;
+}
+
+.voting-empty .btn {
+  min-width: 160px;
+}
+
 .voting-title {
   margin: 0 auto 32px;
   font-size: 20px;
@@ -79,12 +94,16 @@
   letter-spacing: 0.02em;
 }
 
+/* min-height: 0 — критично для Android WebView: flex-ребёнок иначе получает 0 высоту (flexbox bug) */
 .voting-songs-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 0 16px;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .voting-song-card {
