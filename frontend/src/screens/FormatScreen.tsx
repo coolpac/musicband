@@ -241,7 +241,7 @@ export default function FormatScreen({ onFormatClick, onBack }: FormatScreenProp
                 onClick={() => { hapticImpact('light'); onFormatClick(activeFormat.id); }}
                 type="button"
               >
-                {activeFormat.status === 'coming-soon' ? 'Получить прайс' : 'Что в шоу?'}
+                {activeFormat.status === 'coming-soon' ? 'Оставить заявку' : 'Что в шоу?'}
               </button>
             )}
           </>

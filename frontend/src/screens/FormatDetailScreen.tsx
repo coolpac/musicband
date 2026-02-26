@@ -147,7 +147,7 @@ export default function FormatDetailScreen({
           onClick={() => { hapticImpact('light'); onRequestPrice(); }}
           type="button"
         >
-          Получить прайс
+          Оставить заявку
         </motion.button>
       </div>
     </main>

@@ -423,20 +423,35 @@ export class VoteService {
       logger.warn('Failed to clear vote session cache', { sessionId, error });
     }
 
-    // Планируем рассылку «как вчера прошёл вечер» участникам через 24 часа
+    // Планируем рассылки: День 1 (24ч) и День 3 (72ч) после выступления
     if (voterTelegramIds.length > 0) {
-      const scheduledAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const telegramIds = voterTelegramIds.map((u) => u.telegramId.toString());
+
+      const day1At = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await prisma.votingFollowUp.create({
         data: {
           sessionId,
-          telegramIds: voterTelegramIds.map((u) => u.telegramId.toString()),
-          scheduledAt,
+          telegramIds,
+          campaignDay: 1,
+          scheduledAt: day1At,
         },
       });
-      logger.info('Voting follow-up scheduled in 24h', {
+
+      const day3At = new Date(Date.now() + 72 * 60 * 60 * 1000);
+      await prisma.votingFollowUp.create({
+        data: {
+          sessionId,
+          telegramIds,
+          campaignDay: 2,
+          scheduledAt: day3At,
+        },
+      });
+
+      logger.info('Voting follow-ups scheduled (Day 1 + Day 3)', {
         sessionId,
         voterCount: voterTelegramIds.length,
-        scheduledAt: scheduledAt.toISOString(),
+        day1At: day1At.toISOString(),
+        day3At: day3At.toISOString(),
       });
     }
 

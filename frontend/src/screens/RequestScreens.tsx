@@ -520,16 +520,16 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
       <div className="request-body request-body--pattern request-body--form">
         <img alt="Лого" className="request-logo" src={requestLogo} />
         <div className="request-body__scroll">
-        <div className="request-form-card">
-          <motion.h1
+          <div className="request-form-card">
+            <motion.h1
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
             className="request-form-title request-form-appear"
           >
-            Форма для заявки
-          </motion.h1>
-          <div className="request-fields">
+              Форма для заявки
+            </motion.h1>
+            <div className="request-fields">
             <motion.div
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
@@ -621,8 +621,10 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
                 value={source}
               />
             </motion.div>
+            </div>
           </div>
         </div>
+        {/* Кнопка вне скролла — не обрезается на мобильных */}
         <button
           className="request-primary request-primary--floating request-form-appear request-form-appear--button"
           type="button"
@@ -631,7 +633,6 @@ export function RequestFormScreen({ bookingDraft, initialFullName = '', onSubmit
         >
           {isSubmitting ? 'Отправка...' : 'Отправить'}
         </button>
-        </div>
       </div>
     </main>
   );

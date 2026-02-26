@@ -11,8 +11,10 @@ export type Resident = {
   image: string;
   /** Опционально: 2× версия для ретина-экранов (например /residents/sasha@2x.webp) */
   image2x?: string;
-  /** Опционально: SVG «описание» (оверлей) — при клике показывается вместо HTML-плашки; прелоад при наведении */
+  /** Опционально: SVG/изображение «описание» — при клике показывается вместо HTML-плашки (полный оверлей) */
   descriptionSvg?: string;
+  /** Опционально: изображение для панели — внутри glass-панели вместо текста (например, фото с надписями) */
+  panelImage?: string;
 };
 
 export const residents: Resident[] = [
@@ -32,6 +34,7 @@ export const residents: Resident[] = [
     description:
       'Гитарист и аранжировщик. Классика и рок в одном флаконе. Участвует в проектах «Лента» и сольных выступлениях.',
     image: '/residents/alexandr.webp',
+    panelImage: '/residents/alexandr-description-overlay.webp',
   },
   {
     id: 'roma',

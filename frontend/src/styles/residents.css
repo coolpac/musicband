@@ -31,13 +31,23 @@
   display: block;
   width: 100%;
   cursor: pointer;
+  contain: layout paint;
+  content-visibility: auto;
+}
+
+/* Резервируем место до загрузки изображения — предотвращает CLS */
+.residents-card__img-wrap {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .residents-card__img {
   display: block;
   width: 100%;
   min-width: 100%;
-  height: auto;
+  height: 100%;
   vertical-align: top;
   object-fit: cover;
   object-position: center;
@@ -74,7 +84,8 @@
   pointer-events: auto;
 }
 
-/* Плашка с полным описанием (вычленена из Саша описание.svg: скругление 25px, стекло, обводка) */
+/* Плашка с полным описанием (скругление 25px, стекло, обводка).
+   Только opacity в анимации — transform + backdrop-filter вызывает мерцание в Chrome. */
 .residents-card__panel {
   position: absolute;
   left: 12px;
@@ -85,26 +96,20 @@
   border-radius: 25px;
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.12) 0%,
-    rgba(255, 255, 255, 0.06) 100%
+    rgba(40, 40, 45, 0.85) 0%,
+    rgba(25, 25, 30, 0.9) 100%
   );
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(12px);
-  transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-.residents-card__panel--open {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
+  z-index: 2;
+  isolation: isolate;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .residents-card__panel-text {
@@ -115,6 +120,15 @@
   font-size: clamp(15px, 3.2vw, 18px);
   line-height: 1.5;
   -webkit-overflow-scrolling: touch;
+}
+
+.residents-card__panel-image {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 12px;
 }
 
 .residents-card__panel-close {
@@ -144,7 +158,7 @@
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .residents-card__panel {
-    background: rgba(40, 40, 40, 0.95);
+    background: rgba(35, 35, 40, 0.96);
   }
 }
 
@@ -189,5 +203,11 @@
   }
   50% {
     transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .residents-hint__arrow {
+    animation: none;
   }
 }

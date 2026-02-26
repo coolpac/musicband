@@ -235,9 +235,9 @@ export class BotManager {
   }
 
   /**
-   * Обработка отложенных рассылок участникам голосования (24ч после окончания сессии).
-   * Вызывается по расписанию (например каждые 15 мин). Находит записи с scheduledAt <= now и sentAt = null,
-   * отправляет сообщение «Ну как вчера прошёл ваш вечер?» с кнопкой в приложение, помечает sentAt.
+   * Обработка отложенных рассылок участникам голосования.
+   * Вызывается каждые 15 мин. Находит записи с scheduledAt <= now и sentAt = null,
+   * отправляет сообщение по campaignDay (1 = День 1, 2 = День 3) с кнопкой в приложение, помечает sentAt.
    */
   async processScheduledVotingFollowUps(): Promise<void> {
     if (!this.userBot) return;
@@ -261,7 +261,8 @@ export class BotManager {
         continue;
       }
       try {
-        const { sent, failed } = await this.userBot.sendVotingFollowUp24h(telegramIds);
+        const campaignDay = row.campaignDay ?? 1;
+        const { sent, failed } = await this.userBot.sendVotingFollowUp(telegramIds, campaignDay);
         await prisma.votingFollowUp.update({
           where: { id: row.id },
           data: { sentAt: new Date() },
@@ -269,6 +270,7 @@ export class BotManager {
         logger.info('Voting follow-up sent', {
           followUpId: row.id,
           sessionId: row.sessionId,
+          campaignDay,
           sent,
           failed,
         });
