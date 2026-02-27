@@ -17,13 +17,14 @@ export function htmlPreloadPlugin(): Plugin {
 
         const preloads: string[] = [];
 
-        // LCP image: hero-image*.webp
+        // LCP image: hero-image (PNG — исходное, не WebP)
         const heroAsset = Object.keys(ctx.bundle).find(
-          (name) => name.includes('hero-image') && name.endsWith('.webp')
+          (name) => name.includes('hero-image') && (name.endsWith('.png') || name.endsWith('.webp'))
         );
         if (heroAsset) {
+          const mime = heroAsset.endsWith('.png') ? 'image/png' : 'image/webp';
           preloads.push(
-            `<link rel="preload" as="image" type="image/webp" href="/${heroAsset}" fetchpriority="high" />`
+            `<link rel="preload" as="image" type="${mime}" href="/${heroAsset}" fetchpriority="high" />`
           );
         }
 

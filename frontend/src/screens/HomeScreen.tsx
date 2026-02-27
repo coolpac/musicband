@@ -6,9 +6,7 @@ import formatImage from '../assets/figma/format.webp';
 import livePlay from '../assets/figma/play-live.svg';
 import residentsImage from '../assets/figma/residents.webp';
 import dateWave from '../assets/figma/date-wave.svg';
-import heroImageLocal from '../assets/figma/hero-image.webp';
-import heroLogo from '../assets/figma/downloaded/hero-logo.svg';
-import heroCoverBand from '../assets/figma/downloaded/hero-cover-band.svg';
+import heroImageLocal from '../assets/figma/hero-image.png';
 import heroVectorGroup from '../assets/figma/downloaded/hero-vector-group.svg';
 const heroImage = heroImageLocal;
 
@@ -253,8 +251,12 @@ export default function HomeScreen({ onMenuOpen, onGoToFormats, onGoToCalendar, 
       <header className="hero" id="home">
         <div className="hero-media">
           <div className="hero-photo-frame">
-            <img alt="Группа" className="hero-photo" src={heroImage} width={1280} height={720} fetchPriority="high" loading="eager" />
+            <img alt="Группа" className="hero-photo" src={heroImage} width={440} height={375} fetchPriority="high" loading="eager" />
           </div>
+          <h2 className="hero-welcome">
+            <span className="hero-welcome-line">Добро</span>
+            <span className="hero-welcome-line">пожаловать!</span>
+          </h2>
           {/* SVG blur вместо CSS — без banding на OLED */}
           <svg aria-hidden="true" className="hero-blur-svg" viewBox="0 0 509 172" preserveAspectRatio="none">
             <defs>
@@ -265,8 +267,6 @@ export default function HomeScreen({ onMenuOpen, onGoToFormats, onGoToCalendar, 
             <rect x="0" y="0" width="509" height="172" fill="#111111" filter="url(#heroBlur)" />
           </svg>
           <img alt="" className="hero-vector-group" src={heroVectorGroup} width={415} height={147} />
-          <img alt="ВГУП" className="hero-logo-type" src={heroLogo} width={200} height={80} />
-          <img alt="" className="hero-cover-band" src={heroCoverBand} width={411} height={200} />
           <button className="hero-menu" onClick={handleMenuOpen} type="button">
             <span className="hero-menu-label">меню</span>
             <span aria-hidden="true" className="hero-menu-icon">

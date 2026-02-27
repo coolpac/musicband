@@ -3,7 +3,7 @@ import heroLogo from '../assets/figma/downloaded/hero-logo.svg';
 import './AppLoader.css';
 
 // Критичные изображения для preload во время загрузочного экрана
-import heroImage from '../assets/figma/hero-image.webp';
+import heroImage from '../assets/figma/hero-image.png';
 
 /** Минимальное время показа лоадера (чтобы был виден, а не только сплэш Telegram). */
 const MIN_DISPLAY_MS = 1600;
