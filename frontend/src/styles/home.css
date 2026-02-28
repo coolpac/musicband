@@ -76,9 +76,11 @@
   border-top-left-radius: inherit;
   border-top-right-radius: inherit;
   z-index: 1;
+  background: #111111;
 }
 
-/* Градиенты: сверху и снизу. Адаптированы под full-viewport hero. */
+/* Градиенты: сверху — затемнение под хедер, снизу — плавный переход фото в чёрный фон.
+   Фото занимает ~верхние 45% viewport, ниже — тёмный фон с красными фигурами. */
 .hero-photo-frame::before {
   content: "";
   position: absolute;
@@ -86,20 +88,16 @@
   z-index: 1;
   pointer-events: none;
   background: linear-gradient(
-      180deg,
-      #000000 0%,
-      rgba(0, 0, 0, 0.85) 6%,
-      rgba(0, 0, 0, 0.4) 14%,
-      transparent 28%
-    ),
-    linear-gradient(
-      0deg,
-      #111111 0%,
-      rgba(17, 17, 17, 0.95) 6%,
-      rgba(0, 0, 0, 0.7) 14%,
-      rgba(0, 0, 0, 0.3) 24%,
-      transparent 36%
-    );
+    180deg,
+    #000000 0%,
+    rgba(0, 0, 0, 0.8) 4%,
+    rgba(0, 0, 0, 0.3) 9%,
+    transparent 16%,
+    transparent 32%,
+    rgba(0, 0, 0, 0.25) 37%,
+    rgba(0, 0, 0, 0.7) 42%,
+    #111111 48%
+  );
   border-top-left-radius: inherit;
   border-top-right-radius: inherit;
 }
@@ -118,22 +116,22 @@
   background-size: 200px 200px;
 }
 
-/* Изображение: заполняет контейнер, центрировано по вертикали (верхняя часть группы видна) */
+/* Изображение: натуральные пропорции (440×375), не растянуто, прижато к верху. */
 .hero-photo {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 30%;
+  height: auto;
 }
 
 /* SVG blur — математически точный без banding на OLED (как в Лэндинг.svg) */
 .hero-blur-svg {
   position: absolute;
   left: -7.8%;
-  bottom: -2%;
+  top: 34%;
   width: 115.6%;
-  height: 22%;
+  height: 18%;
   z-index: 2;
   pointer-events: none;
   overflow: visible;
@@ -155,7 +153,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 33%;
+  top: 15%;
   margin: 0 auto;
   width: fit-content;
   max-width: 90%;
@@ -903,8 +901,37 @@
     transform-origin: center bottom;
   }
 
+  .hero-photo-frame {
+    background: transparent;
+  }
+
+  .hero-photo-frame::before {
+    background: linear-gradient(
+        180deg,
+        #000000 0%,
+        rgba(0, 0, 0, 0.9) 12%,
+        rgba(0, 0, 0, 0.5) 24%,
+        transparent 45%
+      ),
+      linear-gradient(
+        0deg,
+        #111111 0%,
+        rgba(17, 17, 17, 0.98) 10%,
+        rgba(0, 0, 0, 0.85) 22%,
+        rgba(0, 0, 0, 0.5) 36%,
+        rgba(0, 0, 0, 0.15) 52%,
+        transparent 62%
+      );
+  }
+
+  .hero-photo {
+    top: auto;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 40px;
+  }
+
   .hero-blur-svg {
-    bottom: auto;
     top: 71.8%;
     height: 28.3%;
   }
