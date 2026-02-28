@@ -22,12 +22,13 @@
 /* Появление хиро при загрузке: каскад fade + translateY, только GPU (transform/opacity).
    PageTransition (framer-motion) уже анимирует opacity всего экрана при навигации.
    CSS animation hero-in добавляет каскадный stagger-эффект поверх page transition. */
-/* Соотношение 440/375 — как у hero-image.png, без обрезки по краям (как в Figma) */
+/* Full-viewport hero — изображение заполняет весь экран, как в Figma (node 259-1175) */
 .hero-media {
   position: relative;
   width: 100vw;
-  aspect-ratio: 440 / 375;
-  margin: 0 calc(50% - 50vw);
+  height: 100svh;
+  height: 100dvh;
+  margin: calc(-1 * clamp(64px, 11svh, 107px)) calc(50% - 50vw) 0;
   z-index: 1;
   overflow: visible;
   border-top-left-radius: var(--radius-lg);
@@ -77,8 +78,7 @@
   z-index: 1;
 }
 
-/* Градиенты: сверху и снизу. Низ — полное покрытие (без дырки), плавный переход.
-   Смещение вниз: 0 110% или 0 120%. Смещение вверх: 0 90% или 0 80%. */
+/* Градиенты: сверху и снизу. Адаптированы под full-viewport hero. */
 .hero-photo-frame::before {
   content: "";
   position: absolute;
@@ -88,18 +88,17 @@
   background: linear-gradient(
       180deg,
       #000000 0%,
-      rgba(0, 0, 0, 0.9) 12%,
-      rgba(0, 0, 0, 0.5) 24%,
-      transparent 45%
+      rgba(0, 0, 0, 0.85) 6%,
+      rgba(0, 0, 0, 0.4) 14%,
+      transparent 28%
     ),
     linear-gradient(
       0deg,
       #111111 0%,
-      rgba(17, 17, 17, 0.98) 10%,
-      rgba(0, 0, 0, 0.85) 22%,
-      rgba(0, 0, 0, 0.5) 36%,
-      rgba(0, 0, 0, 0.15) 52%,
-      transparent 62%
+      rgba(17, 17, 17, 0.95) 6%,
+      rgba(0, 0, 0, 0.7) 14%,
+      rgba(0, 0, 0, 0.3) 24%,
+      transparent 36%
     );
   border-top-left-radius: inherit;
   border-top-right-radius: inherit;
@@ -119,22 +118,22 @@
   background-size: 200px 200px;
 }
 
-/* Изображение: сдвиг вниз на 20px */
+/* Изображение: заполняет контейнер, центрировано по вертикали (верхняя часть группы видна) */
 .hero-photo {
   position: absolute;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 40px;
+  object-position: center 30%;
 }
 
 /* SVG blur — математически точный без banding на OLED (как в Лэндинг.svg) */
 .hero-blur-svg {
   position: absolute;
   left: -7.8%;
-  top: 71.8%;
+  bottom: -2%;
   width: 115.6%;
-  height: 28.3%;
+  height: 22%;
   z-index: 2;
   pointer-events: none;
   overflow: visible;
@@ -143,12 +142,10 @@
 .hero-vector-group {
   position: absolute;
   left: 0;
-  top: 73.8%; /* поднято на 3% (было 76.8%) */
+  bottom: 0;
   width: 100%;
   height: auto;
   display: block;
-  transform: scale(0.85);
-  transform-origin: center bottom;
   z-index: 3;
   pointer-events: none;
 }
@@ -158,7 +155,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 14%;
+  top: 33%;
   margin: 0 auto;
   width: fit-content;
   max-width: 90%;
@@ -196,7 +193,7 @@
 
 .hero-menu {
   position: absolute;
-  top: 4.35%;
+  top: clamp(72px, 12svh, 115px);
   right: 5%;
   display: flex;
   flex-direction: column;
@@ -250,11 +247,11 @@
   border-radius: 2.5px;
 }
 
-/* Блок текста и кнопки — ниже, без наезда на красные формы */
+/* Блок текста и кнопки — ниже hero-media, без наезда на красные формы */
 .hero-text-block {
   position: relative;
   z-index: 5;
-  margin-top: 98px;
+  margin-top: 24px;
 }
 
 .hero-copy {
@@ -893,6 +890,37 @@
 }
 
 @media (min-width: 900px) {
+  .hero-media {
+    height: auto;
+    aspect-ratio: 440 / 375;
+    margin: 0 calc(50% - 50vw);
+  }
+
+  .hero-vector-group {
+    bottom: auto;
+    top: 73.8%;
+    transform: scale(0.85);
+    transform-origin: center bottom;
+  }
+
+  .hero-blur-svg {
+    bottom: auto;
+    top: 71.8%;
+    height: 28.3%;
+  }
+
+  .hero-welcome {
+    top: 14%;
+  }
+
+  .hero-menu {
+    top: 4.35%;
+  }
+
+  .hero-text-block {
+    margin-top: 98px;
+  }
+
   .why-mobile {
     display: none;
   }
