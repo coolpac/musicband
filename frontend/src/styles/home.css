@@ -132,9 +132,9 @@
 .hero-blur-svg {
   position: absolute;
   left: -7.8%;
-  top: 71.8%;
+  top: 78%;
   width: 115.6%;
-  height: 28.3%;
+  height: 22%;
   z-index: 2;
   pointer-events: none;
   overflow: visible;
