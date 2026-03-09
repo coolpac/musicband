@@ -357,6 +357,7 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   overscroll-behavior-x: contain;
+  align-items: flex-start;
 }
 
 .poster-slider::-webkit-scrollbar {
