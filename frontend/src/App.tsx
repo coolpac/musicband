@@ -366,6 +366,7 @@ export default function App() {
     }
     if (urlSessionId && urlScreen === 'voting') {
       setVotingSessionId(urlSessionId);
+      loadVotingSession(urlSessionId);
       return;
     }
 
@@ -640,6 +641,15 @@ export default function App() {
               window.history.pushState({}, '', '?screen=home');
             }}
             onSubmit={handleVoteSubmit}
+            onSessionNotActive={() => {
+              const sid = votingSessionId || new URLSearchParams(window.location.search).get('sessionId');
+              if (sid) {
+                loadVotingSession(sid);
+              } else {
+                setCurrentScreen('home');
+                window.history.replaceState({}, '', '?screen=home');
+              }
+            }}
           />
         );
       case 'voting-results':

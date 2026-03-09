@@ -20,6 +20,8 @@ type VotingScreenProps = {
   /** Не используется: навигация назад — кнопка Telegram. */
   onBack?: () => void;
   onSubmit?: (songId: string) => void | Promise<void>;
+  /** Вызывается, когда сессия голосования уже не активна (завершена/истекла) */
+  onSessionNotActive?: () => void;
 };
 
 function toSong(s: { id: string; title: string; artist: string; coverUrl: string | null }): Song {
@@ -33,7 +35,7 @@ function toSong(s: { id: string; title: string; artist: string; coverUrl: string
   };
 }
 
-export default function VotingScreen({ sessionId, onSubmit }: VotingScreenProps) {
+export default function VotingScreen({ sessionId, onSubmit, onSessionNotActive }: VotingScreenProps) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,10 @@ export default function VotingScreen({ sessionId, onSubmit }: VotingScreenProps)
     const fetcher = sessionId
       ? (signal: AbortSignal) =>
           getVoteSessionWithSongs(sessionId, { signal, timeoutMs: SESSION_TIMEOUT_MS }).then((r) => {
-            if (r.status !== 'active') return [];
+            if (r.status !== 'active') {
+              onSessionNotActive?.();
+              return [];
+            }
             return r.songs.map(toSong);
           })
       : (signal: AbortSignal) => getSongs({ signal });
