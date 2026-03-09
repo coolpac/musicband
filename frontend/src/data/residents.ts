@@ -24,7 +24,7 @@ export const residents: Resident[] = [
     shortDescription: 'Фронтмен, солист, автор.',
     description:
       'Автор проекта. Мастер спорта по карате WKF. Высшее педагогическое образование. С детства увлекался написанием музыки. «Я понял, что из хобби это должно превратиться в ремесло моей жизни, и я собрал сильнейших».',
-    image: '/residents/sasha.webp',
+    image: '/residents/sasha.png',
   },
   {
     id: 'alexandr',
@@ -32,7 +32,7 @@ export const residents: Resident[] = [
     shortDescription: 'Барабанщик.',
     description:
       'Занимался карате вместе с Сашей. Профессиональный барабанщик, задаёт ритм и энергию на каждом выступлении. Увлекается спортом и здоровым образом жизни. «Барабаны — это сердцебиение музыки».',
-    image: '/residents/alexandr.webp',
+    image: '/residents/alexandr.png',
   },
   {
     id: 'roma',
@@ -40,7 +40,7 @@ export const residents: Resident[] = [
     shortDescription: 'Бас-гитарист, бэк-вокал.',
     description:
       'Бас-гитарист и бэк-вокал. Держит ритм и низы в группе «Лента». Любит минимализм и чёткие линии.',
-    image: '/residents/roma.webp',
+    image: '/residents/roma.png',
   },
   {
     id: 'egor',
@@ -48,7 +48,7 @@ export const residents: Resident[] = [
     shortDescription: 'Ударные, перкуссия.',
     description:
       'Саундпродюсер. Имеет свою студию звукозаписи "Blunt Music" и уже работал как с нашими, так и с зарубежными звёздами индустрии. Писал аранжировки Александру на авторские песни. «Всегда мечтал играть в группе на бас-гитаре».',
-    image: '/residents/egor.webp',
+    image: '/residents/egor.png',
   },
   {
     id: 'vadim',
@@ -56,7 +56,7 @@ export const residents: Resident[] = [
     shortDescription: 'Клавиши, саунд-дизайн.',
     description:
       'Лауреат международных конкурсов, обладатель президентских грантов. Занимался футболом. Группа считает его одним из лучших клавишников в России. «Неважно какую музыку ты слушаешь. Важно куда она тебя приведёт».',
-    image: '/residents/vadim.webp',
+    image: '/residents/vadim.png',
   },
   {
     id: 'anya',
@@ -64,6 +64,6 @@ export const residents: Resident[] = [
     shortDescription: 'Вокал, скрипка.',
     description:
       'Предприниматель, организатор, дизайнер "Magic stone". Знает всё, что касается красоты, развития и праздников. «Соединяю людей, идеи и смыслы».',
-    image: '/residents/anya.webp',
+    image: '/residents/anya.png',
   },
 ];

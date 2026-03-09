@@ -27,13 +27,15 @@ export class AdminBot {
       text: string;
       buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
       includeDefaultButton: boolean;
-      media?: { type: 'photo' | 'video'; fileId: string };
+      media?: { type: 'photo' | 'video' | 'document'; fileId: string };
+      segment: 'all' | 'just_person' | 'organizer';
     }
   >;
   private onBroadcast?: (payload: {
     text: string;
     buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
-    media?: { type: 'photo' | 'video'; fileId: string };
+    media?: { type: 'photo' | 'video' | 'document'; fileId: string };
+    segment?: 'all' | 'just_person' | 'organizer';
     onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
   }) => Promise<{ sent: number; failed: number; total: number }>;
   private chatsWithKeyboard: Set<number>;
@@ -69,6 +71,8 @@ export class AdminBot {
     onBroadcast?: (payload: {
       text: string;
       buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
+      media?: { type: 'photo' | 'video' | 'document'; fileId: string };
+      segment?: 'all' | 'just_person' | 'organizer';
       onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
     }) => Promise<{ sent: number; failed: number; total: number }>
   ) {
@@ -248,7 +252,7 @@ export class AdminBot {
                   text: textContent,
                   includeDefaultButton: existing.includeDefaultButton ?? false,
                 }
-              : { text: textContent, buttons: [], includeDefaultButton: false };
+              : { text: textContent, buttons: [], includeDefaultButton: false, segment: 'all' as const };
             this.pendingBroadcasts.set(telegramId, nextDraft);
 
             await this.sendBroadcastPreview(chatId, telegramId);
@@ -302,7 +306,18 @@ export class AdminBot {
               return;
             }
 
-            await this.bot.sendMessage(chatId, 'Пришлите фото или видео для рассылки.');
+            if (msg.document) {
+              this.awaitingBroadcastMedia.delete(telegramId);
+              this.pendingBroadcasts.set(telegramId, {
+                ...draft,
+                media: { type: 'document', fileId: msg.document.file_id },
+              });
+              await this.bot.sendMessage(chatId, '📄 Документ прикреплён.');
+              await this.sendBroadcastPreview(chatId, telegramId);
+              return;
+            }
+
+            await this.bot.sendMessage(chatId, 'Пришлите фото, видео или документ для рассылки.');
           }
 
           if (!textContent) return;
@@ -387,8 +402,54 @@ export class AdminBot {
           if (data === 'broadcast_cancel') {
             this.awaitingBroadcastText.delete(telegramId);
             this.awaitingBroadcastButtons.delete(telegramId);
+            this.awaitingBroadcastMedia.delete(telegramId);
             this.pendingBroadcasts.delete(telegramId);
             await this.bot.answerCallbackQuery(query.id, { text: 'Рассылка отменена' });
+            return;
+          }
+
+          if (data?.startsWith('broadcast_segment:')) {
+            const segment = data.replace('broadcast_segment:', '') as
+              | 'all'
+              | 'just_person'
+              | 'organizer';
+            const count = await this.getAudienceCount(segment);
+            const segmentLabel = this.getSegmentLabel(segment);
+
+            this.pendingBroadcasts.set(telegramId, {
+              text: '',
+              buttons: [],
+              includeDefaultButton: false,
+              segment,
+            });
+            this.awaitingBroadcastText.add(telegramId);
+
+            await this.bot.answerCallbackQuery(query.id, {
+              text: `${segmentLabel}: ~${count} чел.`,
+            });
+            await this.bot.sendMessage(
+              chatId,
+              `👥 Аудитория: ${segmentLabel} (~${count} чел.)\n\n` +
+                'Отправьте текст сообщения одним сообщением.',
+              {
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
+                  ],
+                },
+              }
+            );
+            return;
+          }
+
+          if (data === 'broadcast_change_segment') {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет черновика рассылки.' });
+              return;
+            }
+            await this.bot.answerCallbackQuery(query.id);
+            await this.sendSegmentSelection(chatId);
             return;
           }
 
@@ -438,7 +499,7 @@ export class AdminBot {
             await this.bot.answerCallbackQuery(query.id);
             await this.bot.sendMessage(
               chatId,
-              'Пришлите фото или видео для рассылки (одно вложение).'
+              'Пришлите фото, видео или документ для рассылки (одно вложение).'
             );
             return;
           }
@@ -555,6 +616,7 @@ export class AdminBot {
                 text: draft.text,
                 buttons: finalButtons,
                 media: draft.media,
+                segment: draft.segment,
                 onProgress: async (progress) => {
                   lastProgress = progress;
                   if (progress.sent === progress.total) {
@@ -658,6 +720,7 @@ export class AdminBot {
               callback_data: draft.media ? 'broadcast_media_clear' : 'broadcast_media_prompt',
             },
           ],
+          [{ text: '👥 Изменить аудиторию', callback_data: 'broadcast_change_segment' }],
           [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
         ],
       },
@@ -668,8 +731,11 @@ export class AdminBot {
     text: string;
     buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
     includeDefaultButton: boolean;
-    media?: { type: 'photo' | 'video'; fileId: string };
+    media?: { type: 'photo' | 'video' | 'document'; fileId: string };
+    segment?: 'all' | 'just_person' | 'organizer';
   }): string {
+    const segmentLine = `👥 Аудитория: ${this.getSegmentLabel(draft.segment ?? 'all')}`;
+
     const buttonLines: string[] = [];
     if (draft.buttons.length) {
       draft.buttons.forEach((button) =>
@@ -685,11 +751,18 @@ export class AdminBot {
       buttonLines.push('• — нет');
     }
 
-    const mediaLine = draft.media
-      ? `📎 Медиа: ${draft.media.type === 'photo' ? 'Фото' : 'Видео'} прикреплено`
+    const mediaLabel = draft.media
+      ? draft.media.type === 'photo'
+        ? 'Фото'
+        : draft.media.type === 'video'
+          ? 'Видео'
+          : 'Документ'
+      : null;
+    const mediaLine = mediaLabel
+      ? `📎 Медиа: ${mediaLabel} прикреплено`
       : '📎 Медиа не прикреплена';
 
-    return `Черновик рассылки:\n\n${draft.text}\n\nКнопки:\n${buttonLines.join('\n')}\n\n${mediaLine}`;
+    return `Черновик рассылки:\n\n${segmentLine}\n\n${draft.text}\n\nКнопки:\n${buttonLines.join('\n')}\n\n${mediaLine}`;
   }
 
   private parseBroadcastButtons(input: string): {
@@ -846,28 +919,58 @@ export class AdminBot {
   }
 
   private async initiateBroadcastFlow(chatId: number, telegramId: number): Promise<void> {
-    this.awaitingBroadcastText.add(telegramId);
+    this.awaitingBroadcastText.delete(telegramId);
     this.awaitingBroadcastButtons.delete(telegramId);
     this.awaitingBroadcastMedia.delete(telegramId);
     this.pendingBroadcasts.delete(telegramId);
 
-    await this.bot.sendMessage(
-      chatId,
-      '🗣️ Рассылка всем пользователям\n\n' +
-        'Отправьте текст сообщения одним сообщением.\n' +
-        'После текста можно добавить кнопки (например, упоминание пользователя).\n\n' +
-        'Формат кнопок:\n' +
-        'Текст | ссылка\n' +
-        'Например:\n' +
-        'Написать @user | https://t.me/user\n' +
-        'Упомянуть по ID | tg://user?id=123456789\n' +
-        'Профиль | user:123456789',
-      {
-        reply_markup: {
-          inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }]],
-        },
+    await this.sendSegmentSelection(chatId);
+  }
+
+  private async sendSegmentSelection(chatId: number): Promise<void> {
+    await this.bot.sendMessage(chatId, '🗣️ Рассылка\n\nВыберите аудиторию:', {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📢 Все пользователи', callback_data: 'broadcast_segment:all' }],
+          [{ text: '👤 Физлица', callback_data: 'broadcast_segment:just_person' }],
+          [{ text: '🎤 Организаторы', callback_data: 'broadcast_segment:organizer' }],
+          [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
+        ],
+      },
+    });
+  }
+
+  private async getAudienceCount(
+    segment: 'all' | 'just_person' | 'organizer'
+  ): Promise<number> {
+    try {
+      if (segment === 'all') {
+        return await prisma.user.count();
       }
-    );
+      const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*) as count
+        FROM users u
+        INNER JOIN onboarding_answers oa ON oa.telegram_id = u.telegram_id
+        WHERE oa.role = ${segment}
+      `;
+      return Number(result[0].count);
+    } catch (error) {
+      logger.error('Error counting audience', { segment, error });
+      return 0;
+    }
+  }
+
+  private getSegmentLabel(segment: 'all' | 'just_person' | 'organizer'): string {
+    switch (segment) {
+      case 'all':
+        return '📢 Все пользователи';
+      case 'just_person':
+        return '👤 Физлица';
+      case 'organizer':
+        return '🎤 Организаторы';
+      default:
+        return '📢 Все';
+    }
   }
 
   private async sendHelpMessage(chatId: number): Promise<void> {

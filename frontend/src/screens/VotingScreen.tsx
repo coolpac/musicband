@@ -100,7 +100,11 @@ export default function VotingScreen({ sessionId, onSubmit }: VotingScreenProps)
     setIsSubmitting(true);
     Promise.resolve()
       .then(() => onSubmit(selectedSongId))
-      .catch(() => undefined)
+      .catch((err) => {
+        console.error('Vote submit failed:', err);
+        // useVoteSubmit обрабатывает ошибки внутри себя (showAlert),
+        // но если вылетит unexpected — хотя бы залогируем
+      })
       .finally(() => setIsSubmitting(false));
   };
 

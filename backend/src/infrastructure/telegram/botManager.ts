@@ -110,7 +110,8 @@ export class BotManager {
   async broadcastToUsers(payload: {
     text: string;
     buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
-    media?: { type: 'photo' | 'video'; fileId: string };
+    media?: { type: 'photo' | 'video' | 'document'; fileId: string };
+    segment?: 'all' | 'just_person' | 'organizer';
     onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
   }): Promise<{ sent: number; failed: number; total: number }> {
     if (!this.userBot) {
@@ -118,12 +119,8 @@ export class BotManager {
       return { sent: 0, failed: 0, total: 0 };
     }
 
-    const users = await prisma.user.findMany({
-      select: { telegramId: true },
-    });
-    const telegramIds = users
-      .map((user) => Number(user.telegramId))
-      .filter((id) => !Number.isNaN(id));
+    // Получаем список telegramId с учётом сегмента
+    const telegramIds = await this.getAudienceTelegramIds(payload.segment ?? 'all');
 
     const baseButtons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }> =
       payload.buttons;
@@ -163,8 +160,14 @@ export class BotManager {
               caption,
               reply_markup: replyMarkup,
             });
-          } else {
+          } else if (payload.media.type === 'video') {
             await bot.sendVideo(telegramId, payload.media.fileId, {
+              caption,
+              reply_markup: replyMarkup,
+            });
+          } else {
+            // document
+            await bot.sendDocument(telegramId, payload.media.fileId, {
               caption,
               reply_markup: replyMarkup,
             });
@@ -201,8 +204,37 @@ export class BotManager {
       await payload.onProgress({ sent, failed, total });
     }
 
-    logger.info('Broadcast finished', { sent, failed, total });
+    logger.info('Broadcast finished', { sent, failed, total, segment: payload.segment ?? 'all' });
     return { sent, failed, total };
+  }
+
+  /**
+   * Получить список telegramId по сегменту аудитории.
+   * - 'all' — все пользователи
+   * - 'just_person' / 'organizer' — только те, кто прошёл onboarding с соответствующей ролью
+   */
+  private async getAudienceTelegramIds(
+    segment: 'all' | 'just_person' | 'organizer'
+  ): Promise<number[]> {
+    if (segment === 'all') {
+      const users = await prisma.user.findMany({
+        select: { telegramId: true },
+      });
+      return users
+        .map((user) => Number(user.telegramId))
+        .filter((id) => !Number.isNaN(id));
+    }
+
+    // Фильтрация по onboarding-роли через JOIN
+    const rows = await prisma.$queryRaw<Array<{ telegram_id: bigint }>>`
+      SELECT u.telegram_id
+      FROM users u
+      INNER JOIN onboarding_answers oa ON oa.telegram_id = u.telegram_id
+      WHERE oa.role = ${segment}
+    `;
+    return rows
+      .map((row) => Number(row.telegram_id))
+      .filter((id) => !Number.isNaN(id));
   }
 
   /**

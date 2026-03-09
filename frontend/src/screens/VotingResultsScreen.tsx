@@ -34,6 +34,8 @@ type VotingResultsScreenProps = {
   sessionId?: string | null;
   /** Вызывается при завершении голосования с победителем (админ завершил) */
   onSessionEnded?: (winningSongId: string) => void;
+  /** Вызывается при завершении/истечении без победителя — вернуть на главную */
+  onSessionExpired?: () => void;
 };
 
 export default function VotingResultsScreen({
@@ -45,6 +47,7 @@ export default function VotingResultsScreen({
   sessionEnded = false,
   sessionId = null,
   onSessionEnded,
+  onSessionExpired,
 }: VotingResultsScreenProps) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [results, setResults] = useState<VoteResult[]>([]);
@@ -95,18 +98,24 @@ export default function VotingResultsScreen({
     return () => clearInterval(id);
   }, [hasLiveSocket, error, loadData]);
 
-  // Polling статуса сессии: если админ завершил голосование — редирект на победителя (работает без сокета)
+  // Polling статуса сессии: если админ завершил голосование — редирект на победителя или на главную
   useEffect(() => {
-    if (!sessionId || !onSessionEnded) return;
+    if (!sessionId) return;
     const SESSION_POLL_MS = 6000;
     const id = setInterval(async () => {
       const info = await getVoteSessionInfo(sessionId);
-      if (info?.status === 'ended_with_winner' && info.winningSong?.id) {
-        onSessionEnded(info.winningSong.id);
+      if (!info) return;
+      if (info.status === 'ended_with_winner' && info.winningSong?.id) {
+        onSessionEnded?.(info.winningSong.id);
+      } else if (info.status === 'ended_with_winner' && !info.winningSong) {
+        // Завершена без победителя (0 голосов) — на главную
+        onSessionExpired?.();
+      } else if (info.status === 'expired') {
+        onSessionExpired?.();
       }
     }, SESSION_POLL_MS);
     return () => clearInterval(id);
-  }, [sessionId, onSessionEnded]);
+  }, [sessionId, onSessionEnded, onSessionExpired]);
 
   const getSongPercentage = (songId: string) => {
     if (hasLiveSocket && liveResults?.songs) {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { hapticImpact } from '../telegram/telegramWebApp';
 import { Song } from '../types/vote';
-import { getSongs, getSongById } from '../services/songService';
+import { getSongById } from '../services/songService';
 import NetworkError from '../components/NetworkError';
 import votingBg from '../assets/figma/voting-bg-only.svg';
 import LyricsOverlay from '../components/LyricsOverlay';
@@ -26,9 +26,11 @@ export default function WinningSongScreen({ onViewLyrics, songId }: WinningSongS
   const loadSong = useCallback(async () => {
     setError(null);
     try {
-      const song = songId
-        ? await getSongById(songId)
-        : (await getSongs())[0] ?? null;
+      if (!songId) {
+        setError(new Error('Песня не найдена'));
+        return;
+      }
+      const song = await getSongById(songId);
       setWinningSong(song);
     } catch (err) {
       console.error('WinningSongScreen loadSong failed:', { songId, err });

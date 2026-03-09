@@ -152,6 +152,7 @@ model VotingSession {
   totalVoters    Int       @default(0) @map("total_voters")
   winningSongId  String?   @map("winning_song_id")
   expiresAt      DateTime? @map("expires_at")
+  finalResults   Json?     @map("final_results") // Снимок результатов на момент завершения (песни+голоса+проценты)
   createdAt      DateTime  @default(now()) @map("created_at")
 
   votes Vote[]
@@ -186,7 +187,7 @@ model Vote {
   session   VotingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   createdAt DateTime       @default(now()) @map("created_at")
 
-  @@unique([userId, songId, sessionId])
+  @@unique([userId, sessionId])
   @@index([sessionId, songId])
   @@index([sessionId, userId])
   @@index([songId])

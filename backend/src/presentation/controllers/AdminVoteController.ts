@@ -171,11 +171,7 @@ export class AdminVoteController {
       if (socketServer) {
         socketServer.broadcastSessionEnded({
           sessionId: id,
-          results: result.finalResults.map((r) => ({
-            song: { id: r.songId },
-            votes: r.votes,
-            percentage: r.percentage,
-          })),
+          results: result.finalResultsSnapshot.songs,
           totalVoters: result.totalVoters,
           winningSong: result.winningSong,
         });

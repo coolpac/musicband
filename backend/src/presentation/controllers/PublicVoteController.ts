@@ -213,10 +213,14 @@ export class PublicVoteController {
         return;
       }
 
-      const { initData, songId } = req.body as { initData: string; songId: string; sessionId?: string };
+      const { initData, songId, sessionId: targetSessionId } = req.body as {
+        initData: string;
+        songId: string;
+        sessionId?: string;
+      };
 
       const authResult = await this.authService.authenticateWithTelegram(initData);
-      const sessionId = await this.voteService.castVote(authResult.user.id, songId);
+      const sessionId = await this.voteService.castVote(authResult.user.id, songId, targetSessionId);
 
       const socketServer = getSocketServer();
       socketServer?.requestResultsUpdate(sessionId);

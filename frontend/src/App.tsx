@@ -63,6 +63,7 @@ export default function App() {
   const [socketStatus, setSocketStatus] = useState<'connected' | 'reconnecting' | 'disconnected' | 'error' | null>(null);
   const [retryTrigger, setRetryTrigger] = useState(0);
   const [liveResults, setLiveResults] = useState<import('./screens/VotingResultsScreen').LiveResultsPayload | null>(null);
+  const [votingSessionEnded, setVotingSessionEnded] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(() =>
     localStorage.getItem('auth_token') || localStorage.getItem('admin_token')
   );
@@ -310,6 +311,7 @@ export default function App() {
   /** Загрузить сессию и перейти на нужный экран. fromScreen: не переключать на voting, если уже смотрим результаты. */
   const loadVotingSession = (sessionId: string, fromScreen?: 'voting' | 'voting-results') => {
     setVotingSessionId(sessionId);
+    setVotingSessionEnded(false);
 
     const base = import.meta.env.VITE_API_URL || '';
     fetch(`${base}/api/public/vote/session/${sessionId}`)
@@ -400,6 +402,17 @@ export default function App() {
     }
   }, []);
 
+  // Ref для votingSessionId — чтобы не переподключать сокет при смене sessionId
+  const votingSessionIdRef = useRef(votingSessionId);
+  votingSessionIdRef.current = votingSessionId;
+
+  // При смене votingSessionId — только перевходим в комнату, БЕЗ пересоздания сокета
+  useEffect(() => {
+    if (socket?.connected && votingSessionId) {
+      socket.emit('vote:join', { sessionId: votingSessionId });
+    }
+  }, [votingSessionId, socket]);
+
   // Socket.io: live-обновления результатов и реакция на завершение голосования (только на экранах voting / voting-results)
   useEffect(() => {
     if (currentScreen !== 'voting' && currentScreen !== 'voting-results') {
@@ -412,9 +425,8 @@ export default function App() {
       return;
     }
 
-    // Если сокет уже подключен — просто (пере)входим в нужную сессию
+    // Если сокет уже подключен — не пересоздаём
     if (socket?.connected) {
-      socket.emit('vote:join', { sessionId: votingSessionId || undefined });
       return;
     }
 
@@ -441,7 +453,7 @@ export default function App() {
 
     newSocket.on('connect', () => {
       setSocketStatus('connected');
-      newSocket.emit('vote:join', { sessionId: votingSessionId || undefined });
+      newSocket.emit('vote:join', { sessionId: votingSessionIdRef.current || undefined });
     });
 
     newSocket.on('disconnect', (reason: string) => {
@@ -464,9 +476,10 @@ export default function App() {
 
     newSocket.on('vote:session:ended', (data: { winningSong?: { id: string; title: string; artist: string; coverUrl: string | null }; sessionId?: string }) => {
       const { winningSong, sessionId: evtSessionId } = data;
+      setVotingSessionEnded(true);
       if (winningSong) {
         setCurrentScreen('winning-song');
-        const sid = evtSessionId || votingSessionId || new URLSearchParams(window.location.search).get('sessionId');
+        const sid = evtSessionId || votingSessionIdRef.current || new URLSearchParams(window.location.search).get('sessionId');
         window.history.replaceState({}, '', sid ? `?screen=winning-song&songId=${winningSong.id}&sessionId=${sid}` : `?screen=winning-song&songId=${winningSong.id}`);
       }
     });
@@ -477,7 +490,7 @@ export default function App() {
     return () => {
       newSocket.disconnect();
     };
-  }, [currentScreen, authToken, votingSessionId]);
+  }, [currentScreen, authToken]);
 
   const handleRetryConnection = () => {
     if (socket && !socket.connected) {
@@ -642,15 +655,20 @@ export default function App() {
               window.history.pushState({}, '', sid ? `?screen=winning-song&songId=${songId}&sessionId=${sid}` : `?screen=winning-song&songId=${songId}`);
             }}
             onSessionEnded={(winningSongId) => {
+              setVotingSessionEnded(true);
               setCurrentScreen('winning-song');
               const sid = votingSessionId || new URLSearchParams(window.location.search).get('sessionId');
               window.history.replaceState({}, '', sid ? `?screen=winning-song&songId=${winningSongId}&sessionId=${sid}` : `?screen=winning-song&songId=${winningSongId}`);
+            }}
+            onSessionExpired={() => {
+              setCurrentScreen('home');
+              window.history.replaceState({}, '', '?screen=home');
             }}
             liveResults={liveResults}
             socketStatus={currentScreen === 'voting-results' ? socketStatus : null}
             retryTrigger={retryTrigger}
             onRetryConnection={handleRetryConnection}
-            sessionEnded={false}
+            sessionEnded={votingSessionEnded}
             sessionId={votingSessionId}
           />
         );

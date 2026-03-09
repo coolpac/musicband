@@ -19,7 +19,7 @@ export class VoteService {
   /**
    * Создание голоса
    */
-  async castVote(userId: string, songId: string): Promise<string> {
+  async castVote(userId: string, songId: string, targetSessionId?: string): Promise<string> {
     // Проверяем пользователя
     const user = await this.userRepository.findById(userId);
     if (!user) {
@@ -36,10 +36,15 @@ export class VoteService {
       throw new ValidationError('Song is not active for voting');
     }
 
-    // Получаем активную сессию
-    const session = await this.voteRepository.findActiveSession();
+    // Получаем сессию: по ID (если передан) или активную
+    const session = targetSessionId
+      ? await this.voteRepository.findSessionById(targetSessionId)
+      : await this.voteRepository.findActiveSession();
     if (!session) {
-      throw new ValidationError('No active voting session');
+      throw new ValidationError(targetSessionId ? 'Session not found' : 'No active voting session');
+    }
+    if (!session.isActive) {
+      throw new ValidationError('Voting session is not active');
     }
 
     // Проверяем, не голосовал ли уже пользователь
@@ -165,6 +170,7 @@ export class VoteService {
 
   /**
    * Получение результатов голосования (с кешированием)
+   * Для завершённых сессий — возвращает сохранённый JSON-снимок.
    */
   async getResults(sessionId?: string) {
     let session;
@@ -183,6 +189,20 @@ export class VoteService {
           totalVotes: 0,
         };
       }
+    }
+
+    // Завершённая сессия — отдаём сохранённый снимок результатов
+    if (!session.isActive && session.finalResults) {
+      const stored = session.finalResults as {
+        sessionId: string;
+        songs: Array<{
+          song: { id: string; title: string; artist: string; coverUrl: string | null } | null;
+          votes: number;
+          percentage: number;
+        }>;
+        totalVotes: number;
+      };
+      return stored;
     }
 
     // Пытаемся получить из кеша
@@ -362,9 +382,12 @@ export class VoteService {
     // Получаем финальные результаты ДО удаления
     const results = await this.voteRepository.getResults(sessionId);
 
-    // Получаем список песен для деактивации
+    // Получаем ВСЕ активные песни (включая те, за которые никто не голосовал)
+    const activeSongs = await this.songRepository.findActive();
+    const allActiveSongIds = activeSongs.map((s) => s.id);
+
+    // Получаем голоса для подсчёта уникальных voters и telegramId
     const votes = await this.voteRepository.findBySession(sessionId);
-    const songIds = [...new Set(votes.map((v) => v.songId))];
 
     // Собираем telegramId всех проголосовавших (ДО deleteMany в транзакции)
     const uniqueUserIds = [...new Set(votes.map((v) => v.userId))];
@@ -379,24 +402,41 @@ export class VoteService {
     // Победитель — песня с максимумом голосов (results уже отсортированы по votes DESC)
     const winningSongId = results.length > 0 ? results[0].songId : null;
 
+    // Формируем JSON-снимок результатов (сохраняется в VotingSession, т.к. голоса удаляются)
+    const totalVotes = results.reduce((sum, r) => sum + r.votes, 0);
+    const votesMap = new Map(results.map((r) => [r.songId, r]));
+    const finalResultsSnapshot = {
+      sessionId,
+      songs: activeSongs.map((song) => {
+        const result = votesMap.get(song.id);
+        return {
+          song: { id: song.id, title: song.title, artist: song.artist, coverUrl: song.coverUrl },
+          votes: result?.votes ?? 0,
+          percentage: result?.percentage ?? 0,
+        };
+      }).sort((a, b) => b.votes - a.votes),
+      totalVotes,
+    };
+
     // TRANSACTION: Завершаем сессию + деактивируем песни + удаляем голоса атомарно
     const endedSession = await prisma.$transaction(async (tx) => {
-      // 1. Завершаем сессию (устанавливаем isActive = false, победитель, expiresAt)
+      // 1. Завершаем сессию (isActive = false, победитель, expiresAt, снимок результатов)
       const updated = await tx.votingSession.update({
         where: { id: sessionId },
         data: {
           isActive: false,
           endedAt: new Date(),
-          totalVoters: votes.length, // Сохраняем финальное кол-во голосов
+          totalVoters: votes.length,
           winningSongId,
           expiresAt: new Date(Date.now() + 6 * 60 * 60 * 1000), // 6 часов
+          finalResults: finalResultsSnapshot,
         },
       });
 
-      // 2. Деактивируем все песни из сессии
-      if (songIds.length > 0) {
+      // 2. Деактивируем ВСЕ активные песни (включая с 0 голосов)
+      if (allActiveSongIds.length > 0) {
         await tx.song.updateMany({
-          where: { id: { in: songIds } },
+          where: { id: { in: allActiveSongIds } },
           data: { isActive: false },
         });
       }
@@ -463,6 +503,7 @@ export class VoteService {
     return {
       session: endedSession,
       finalResults: results,
+      finalResultsSnapshot,
       totalVoters: endedSession.totalVoters,
       winningSong: winningSong
         ? {
