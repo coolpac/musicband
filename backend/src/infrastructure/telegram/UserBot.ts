@@ -273,6 +273,23 @@ export class UserBot {
             }
             await redis.del(key);
             await this.onboardingRepository.create(BigInt(chatId), role);
+
+            // Уведомляем админов о новом пользователе
+            try {
+              const { getBotManager } = await import('./botManager');
+              const botManager = getBotManager();
+              if (botManager) {
+                await botManager.notifyNewUser({
+                  telegramId: chatId.toString(),
+                  username: query.from?.username,
+                  firstName: query.from?.first_name,
+                  lastName: query.from?.last_name,
+                });
+              }
+            } catch (notifyError) {
+              logger.warn('Failed to send new user notification from onboarding', { error: notifyError });
+            }
+
             await this.sendWelcome(chatId);
             return;
           }

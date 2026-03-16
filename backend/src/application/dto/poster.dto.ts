@@ -14,6 +14,7 @@ export const CreatePosterSchema = z.object({
   description: z.string().optional(),
   imageUrl: z.union([urlOrPath, z.literal('')]).optional(),
   link: z.string().url().optional().or(z.literal('')),
+  order: z.number().int().min(0).optional(),
 });
 
 export const UpdatePosterSchema = z.object({
@@ -21,6 +22,7 @@ export const UpdatePosterSchema = z.object({
   description: z.string().optional(),
   imageUrl: z.union([urlOrPath, z.literal('')]).optional(),
   link: z.string().url().optional().or(z.literal('')),
+  order: z.number().int().min(0).optional(),
 });
 
 export type CreatePosterDto = z.infer<typeof CreatePosterSchema>;

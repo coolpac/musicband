@@ -22,6 +22,7 @@ interface PosterInput {
   description?: string;
   imageUrl: string;
   link?: string;
+  order?: number;
 }
 
 export default function PostersManagementScreen() {
@@ -30,6 +31,7 @@ export default function PostersManagementScreen() {
   const [showModal, setShowModal] = useState(false);
   const [editingPoster, setEditingPoster] = useState<AdminPoster | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
 
   const [formData, setFormData] = useState<PosterInput>({
     title: '',
@@ -37,6 +39,12 @@ export default function PostersManagementScreen() {
     imageUrl: '',
     link: '',
   });
+
+  const sortPosters = (list: AdminPoster[]) =>
+    [...list].sort((a, b) => {
+      if ((a.order ?? 0) !== (b.order ?? 0)) return (a.order ?? 0) - (b.order ?? 0);
+      return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+    });
 
   useEffect(() => {
     loadPosters();
@@ -46,7 +54,7 @@ export default function PostersManagementScreen() {
     setIsLoading(true);
     try {
       const list = await getAdminPosters();
-      setPosters(list);
+      setPosters(sortPosters(list));
     } catch (error) {
       console.error('Error loading posters:', error);
       toast.error('Не удалось загрузить афиши');
@@ -64,8 +72,45 @@ export default function PostersManagementScreen() {
       description: '',
       imageUrl: '',
       link: '',
+      order: posters.length + 1,
     });
     setShowModal(true);
+  };
+
+  const handleMovePoster = async (posterId: string, direction: 'up' | 'down') => {
+    if (isReordering) return;
+    const currentIndex = posters.findIndex((p) => p.id === posterId);
+    if (currentIndex === -1) return;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= posters.length) return;
+
+    const reordered = [...posters];
+    const temp = reordered[currentIndex];
+    reordered[currentIndex] = reordered[targetIndex];
+    reordered[targetIndex] = temp;
+
+    const normalized = reordered.map((poster, index) => ({
+      ...poster,
+      order: index + 1,
+    }));
+
+    const changed = normalized.filter((poster, index) => poster.order !== (posters[index].order ?? index + 1));
+    setPosters(normalized);
+    setIsReordering(true);
+
+    try {
+      await Promise.all(
+        changed.map((poster) =>
+          updateAdminPoster(poster.id, { order: poster.order })
+        )
+      );
+    } catch (error) {
+      console.error('Error reordering posters:', error);
+      toast.error('Не удалось сохранить порядок афиш');
+      await loadPosters();
+    } finally {
+      setIsReordering(false);
+    }
   };
 
   const handleEdit = (poster: AdminPoster) => {
@@ -133,6 +178,7 @@ export default function PostersManagementScreen() {
           description: formData.description?.trim() || undefined,
           imageUrl,
           link: formData.link?.trim() || undefined,
+          order: formData.order,
         });
         toast.success('Афиша добавлена');
       }
@@ -178,7 +224,7 @@ export default function PostersManagementScreen() {
           </div>
         ) : (
           <div className="posters-list">
-            {posters.map((poster) => {
+            {posters.map((poster, index) => {
               const imgProps = getOptimizedImageProps(poster.imageUrl ?? undefined);
               return (
               <div key={poster.id} className="poster-item">
@@ -197,7 +243,10 @@ export default function PostersManagementScreen() {
                 )}
 
                 <div className="poster-item__content">
-                  <h3 className="poster-item__title">{poster.title}</h3>
+                  <h3 className="poster-item__title">
+                    {poster.title}
+                    <span className="poster-order-pill">#{poster.order ?? '-'}</span>
+                  </h3>
                   {poster.description && (
                     <p className="poster-item__description">{poster.description}</p>
                   )}
@@ -214,6 +263,26 @@ export default function PostersManagementScreen() {
                 </div>
 
                 <div className="poster-item__actions">
+                  <div className="poster-order-controls">
+                    <button
+                      type="button"
+                      className="poster-order-btn"
+                      aria-label={`Поднять ${poster.title}`}
+                      disabled={isReordering || index === 0}
+                      onClick={() => handleMovePoster(poster.id, 'up')}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="poster-order-btn"
+                      aria-label={`Опустить ${poster.title}`}
+                      disabled={isReordering || index === posters.length - 1}
+                      onClick={() => handleMovePoster(poster.id, 'down')}
+                    >
+                      ↓
+                    </button>
+                  </div>
                   <button
                     className="admin-btn admin-btn--secondary"
                     onClick={() => handleEdit(poster)}

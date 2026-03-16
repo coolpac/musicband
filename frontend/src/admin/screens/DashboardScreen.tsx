@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { hapticImpact } from '../../telegram/telegramWebApp';
-import { getAdminStatsCached } from '../../services/adminService';
+import { getAdminStatsCached, exportUsersCsv } from '../../services/adminService';
 import { getCached, CACHE_KEYS } from '../../services/adminDataCache';
 import type { AdminStats } from '../../services/adminService';
 import AdminHeader from '../components/AdminHeader';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import toast from 'react-hot-toast';
 import '../../styles/admin.css';
 
 /* Оптимизированные SVG-иконки (stroke, 24×24) */
@@ -92,6 +93,20 @@ export default function DashboardScreen({
   const cached = getCached<AdminStats>(CACHE_KEYS.ADMIN_STATS);
   const [stats, setStats] = useState<DashboardStats>(cached ?? defaultStats);
   const [loading, setLoading] = useState(!cached);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async (segment: 'all' | 'just_person' | 'organizer') => {
+    setIsExporting(true);
+    try {
+      await exportUsersCsv(segment);
+      toast.success('Файл скачан');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Не удалось выгрузить данные');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -258,6 +273,34 @@ export default function DashboardScreen({
             )}
           </div>
         </section>
+
+        {/* Export section */}
+        <div className="dashboard-export">
+          <h2 className="dashboard-export__title">Экспорт пользователей</h2>
+          <div className="dashboard-export__buttons">
+            <button
+              className="admin-btn admin-btn--secondary"
+              onClick={() => handleExport('all')}
+              disabled={isExporting}
+            >
+              {isExporting ? 'Выгрузка...' : 'Все пользователи'}
+            </button>
+            <button
+              className="admin-btn admin-btn--secondary"
+              onClick={() => handleExport('just_person')}
+              disabled={isExporting}
+            >
+              Физлица
+            </button>
+            <button
+              className="admin-btn admin-btn--secondary"
+              onClick={() => handleExport('organizer')}
+              disabled={isExporting}
+            >
+              Организаторы
+            </button>
+          </div>
+        </div>
       </main>
     </div>
   );

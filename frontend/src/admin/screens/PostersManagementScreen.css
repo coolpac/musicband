@@ -79,6 +79,7 @@
 
 .poster-item__actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
@@ -108,4 +109,45 @@
   .poster-item__actions .admin-btn {
     flex: 1;
   }
+}
+
+.poster-order-pill {
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  border: 1px solid rgba(147, 197, 253, 0.35);
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.poster-order-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.poster-order-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--admin-text);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.poster-order-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.poster-order-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }

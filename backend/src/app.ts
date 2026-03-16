@@ -19,6 +19,7 @@ import adminPartnersRoutes from './presentation/routes/admin/partners.routes';
 import adminPostersRoutes from './presentation/routes/admin/posters.routes';
 import adminReviewsRoutes from './presentation/routes/admin/reviews.routes';
 import adminAgentsRoutes from './presentation/routes/admin/agents.routes';
+import adminUsersRoutes from './presentation/routes/admin/users.routes';
 import adminBookingsRoutes from './presentation/routes/admin/bookings.routes';
 import formatsRoutes from './presentation/routes/formats.routes';
 import partnersRoutes from './presentation/routes/partners.routes';
@@ -161,6 +162,7 @@ app.use('/api/admin/partners', adminPartnersRoutes);
 app.use('/api/admin/posters', adminPostersRoutes);
 app.use('/api/admin/reviews', adminReviewsRoutes);
 app.use('/api/admin/agents', adminAgentsRoutes);
+app.use('/api/admin/users', adminUsersRoutes);
 
 // Error handler (должен быть последним)
 app.use(errorHandler);

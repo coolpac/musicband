@@ -14,6 +14,7 @@ export interface CreatePosterData {
   description?: string;
   imageUrl?: string;
   link?: string;
+  order?: number;
 }
 
 export interface UpdatePosterData {
@@ -21,6 +22,7 @@ export interface UpdatePosterData {
   description?: string;
   imageUrl?: string;
   link?: string;
+  order?: number;
 }
 
 export class PrismaPosterRepository implements IPosterRepository {
@@ -28,7 +30,7 @@ export class PrismaPosterRepository implements IPosterRepository {
 
   async findAll(): Promise<Poster[]> {
     return this.client.poster.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });
   }
 
@@ -45,6 +47,7 @@ export class PrismaPosterRepository implements IPosterRepository {
         description: data.description,
         imageUrl: data.imageUrl,
         link: data.link,
+        order: data.order,
       },
     });
   }
@@ -57,6 +60,7 @@ export class PrismaPosterRepository implements IPosterRepository {
         description: data.description,
         imageUrl: data.imageUrl,
         link: data.link,
+        order: data.order,
       },
     });
   }

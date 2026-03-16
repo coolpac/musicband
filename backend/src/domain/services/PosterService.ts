@@ -22,6 +22,7 @@ export class PosterService {
     description?: string;
     imageUrl?: string;
     link?: string;
+    order?: number;
   }) {
     if (!data.title || data.title.trim().length === 0) {
       throw new ValidationError('Poster title is required');
@@ -36,7 +37,7 @@ export class PosterService {
 
   async updatePoster(
     id: string,
-    data: { title?: string; description?: string; imageUrl?: string; link?: string }
+    data: { title?: string; description?: string; imageUrl?: string; link?: string; order?: number }
   ) {
     await this.getPosterById(id);
     return this.posterRepository.update(id, data);

@@ -8,6 +8,7 @@ export interface AdminPoster {
   description?: string | null;
   imageUrl?: string | null;
   link?: string | null;
+  order?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -17,6 +18,7 @@ export interface CreatePosterInput {
   description?: string;
   imageUrl?: string;
   link?: string;
+  order?: number;
 }
 
 export interface UpdatePosterInput {
@@ -24,6 +26,7 @@ export interface UpdatePosterInput {
   description?: string;
   imageUrl?: string;
   link?: string;
+  order?: number;
 }
 
 export async function getAdminPosters(): Promise<AdminPoster[]> {
@@ -37,6 +40,7 @@ export async function createAdminPoster(input: CreatePosterInput): Promise<Admin
     description: input.description || undefined,
     imageUrl: input.imageUrl || undefined,
     link: input.link || undefined,
+    order: input.order,
   });
 }
 
@@ -46,6 +50,7 @@ export async function updateAdminPoster(id: string, input: UpdatePosterInput): P
     description: input.description,
     imageUrl: input.imageUrl,
     link: input.link,
+    order: input.order,
   });
 }
 
