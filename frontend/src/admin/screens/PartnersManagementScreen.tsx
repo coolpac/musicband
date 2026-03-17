@@ -202,7 +202,7 @@ export default function PartnersManagementScreen() {
                     aria-label="Поднять выше"
                     title="Поднять выше"
                   >
-                    ↑
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2.5L12 8.5H2L7 2.5Z" fill="currentColor"/></svg>
                   </button>
                   <span className="partner-card__order-num">{index + 1}</span>
                   <button
@@ -213,7 +213,7 @@ export default function PartnersManagementScreen() {
                     aria-label="Опустить ниже"
                     title="Опустить ниже"
                   >
-                    ↓
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 11.5L2 5.5H12L7 11.5Z" fill="currentColor"/></svg>
                   </button>
                 </div>
                 {logoProps ? (

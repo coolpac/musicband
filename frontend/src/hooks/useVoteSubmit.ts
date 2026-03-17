@@ -18,7 +18,8 @@ type UseVoteSubmitParams = {
   authToken: string | null;
   votingSessionId: string | null;
   setAuthToken: (t: string | null) => void;
-  setCurrentScreen: (s: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setCurrentScreen: (s: any) => void;
 };
 
 /**

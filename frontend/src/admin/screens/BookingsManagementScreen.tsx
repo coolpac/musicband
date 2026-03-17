@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
-import { CalendarDayCell } from '../components/CalendarDayCell';
+import { CalendarDayCell, type CalendarDayCellDay } from '../components/CalendarDayCell';
 import { SectionLoader } from '../components/SectionLoader';
 import Modal from '../components/Modal';
 import { ApiError, formatApiErrorMessage } from '../../services/apiClient';
@@ -219,16 +219,16 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
     setCurrentDate(new Date());
   }, []);
 
-  const handleDayClick = useCallback((day: CalendarDay) => {
+  const handleDayClick = useCallback((day: CalendarDayCellDay) => {
     // Прошедшие даты без заявки не редактируем (но заявку можно открыть для просмотра/дохода)
     if (day.isPast && !day.hasBooking) {
       toast.error('Нельзя редактировать прошедшие даты');
       return;
     }
 
-    setSelectedDay(day);
+    setSelectedDay(day as CalendarDay);
     setBlockReason('');
-    setIncomeEdit(day.booking?.income != null ? String(day.booking.income) : '');
+    setIncomeEdit((day.booking as CalendarDay['booking'])?.income != null ? String((day.booking as CalendarDay['booking'])!.income) : '');
     setShowDayModal(true);
   }, []);
 

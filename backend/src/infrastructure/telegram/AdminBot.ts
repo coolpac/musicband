@@ -1142,6 +1142,18 @@ export class AdminBot {
   }
 
   /**
+   * Отправка CSV-файла конкретному администратору через бота
+   */
+  async sendCsvToAdmin(telegramId: number, csvBuffer: Buffer, filename: string): Promise<void> {
+    await this.bot.sendDocument(
+      telegramId,
+      csvBuffer,
+      { caption: `📊 Экспорт: ${filename}` },
+      { filename, contentType: 'text/csv' }
+    );
+  }
+
+  /**
    * Остановка polling (для graceful shutdown)
    */
   async stop(): Promise<void> {

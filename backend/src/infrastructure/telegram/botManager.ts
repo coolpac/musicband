@@ -87,6 +87,12 @@ export class BotManager {
     }
   }
 
+  async sendCsvToAdmin(telegramId: number, csvBuffer: Buffer, filename: string): Promise<void> {
+    if (this.adminBot) {
+      await this.adminBot.sendCsvToAdmin(telegramId, csvBuffer, filename);
+    }
+  }
+
   /**
    * Отправка уведомления о новом бронировании
    */

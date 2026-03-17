@@ -463,11 +463,35 @@ export class VoteService {
       logger.warn('Failed to clear vote session cache', { sessionId, error });
     }
 
-    // Планируем рассылки: День 1 (24ч) и День 3 (72ч) после выступления
+    // Планируем рассылки по челябинскому времени (UTC+5):
+    // Первое сообщение — в 18:00, второе — в 20:00
     if (voterTelegramIds.length > 0) {
       const telegramIds = voterTelegramIds.map((u) => u.telegramId.toString());
 
-      const day1At = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const CHELYABINSK_OFFSET = 5; // UTC+5
+      const now = new Date();
+
+      // Базовая дата — сегодня в UTC
+      const baseDate = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+      ));
+
+      // 18:00 Челябинск = 13:00 UTC
+      const day1At = new Date(baseDate.getTime() + (18 - CHELYABINSK_OFFSET) * 60 * 60 * 1000);
+      // Если 18:00 уже прошло — переносим на завтра
+      if (day1At.getTime() <= now.getTime()) {
+        day1At.setTime(day1At.getTime() + 24 * 60 * 60 * 1000);
+      }
+
+      // 20:00 Челябинск = 15:00 UTC
+      const day2At = new Date(baseDate.getTime() + (20 - CHELYABINSK_OFFSET) * 60 * 60 * 1000);
+      // Если 20:00 уже прошло — переносим на завтра
+      if (day2At.getTime() <= now.getTime()) {
+        day2At.setTime(day2At.getTime() + 24 * 60 * 60 * 1000);
+      }
+
       await prisma.votingFollowUp.create({
         data: {
           sessionId,
@@ -477,21 +501,20 @@ export class VoteService {
         },
       });
 
-      const day3At = new Date(Date.now() + 72 * 60 * 60 * 1000);
       await prisma.votingFollowUp.create({
         data: {
           sessionId,
           telegramIds,
           campaignDay: 2,
-          scheduledAt: day3At,
+          scheduledAt: day2At,
         },
       });
 
-      logger.info('Voting follow-ups scheduled (Day 1 + Day 3)', {
+      logger.info('Voting follow-ups scheduled (18:00 + 20:00 Chelyabinsk)', {
         sessionId,
         voterCount: voterTelegramIds.length,
         day1At: day1At.toISOString(),
-        day3At: day3At.toISOString(),
+        day2At: day2At.toISOString(),
       });
     }
 

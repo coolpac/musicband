@@ -98,8 +98,8 @@ export default function DashboardScreen({
   const handleExport = async (segment: 'all' | 'just_person' | 'organizer') => {
     setIsExporting(true);
     try {
-      await exportUsersCsv(segment);
-      toast.success('Файл скачан');
+      const count = await exportUsersCsv(segment);
+      toast.success(`CSV отправлен в бота (${count} пользователей)`);
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Не удалось выгрузить данные');

@@ -84,13 +84,14 @@ export async function deleteTrack(id: string): Promise<void> {
   return apiDelete<void>(`/api/admin/songs/${id}`);
 }
 
-export async function exportUsersCsv(segment: 'all' | 'just_person' | 'organizer'): Promise<void> {
+export async function exportUsersCsv(segment: 'all' | 'just_person' | 'organizer'): Promise<number> {
   const apiBase = import.meta.env.VITE_API_URL || '';
   const base = apiBase || '/api';
-  const url = `${base}/admin/users/export?segment=${segment}`;
+  const url = `${base}/admin/users/export-bot?segment=${segment}`;
   const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token');
 
   const res = await fetch(url, {
+    method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     credentials: 'include',
   });
@@ -99,13 +100,6 @@ export async function exportUsersCsv(segment: 'all' | 'just_person' | 'organizer
     throw new Error(`Export failed: ${res.status}`);
   }
 
-  const blob = await res.blob();
-  const downloadUrl = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = downloadUrl;
-  a.download = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || `users_${segment}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(downloadUrl);
+  const data = await res.json() as { ok: boolean; count: number; filename: string };
+  return data.count;
 }

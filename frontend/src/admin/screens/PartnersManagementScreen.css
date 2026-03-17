@@ -36,27 +36,29 @@
 }
 
 .partner-card__order-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--admin-text-secondary);
-  font-size: 14px;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: all 0.2s ease;
+  padding: 0;
+  line-height: 1;
 }
 
 .partner-card__order-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
   color: var(--admin-text);
+  transform: translateY(-1px);
 }
 
 .partner-card__order-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 

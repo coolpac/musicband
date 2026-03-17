@@ -271,7 +271,7 @@ export default function PostersManagementScreen() {
                       disabled={isReordering || index === 0}
                       onClick={() => handleMovePoster(poster.id, 'up')}
                     >
-                      ↑
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2.5L12 8.5H2L7 2.5Z" fill="currentColor"/></svg>
                     </button>
                     <button
                       type="button"
@@ -280,7 +280,7 @@ export default function PostersManagementScreen() {
                       disabled={isReordering || index === posters.length - 1}
                       onClick={() => handleMovePoster(poster.id, 'down')}
                     >
-                      ↓
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 11.5L2 5.5H12L7 11.5Z" fill="currentColor"/></svg>
                     </button>
                   </div>
                   <button

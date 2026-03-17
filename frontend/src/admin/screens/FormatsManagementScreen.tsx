@@ -305,7 +305,7 @@ export default function FormatsManagementScreen() {
                           disabled={isReordering || index === 0}
                           onClick={() => handleMoveFormat(format.id, 'up')}
                         >
-                          ↑
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2.5L12 8.5H2L7 2.5Z" fill="currentColor"/></svg>
                         </button>
                         <button
                           type="button"
@@ -314,7 +314,7 @@ export default function FormatsManagementScreen() {
                           disabled={isReordering || index === formats.length - 1}
                           onClick={() => handleMoveFormat(format.id, 'down')}
                         >
-                          ↓
+                          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 11.5L2 5.5H12L7 11.5Z" fill="currentColor"/></svg>
                         </button>
                       </div>
                     </div>

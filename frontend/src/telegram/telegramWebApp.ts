@@ -199,7 +199,7 @@ export function getInitData(): string | null {
 
 /** start_param из deep link (initDataUnsafe.start_param). */
 export function getStartParam(): string | null {
-  return getTelegramWebApp()?.initDataUnsafe?.start_param ?? null;
+  return (getTelegramWebApp()?.initDataUnsafe?.start_param as string | undefined) ?? null;
 }
 
 /** Telegram user ID из initDataUnsafe (для проверки pending vote session). */
