@@ -170,6 +170,26 @@
   border-color: rgba(52, 199, 89, 0.35);
 }
 
+.calendar-day--full {
+  background: linear-gradient(160deg, rgba(255, 149, 0, 0.2), rgba(0, 0, 0, 0.4));
+  border-color: rgba(255, 149, 0, 0.5);
+}
+
+.calendar-day__badge {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 3px;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.calendar-day__badge--full {
+  background: rgba(255, 149, 0, 0.3);
+  color: rgb(255, 149, 0);
+  border: 1px solid rgba(255, 149, 0, 0.5);
+}
+
 .calendar-day__number {
   font-size: 16px;
   font-weight: 600;

@@ -21,6 +21,8 @@ export class BookingService {
   /**
    * Создание бронирования
    */
+  static readonly MAX_BOOKINGS_PER_DAY = 2;
+
   async createBooking(data: CreateBookingData): Promise<BookingWithUserAndFormat> {
     // Проверяем пользователя
     const user = await this.userRepository.findById(data.userId);
@@ -34,7 +36,29 @@ export class BookingService {
       throw new ValidationError('This date is blocked for booking');
     }
 
+    // Проверяем лимит заявок на день (максимум 2, не считая отменённых)
+    const existingBookings = await this.bookingRepository.findByDate(data.bookingDate);
+    const activeBookings = existingBookings.filter((b) => b.status !== 'cancelled');
+    if (activeBookings.length >= BookingService.MAX_BOOKINGS_PER_DAY) {
+      throw new ConflictError('This date is fully booked (maximum 2 bookings per day)');
+    }
+
     const booking = await this.bookingRepository.create(data);
+
+    // Если после создания достигнут лимит — автоматически блокируем дату
+    const totalActive = activeBookings.length + 1;
+    if (totalActive >= BookingService.MAX_BOOKINGS_PER_DAY) {
+      try {
+        await this.blockedDateRepository.create({
+          date: data.bookingDate,
+          reason: 'Автоблокировка: достигнут лимит заявок (2/2)',
+        });
+        logger.info('Date auto-blocked after reaching booking limit', { date: data.bookingDate });
+      } catch (err) {
+        // Игнорируем если дата уже заблокирована
+        logger.warn('Failed to auto-block date (may already be blocked)', { date: data.bookingDate, err });
+      }
+    }
 
     // Инвалидация кешей: доступные даты и календарь админки
     const bookingMonth = `${data.bookingDate.getFullYear()}-${String(data.bookingDate.getMonth() + 1).padStart(2, '0')}`;

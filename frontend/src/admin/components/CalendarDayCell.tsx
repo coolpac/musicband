@@ -9,6 +9,7 @@ export interface CalendarDayCellDay {
   isBlocked: boolean;
   hasBooking: boolean;
   booking?: { status: 'pending' | 'confirmed' | 'cancelled' } | null;
+  bookingCount?: number;
   isPast: boolean;
 }
 
@@ -25,6 +26,7 @@ function CalendarDayCellComponent({ day, onDayClick }: CalendarDayCellProps) {
     isBlocked,
     hasBooking,
     booking,
+    bookingCount = 0,
     isPast,
   } = day;
 
@@ -34,6 +36,7 @@ function CalendarDayCellComponent({ day, onDayClick }: CalendarDayCellProps) {
     isToday && 'calendar-day--today',
     isBlocked && 'calendar-day--blocked',
     hasBooking && 'calendar-day--booked',
+    bookingCount >= 2 && 'calendar-day--full',
     isPast && 'calendar-day--past',
   ]
     .filter(Boolean)
@@ -45,17 +48,20 @@ function CalendarDayCellComponent({ day, onDayClick }: CalendarDayCellProps) {
       className={classNames}
       onClick={() => onDayClick(day)}
       disabled={isPast && !hasBooking}
-      aria-label={`${date.getDate()}${isBlocked ? ', заблокировано' : ''}${hasBooking ? ', есть заявка' : ''}`}
+      aria-label={`${date.getDate()}${isBlocked ? ', заблокировано' : ''}${hasBooking ? `, заявок: ${bookingCount}` : ''}`}
     >
       <span className="calendar-day__number">{date.getDate()}</span>
-      {hasBooking && booking?.status && (
+      {hasBooking && bookingCount >= 2 && (
+        <span className="calendar-day__badge calendar-day__badge--full">2/2</span>
+      )}
+      {hasBooking && bookingCount === 1 && booking?.status && (
         <span className={`calendar-day__status calendar-day__status--${booking.status}`}>
           {booking.status === 'confirmed' && '✓'}
           {booking.status === 'pending' && '⏳'}
           {booking.status === 'cancelled' && '✗'}
         </span>
       )}
-      {isBlocked && <span className="calendar-day__blocked-icon">🚫</span>}
+      {isBlocked && !hasBooking && <span className="calendar-day__blocked-icon">🚫</span>}
     </button>
   );
 }

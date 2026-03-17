@@ -51,6 +51,8 @@ interface CalendarDay {
   isBlocked: boolean;
   hasBooking: boolean;
   booking?: Booking;
+  bookings: Booking[];
+  bookingCount: number;
   isPast: boolean;
 }
 
@@ -149,10 +151,15 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
     [blockedDates]
   );
 
-  const bookingsMap = useMemo(
-    () => new Map(bookings.map((b) => [b.bookingDate, b] as const)),
-    [bookings]
-  );
+  const bookingsMap = useMemo(() => {
+    const map = new Map<string, Booking[]>();
+    for (const b of bookings) {
+      const arr = map.get(b.bookingDate) ?? [];
+      arr.push(b);
+      map.set(b.bookingDate, arr);
+    }
+    return map;
+  }, [bookings]);
 
   const calendarDays = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -163,7 +170,9 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
     const createCalendarDay = (date: Date, isCurrentMonth: boolean): CalendarDay => {
       const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       const dateString = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
-      const booking = bookingsMap.get(dateString);
+      const dayBookings = bookingsMap.get(dateString) ?? [];
+      const activeBookings = dayBookings.filter((b) => b.status !== 'cancelled');
+      const booking = dayBookings[0];
       const isBlocked = blockedDatesMap.has(dateString);
       const isPast = localDate < today;
 
@@ -173,8 +182,10 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
         isCurrentMonth,
         isToday: localDate.getTime() === today.getTime(),
         isBlocked,
-        hasBooking: !!booking,
+        hasBooking: dayBookings.length > 0,
         booking,
+        bookings: dayBookings,
+        bookingCount: activeBookings.length,
         isPast,
       };
     };
@@ -228,7 +239,8 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
 
     setSelectedDay(day as CalendarDay);
     setBlockReason('');
-    setIncomeEdit((day.booking as CalendarDay['booking'])?.income != null ? String((day.booking as CalendarDay['booking'])!.income) : '');
+    const firstBooking = (day as CalendarDay).bookings?.[0];
+    setIncomeEdit(firstBooking?.income != null ? String(firstBooking.income) : '');
     setShowDayModal(true);
   }, []);
 
@@ -452,93 +464,98 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
       >
         {selectedDay && (
           <div className="day-modal">
-            {/* If has booking */}
-            {selectedDay.hasBooking && selectedDay.booking && (
-              <div className="booking-details">
+            {/* Список заявок на день */}
+            {selectedDay.bookings.map((bk, idx) => (
+              <div key={bk.id} className="booking-details">
+                {selectedDay.bookings.length > 1 && (
+                  <div className="booking-details__counter">Заявка {idx + 1} из {selectedDay.bookings.length}</div>
+                )}
                 <section className="booking-details__section">
                   <h3 className="booking-details__section-title">Данные от пользователя</h3>
                   <div className="booking-detail-group">
                     <label>ФИО</label>
-                    <span>{selectedDay.booking.fullName}</span>
+                    <span>{bk.fullName}</span>
                   </div>
                   <div className="booking-detail-group">
                     <label>Контакт</label>
-                    <span>{selectedDay.booking.contactValue}</span>
+                    <span>{bk.contactValue}</span>
                   </div>
-                  {selectedDay.booking.telegramUsername && (
+                  {bk.telegramUsername && (
                     <div className="booking-detail-group">
                       <label>Username (TG)</label>
-                      <span>@{selectedDay.booking.telegramUsername}</span>
+                      <span>@{bk.telegramUsername}</span>
                     </div>
                   )}
-                  {selectedDay.booking.contactType && (
+                  {bk.contactType && (
                     <div className="booking-detail-group">
                       <label>Тип контакта</label>
-                      <span>{selectedDay.booking.contactType}</span>
+                      <span>{bk.contactType}</span>
                     </div>
                   )}
                   <div className="booking-detail-group">
                     <label>Формат</label>
-                    <span>{selectedDay.booking.formatName || 'Не указан'}</span>
+                    <span>{bk.formatName || 'Не указан'}</span>
                   </div>
-                  {selectedDay.booking.city && (
+                  {bk.city && (
                     <div className="booking-detail-group">
                       <label>Город</label>
-                      <span>{selectedDay.booking.city}</span>
+                      <span>{bk.city}</span>
                     </div>
                   )}
-                  {selectedDay.booking.source && (
+                  {bk.source && (
                     <div className="booking-detail-group">
                       <label>Источник</label>
-                      <span>{selectedDay.booking.source}</span>
+                      <span>{bk.source}</span>
                     </div>
                   )}
                   <div className="booking-detail-group">
                     <label>Дата заявки</label>
-                    <span>{selectedDay.booking.createdAt ? new Date(selectedDay.booking.createdAt).toLocaleString('ru-RU') : '—'}</span>
+                    <span>{bk.createdAt ? new Date(bk.createdAt).toLocaleString('ru-RU') : '—'}</span>
                   </div>
                 </section>
 
                 <section className="booking-details__section">
                   <h3 className="booking-details__section-title">Админ</h3>
-                  <div className="booking-detail-group booking-detail-group--income">
-                    <label>Доход (вписывает админ), ₽</label>
-                    <div className="booking-income-row">
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        className="admin-form-input booking-income-input"
-                        value={incomeEdit}
-                        onChange={(e) => setIncomeEdit(e.target.value.replace(/[^\d\s]/g, ''))}
-                        placeholder="0"
-                        aria-label="Доход в рублях"
-                      />
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn--secondary"
-                        onClick={handleSaveIncome}
-                        disabled={incomeSaving}
-                      >
-                        {incomeSaving ? 'Сохранение…' : 'Сохранить'}
-                      </button>
+                  {idx === 0 && (
+                    <div className="booking-detail-group booking-detail-group--income">
+                      <label>Доход (вписывает админ), ₽</label>
+                      <div className="booking-income-row">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          className="admin-form-input booking-income-input"
+                          value={incomeEdit}
+                          onChange={(e) => setIncomeEdit(e.target.value.replace(/[^\d\s]/g, ''))}
+                          placeholder="0"
+                          aria-label="Доход в рублях"
+                        />
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--secondary"
+                          onClick={handleSaveIncome}
+                          disabled={incomeSaving}
+                        >
+                          {incomeSaving ? 'Сохранение…' : 'Сохранить'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div className="booking-detail-group">
                     <label>Статус</label>
-                    <span className={`booking-status booking-status--${selectedDay.booking.status}`}>
-                      {selectedDay.booking.status === 'confirmed' && 'Подтверждено'}
-                      {selectedDay.booking.status === 'pending' && 'В ожидании'}
-                      {selectedDay.booking.status === 'cancelled' && 'Отменено'}
+                    <span className={`booking-status booking-status--${bk.status}`}>
+                      {bk.status === 'confirmed' && 'Подтверждено'}
+                      {bk.status === 'pending' && 'В ожидании'}
+                      {bk.status === 'cancelled' && 'Отменено'}
                     </span>
                   </div>
 
                   <div className="booking-actions">
-                    {selectedDay.booking.status === 'pending' && (
-                      <button className="admin-btn admin-btn--success" onClick={() => handleUpdateStatus(selectedDay.booking!.id, 'confirmed')}>
+                    {bk.status === 'pending' && (
+                      <button className="admin-btn admin-btn--success" onClick={() => handleUpdateStatus(bk.id, 'confirmed')}>
                         Подтвердить
                       </button>
                     )}
-                    {selectedDay.booking.status === 'confirmed' && (
+                    {bk.status === 'confirmed' && idx === 0 && (
                       <button
                         className="admin-btn admin-btn--success"
                         onClick={handleComplete}
@@ -547,18 +564,18 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
                         {completing ? 'Выполнение…' : 'Выполнено'}
                       </button>
                     )}
-                    {selectedDay.booking.status !== 'cancelled' && (
-                      <button className="admin-btn admin-btn--danger" onClick={() => handleUpdateStatus(selectedDay.booking!.id, 'cancelled')}>
+                    {bk.status !== 'cancelled' && (
+                      <button className="admin-btn admin-btn--danger" onClick={() => handleUpdateStatus(bk.id, 'cancelled')}>
                         Отменить
                       </button>
                     )}
                   </div>
                 </section>
               </div>
-            )}
+            ))}
 
             {/* If blocked */}
-            {selectedDay.isBlocked && !selectedDay.hasBooking && (
+            {selectedDay.isBlocked && (
               <div className="blocked-info">
                 <p className="blocked-message">🚫 Эта дата заблокирована для бронирований</p>
                 {blockedDateForSelected?.reason && (
@@ -571,29 +588,27 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
             )}
 
             {/* Block/Unblock controls */}
-            {!selectedDay.hasBooking && (
-              <div className="block-controls">
-                {!selectedDay.isBlocked && (
-                  <div className="admin-form-group">
-                    <label className="admin-form-label">Причина блокировки (необязательно)</label>
-                    <input
-                      type="text"
-                      className="admin-form-input"
-                      value={blockReason}
-                      onChange={(e) => setBlockReason(e.target.value)}
-                      placeholder="Например: Личные дела"
-                    />
-                  </div>
-                )}
+            <div className="block-controls">
+              {!selectedDay.isBlocked && (
+                <div className="admin-form-group">
+                  <label className="admin-form-label">Причина блокировки (необязательно)</label>
+                  <input
+                    type="text"
+                    className="admin-form-input"
+                    value={blockReason}
+                    onChange={(e) => setBlockReason(e.target.value)}
+                    placeholder="Например: Личные дела"
+                  />
+                </div>
+              )}
 
-                <button
-                  className={`admin-btn admin-btn--full ${selectedDay.isBlocked ? 'admin-btn--secondary' : 'admin-btn--danger'}`}
-                  onClick={handleToggleBlock}
-                >
-                  {selectedDay.isBlocked ? 'Разблокировать дату' : 'Заблокировать дату'}
-                </button>
-              </div>
-            )}
+              <button
+                className={`admin-btn admin-btn--full ${selectedDay.isBlocked ? 'admin-btn--secondary' : 'admin-btn--danger'}`}
+                onClick={handleToggleBlock}
+              >
+                {selectedDay.isBlocked ? 'Разблокировать дату' : 'Заблокировать дату'}
+              </button>
+            </div>
           </div>
         )}
       </Modal>
