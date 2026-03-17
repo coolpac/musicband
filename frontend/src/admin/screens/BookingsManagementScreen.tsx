@@ -172,7 +172,7 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
       const dateString = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
       const dayBookings = bookingsMap.get(dateString) ?? [];
       const activeBookings = dayBookings.filter((b) => b.status !== 'cancelled');
-      const booking = dayBookings[0];
+      const booking = activeBookings[0] ?? dayBookings[0];
       const isBlocked = blockedDatesMap.has(dateString);
       const isPast = localDate < today;
 
@@ -182,7 +182,7 @@ export default function BookingsManagementScreen({ onGoToLog }: BookingsManageme
         isCurrentMonth,
         isToday: localDate.getTime() === today.getTime(),
         isBlocked,
-        hasBooking: dayBookings.length > 0,
+        hasBooking: activeBookings.length > 0,
         booking,
         bookings: dayBookings,
         bookingCount: activeBookings.length,

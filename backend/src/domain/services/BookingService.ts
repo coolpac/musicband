@@ -177,6 +177,25 @@ export class BookingService {
     const date = bookingDate instanceof Date ? bookingDate : new Date(bookingDate);
     const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(month));
+
+    // Если заявка отменена — проверяем, не нужно ли снять автоблок
+    if (status === 'cancelled') {
+      try {
+        const remaining = await this.bookingRepository.findByDate(date);
+        const stillActive = remaining.filter((b) => b.status !== 'cancelled').length;
+        if (stillActive < BookingService.MAX_BOOKINGS_PER_DAY) {
+          const blockedEntry = await this.blockedDateRepository.findByDate(date);
+          if (blockedEntry?.reason?.startsWith('Автоблокировка')) {
+            await this.blockedDateRepository.delete(blockedEntry.id);
+            await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(month));
+            logger.info('Auto-block removed after booking cancellation', { date });
+          }
+        }
+      } catch (err) {
+        logger.warn('Failed to remove auto-block after cancellation', { err });
+      }
+    }
+
     return updated;
   }
 
