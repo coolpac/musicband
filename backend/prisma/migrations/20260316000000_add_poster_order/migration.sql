@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "posters" ADD COLUMN "order" INTEGER NOT NULL DEFAULT 0;
