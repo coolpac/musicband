@@ -50,7 +50,7 @@ export class BookingService {
     if (totalActive >= BookingService.MAX_BOOKINGS_PER_DAY) {
       try {
         await this.blockedDateRepository.create({
-          date: data.bookingDate,
+          blockedDate: data.bookingDate,
           reason: 'Автоблокировка: достигнут лимит заявок (2/2)',
         });
         logger.info('Date auto-blocked after reaching booking limit', { date: data.bookingDate });
