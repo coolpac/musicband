@@ -98,7 +98,9 @@ const ResidentCard = memo(function ResidentCard({
                   draggable={false}
                 />
               ) : (
-                <p className="residents-card__panel-text">{description}</p>
+                description.split('\n\n').map((para, i) => (
+                  <p key={i} className="residents-card__panel-text">{para}</p>
+                ))
               )}
               <button
                 type="button"
