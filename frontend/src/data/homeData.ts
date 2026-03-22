@@ -56,6 +56,7 @@ export const promoVideos: PromoVideoItem[] = [
   { id: 'promo-4', src: 'https://rutube.ru/video/40656f651368b42f7d5627ed6a9e7c20/', poster: promoImage, title: 'РЕПОРТАЖ ШОУ-КОНЦЕРТА "31 КАНАЛ"' },
   { id: 'promo-5', src: 'https://rutube.ru/video/5297e7c30dd2030284d6d38e0768c8e9/', poster: promoImage, title: 'СЕДАЯ НОЧЬ - ОТРЫВОК С ПРЕМИИ "ПРИЗВАНИЕ АРТИСТ" 2024' },
   { id: 'promo-6', src: 'https://rutube.ru/video/ee884839b614dfd5241a30588fd9b464/', poster: promoImage, title: 'СВАДЕБНОЕ СОПРОВОЖДЕНИЕ' },
+  { id: 'promo-7', src: 'https://rutube.ru/video/d51aff7f8075421432de4660a262ba38/', poster: promoImage, title: 'НОВЫЙ ФОРМАТ "По-новее русские!"' },
 ];
 
 export const whyMobileSlides: WhyMobileSlide[] = [
