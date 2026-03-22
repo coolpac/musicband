@@ -114,12 +114,20 @@
 
 .residents-card__panel-text {
   margin: 0;
-  flex: 1;
-  overflow-y: auto;
   color: #fff;
   font-size: clamp(15px, 3.2vw, 18px);
   line-height: 1.5;
+}
+
+.residents-card__panel-text:first-child {
+  flex: 1;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.residents-card__panel-text + .residents-card__panel-text {
+  margin-top: 12px;
+  flex-shrink: 0;
 }
 
 .residents-card__panel-image {
