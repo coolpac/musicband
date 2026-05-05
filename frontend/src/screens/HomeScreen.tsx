@@ -695,7 +695,7 @@ export default function HomeScreen({ onMenuOpen, onGoToFormats, onGoToCalendar, 
           </div>
           <div className="card-body glass">
             <p className="format-item">
-              <strong>Main show</strong> — основной формат. Полный состав из 5 музыкантов.
+              <strong>Основной формат «гангстеры»</strong> — Полный состав из 5 музыкантов.
             </p>
             <p className="format-item">
               <strong>Welcome</strong> — встреча гостей или гастропаузы. Полный состав.
@@ -704,10 +704,7 @@ export default function HomeScreen({ onMenuOpen, onGoToFormats, onGoToCalendar, 
               <strong>Дуэт</strong> — подходит под формат велком. Гитара или клавиши с вокалом.
             </p>
             <p className="format-item">
-              <strong>Виолончель</strong> — дополнительно к основному составу 1 музыкант.
-            </p>
-            <p className="format-item">
-              <strong>90-ые. «По-новее русские»</strong> — СКОРО!
+              <strong>90-ые. «По-новее русские»</strong> — Шоу-перформанс. 40 минут нон-стопом с музыкой, юмором и интерактивами. СКОРО!
             </p>
           </div>
         </article>
