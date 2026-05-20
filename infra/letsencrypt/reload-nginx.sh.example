@@ -1,0 +1,6 @@
+#!/bin/sh
+# Certbot deploy-hook for vgulcover.ru on a multi-tenant server.
+# Installed at /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh on the host
+# (chmod +x). Certbot invokes this after every successful renewal so the
+# host nginx picks up the new certificate without a manual reload.
+systemctl reload nginx

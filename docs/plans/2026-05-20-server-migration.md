@@ -82,7 +82,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
         proxy_cache_bypass $http_upgrade;
         proxy_connect_timeout 10s;
         proxy_send_timeout 60s;
@@ -182,7 +182,7 @@ services:
       args:
         NGINX_CONF: nginx/nginx-behind-proxy.conf
     ports: !override
-      - "127.0.0.1:8084:80"
+      - "127.0.0.1:${HOST_PROXY_PORT:-8084}:80"
     volumes: !override []
 ```
 
@@ -501,6 +501,8 @@ EOF
 nginx -t && systemctl reload nginx"
 ```
 Expected: `nginx -t` passes; reload silent.
+
+**Note:** nginx 1.24 on Ubuntu 24.04 requires the legacy `listen 443 ssl http2;` syntax (the newer standalone `http2 on;` directive is only available in nginx 1.25.1+); we had to discover this at runtime during the migration.
 
 ### Task 20: Install renewal deploy-hook
 
