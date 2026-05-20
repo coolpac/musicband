@@ -54,11 +54,11 @@ brew install ffmpeg  # macOS
 ## 🚀 Деплой на production
 
 ### Документация
-- 📘 [Полное руководство по деплою](docs/DEPLOYMENT_GUIDE.md) — сервер 89.223.64.110
+- 📘 [Полное руководство по деплою](docs/DEPLOYMENT_GUIDE.md) — сервер 77.91.65.252
 - 🔒 [SSL для vgulcover.ru (HTTPS)](docs/SSL_SETUP.md) — Let's Encrypt и проверка сайта
 - 🐳 [Docker оптимизации](docs/DOCKER_OPTIMIZATION.md) — архитектура и best practices
 
-### Первоначальная настройка сервера (vgulcover.ru / 89.223.64.110)
+### Первоначальная настройка сервера (vgulcover.ru / 77.91.65.252)
 
 **Один скрипт для полной настройки:**
 ```bash
@@ -66,7 +66,7 @@ brew install ffmpeg  # macOS
 chmod +x scripts/*.sh
 
 # Полная настройка сервера с нуля (Docker, firewall, клонирование, .env)
-REMOTE_HOST=89.223.64.110 ./scripts/server-provision.sh \
+REMOTE_HOST=77.91.65.252 ./scripts/server-provision.sh \
   https://github.com/username/musicians.git vgulcover.ru
 
 # Скрипт автоматически:
@@ -80,7 +80,7 @@ REMOTE_HOST=89.223.64.110 ./scripts/server-provision.sh \
 **После завершения скрипта:**
 ```bash
 # 1. SSH на сервер и добавить Telegram токены
-ssh root@89.223.64.110
+ssh root@77.91.65.252
 cd /opt/musicians
 nano .env  # Добавить TELEGRAM_ADMIN_BOT_TOKEN (получить у @BotFather)
 
@@ -91,7 +91,7 @@ nano .env  # Добавить TELEGRAM_ADMIN_BOT_TOKEN (получить у @Bot
 **Обновления:**
 ```bash
 # Полный деплой (backend + frontend + миграции)
-REMOTE_HOST=89.223.64.110 REMOTE_USER=root REMOTE_PATH=/opt/musicians \
+REMOTE_HOST=77.91.65.252 REMOTE_USER=root REMOTE_PATH=/opt/musicians \
   ./scripts/remote-deploy.sh
 
 # Только backend
@@ -105,7 +105,7 @@ REMOTE_HOST=89.223.64.110 REMOTE_USER=root REMOTE_PATH=/opt/musicians \
 ```
 
 **Переменные окружения:**
-- `REMOTE_HOST` - IP или домен сервера (по умолчанию: 89.223.64.110)
+- `REMOTE_HOST` - IP или домен сервера (по умолчанию: 77.91.65.252)
 - `REMOTE_USER` - пользователь SSH (по умолчанию: root)
 - `REMOTE_PORT` - порт SSH (по умолчанию: 22)
 - `REMOTE_PATH` - путь к проекту (по умолчанию: /opt/musicians)

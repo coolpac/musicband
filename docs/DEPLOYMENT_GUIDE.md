@@ -1,4 +1,4 @@
-# 🚀 Руководство по деплою на сервер 89.223.64.110
+# 🚀 Руководство по деплою на сервер 77.91.65.252
 
 ## Подготовка к деплою
 
@@ -11,7 +11,7 @@
 chmod +x scripts/*.sh
 
 # Полная автоматическая настройка сервера
-REMOTE_HOST=89.223.64.110 ./scripts/server-provision.sh \
+REMOTE_HOST=77.91.65.252 ./scripts/server-provision.sh \
   https://github.com/username/musicians.git vgulcover.ru
 ```
 
@@ -27,7 +27,7 @@ REMOTE_HOST=89.223.64.110 ./scripts/server-provision.sh \
 
 ```bash
 # 1. Подключаемся к серверу
-ssh root@89.223.64.110
+ssh root@77.91.65.252
 cd /opt/musicians
 
 # 2. Добавляем Telegram bot tokens в .env
@@ -44,7 +44,7 @@ nano .env
 
 ```bash
 # 1. Подключение к серверу
-ssh root@89.223.64.110
+ssh root@77.91.65.252
 
 # 2. Установка зависимостей
 apt update && apt upgrade -y
@@ -95,7 +95,7 @@ TELEGRAM_USER_BOT_TOKEN=654321:XYZ-ABC...
 TELEGRAM_USER_BOT_USERNAME=YourBotUsername
 
 # URLs
-FRONTEND_URL=http://89.223.64.110
+FRONTEND_URL=https://vgulcover.ru
 # Или если есть домен:
 # FRONTEND_URL=https://musicians.example.com
 
@@ -138,7 +138,7 @@ chmod +x init.sh deploy.sh scripts/*.sh
 ```bash
 # После установки Docker:
 exit
-ssh root@89.223.64.110
+ssh root@77.91.65.252
 cd /opt/musicians
 ./init.sh
 ```
@@ -169,11 +169,11 @@ cd /opt/musicians
 ```bash
 # Первый запуск на сервере
 chmod +x scripts/remote-init.sh scripts/remote-deploy.sh
-REMOTE_HOST=89.223.64.110 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-init.sh
+REMOTE_HOST=77.91.65.252 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-init.sh
 
 # Деплой обновлений
-REMOTE_HOST=89.223.64.110 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-deploy.sh
-REMOTE_HOST=89.223.64.110 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-deploy.sh --backend
+REMOTE_HOST=77.91.65.252 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-deploy.sh
+REMOTE_HOST=77.91.65.252 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-deploy.sh --backend
 
 # Дополнительно (при необходимости)
 # REMOTE_PORT=22
@@ -430,6 +430,6 @@ docker inspect musicians-backend | grep -A 10 Health
 
 ---
 
-**Сервер:** 89.223.64.110  
+**Сервер:** 77.91.65.252  
 **Проект:** /opt/musicians  
 **Документация:** [SERVER_50_USERS.md](./SERVER_50_USERS.md), [VIDEO_HOSTING_AND_SERVER.md](./VIDEO_HOSTING_AND_SERVER.md)
