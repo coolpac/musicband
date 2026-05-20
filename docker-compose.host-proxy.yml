@@ -1,0 +1,10 @@
+# Override for hosts where TLS is terminated by a host-level reverse proxy.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.host-proxy.yml up -d
+services:
+  frontend:
+    build:
+      args:
+        NGINX_CONF: nginx/nginx-behind-proxy.conf
+    ports: !override
+      - "127.0.0.1:8084:80"
+    volumes: !override []

@@ -27,7 +27,8 @@ FROM nginx:1.27-alpine AS production
 RUN rm /etc/nginx/conf.d/default.conf
 
 # Копируем наш конфиг
-COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
+ARG NGINX_CONF=nginx/nginx.conf
+COPY ${NGINX_CONF} /etc/nginx/conf.d/default.conf
 
 # Копируем собранный фронтенд
 COPY --from=build /app/dist /usr/share/nginx/html
