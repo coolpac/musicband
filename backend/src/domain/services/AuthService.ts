@@ -242,9 +242,9 @@ export class AuthService {
     } else {
       // Обновляем данные пользователя если изменились
       const needsUpdate =
-        user.username !== maxUser.username ||
-        user.firstName !== maxUser.first_name ||
-        user.lastName !== maxUser.last_name ||
+        user.username !== (maxUser.username ?? null) ||
+        user.firstName !== (maxUser.first_name ?? null) ||
+        user.lastName !== (maxUser.last_name ?? null) ||
         user.photoUrl !== (maxUser.photo_url ?? null);
 
       if (needsUpdate) {

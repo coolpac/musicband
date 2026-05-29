@@ -96,8 +96,13 @@ export function validateWebAppInitData(
       .update(dataCheckString)
       .digest('hex');
 
-    // Сравниваем хеши
-    if (calculatedHash !== hash) {
+    // Сравниваем хеши в постоянном времени (единая точка проверки для всех платформ).
+    const calculatedBuf = Buffer.from(calculatedHash, 'hex');
+    const providedBuf = Buffer.from(hash, 'hex');
+    if (
+      calculatedBuf.length !== providedBuf.length ||
+      !crypto.timingSafeEqual(calculatedBuf, providedBuf)
+    ) {
       warn('InitData validation failed: invalid hash');
       return null;
     }
