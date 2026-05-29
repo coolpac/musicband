@@ -1,10 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../../domain/services/AuthService';
 import { TelegramAuthDto, MaxAuthDto, AdminAuthDto } from '../../application/dto/auth.dto';
+import { IUserRepository } from '../../infrastructure/database/repositories/UserRepository';
 import { logger } from '../../shared/utils/logger';
 
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private userRepository: IUserRepository
+  ) {}
 
   /**
    * POST /api/auth/telegram
@@ -175,7 +179,14 @@ export class AuthController {
 
   /**
    * GET /api/auth/me/avatar
-   * Прокси фото профиля текущего пользователя из Telegram (getUserProfilePhotos + getFile).
+   * Аватар текущего пользователя, платформо-зависимо:
+   * - telegram → прокси фото из Telegram (getUserProfilePhotos + getFile);
+   * - max → 302-редирект на сохранённый User.photoUrl (из Max initData).
+   *
+   * Почему редирект для Max (а не прокси-стрим как у Telegram): Max-аватар — это
+   * публичный CDN-URL из initData, для которого НЕ нужен токен бота (в отличие от
+   * Telegram, чей file-URL требует bot-токен). Редирект проще и не гоняет байты
+   * через наш сервер.
    */
   async getAvatar(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -183,7 +194,13 @@ export class AuthController {
         res.status(404).send();
         return;
       }
-      // Max-аватары реализуются в Phase 7. Пока что отдаём 404 для не-telegram.
+
+      if (req.user.platform === 'max') {
+        await this.serveMaxAvatar(req, res);
+        return;
+      }
+
+      // Не-telegram (и не-max) платформы аватара не имеют.
       if (req.user.platform !== 'telegram') {
         res.status(404).send();
         return;
@@ -229,5 +246,22 @@ export class AuthController {
     } catch (error) {
       next(error);
     }
+  }
+
+  /**
+   * Аватар Max-пользователя: 302-редирект на сохранённый photoUrl.
+   * photoUrl нет в JWT, поэтому подгружаем пользователя по identity (platform+platformId).
+   * 404, если пользователь не найден или photoUrl отсутствует.
+   */
+  private async serveMaxAvatar(req: Request, res: Response): Promise<void> {
+    const user = await this.userRepository.findByIdentity(
+      'max',
+      BigInt(req.user!.platformId)
+    );
+    if (!user?.photoUrl) {
+      res.status(404).send();
+      return;
+    }
+    res.redirect(user.photoUrl);
   }
 }

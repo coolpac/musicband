@@ -23,7 +23,7 @@ const authService = new AuthService(
   process.env.MAX_ADMIN_BOT_TOKEN || undefined,
   process.env.MAX_USER_BOT_TOKEN || undefined
 );
-const authController = new AuthController(authService);
+const authController = new AuthController(authService, userRepository);
 
 // Публичные маршруты с rate limiting
 router.post(
