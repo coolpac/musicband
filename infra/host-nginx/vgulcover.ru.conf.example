@@ -39,7 +39,9 @@ server {
     # first three, but the host edge is the authoritative place — duplicating
     # is harmless and survives container-side regressions).
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
+    # frame-ancestors вместо X-Frame-Options: Mini App встраивается в Telegram и Max.
+    # X-Frame-Options не умеет несколько источников, поэтому используем CSP.
+    add_header Content-Security-Policy "frame-ancestors 'self' https://*.telegram.org https://web.telegram.org https://*.max.ru https://max.ru" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
