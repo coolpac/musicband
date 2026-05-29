@@ -51,25 +51,15 @@ export class TelegramBots implements PlatformBots {
     await this.userBot.sendBookingConfirmation(platformId, booking);
   }
 
-  async sendReviewRequest(
-    platformId: string,
-    review: ReviewNotice
-  ): Promise<ReviewRequestResult> {
+  async sendReviewRequest(platformId: string, review: ReviewNotice): Promise<ReviewRequestResult> {
     return this.userBot.sendReviewRequest(platformId, review);
   }
 
-  async sendVotingFollowUp(
-    platformIds: string[],
-    campaignDay: number
-  ): Promise<BatchSendResult> {
+  async sendVotingFollowUp(platformIds: string[], campaignDay: number): Promise<BatchSendResult> {
     return this.userBot.sendVotingFollowUp(platformIds, campaignDay);
   }
 
-  async sendVotingWinner(
-    platformId: string,
-    song: SongNotice,
-    sessionId: string
-  ): Promise<void> {
+  async sendVotingWinner(platformId: string, song: SongNotice, sessionId: string): Promise<void> {
     await this.userBot.sendVotingWinnerNotification(BigInt(platformId), song, sessionId);
   }
 

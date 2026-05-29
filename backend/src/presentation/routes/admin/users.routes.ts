@@ -151,7 +151,12 @@ router.post('/export-bot', asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  await botManager.sendCsvToAdmin(adminTelegramId, Buffer.from(csv, 'utf-8'), filename);
+  // Phase 3: платформа захардкожена 'telegram' (CSV-экспорт идёт админу в Telegram).
+  await botManager.sendCsvToAdmin(
+    { platform: 'telegram', platformId: String(adminTelegramId) },
+    Buffer.from(csv, 'utf-8'),
+    filename
+  );
   res.json({ ok: true, count: users.length, filename });
 }));
 
