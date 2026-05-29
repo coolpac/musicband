@@ -1,23 +1,29 @@
-import { PrismaClient, User, UserRole } from '@prisma/client';
+import { PrismaClient, Platform, User, UserRole } from '@prisma/client';
 import { prisma } from '../../../config/database';
 
 export interface IUserRepository {
-  findByTelegramId(telegramId: bigint): Promise<User | null>;
+  findByIdentity(platform: Platform, platformId: bigint): Promise<User | null>;
   findById(id: string): Promise<User | null>;
   create(data: CreateUserData): Promise<User>;
   /**
-   * Находит или создаёт пользователя по telegramId. Использует upsert для атомарности
-   * и предотвращения duplicate key при параллельных запросах.
+   * Находит или создаёт пользователя по (platform, platformId). Использует
+   * create-then-catch-unique для атомарности и предотвращения duplicate key
+   * при параллельных запросах.
    */
-  findOrCreateByTelegramId(data: CreateUserData): Promise<{ user: User; created: boolean }>;
+  findOrCreateByIdentity(data: CreateUserData): Promise<{ user: User; created: boolean }>;
   update(id: string, data: UpdateUserData): Promise<User>;
   updateRole(id: string, role: UserRole): Promise<User>;
-  /** Обновление роли по telegram_id (для назначения админа без знания id). */
-  updateRoleByTelegramId(telegramId: bigint, role: UserRole): Promise<User | null>;
+  /** Обновление роли по (platform, platformId) — для назначения админа без знания id. */
+  updateRoleByIdentity(
+    platform: Platform,
+    platformId: bigint,
+    role: UserRole
+  ): Promise<User | null>;
 }
 
 export interface CreateUserData {
-  telegramId: bigint;
+  platform: Platform;
+  platformId: bigint;
   username?: string;
   firstName?: string;
   lastName?: string;
@@ -34,9 +40,9 @@ export interface UpdateUserData {
 export class PrismaUserRepository implements IUserRepository {
   constructor(private client: PrismaClient = prisma) {}
 
-  async findByTelegramId(telegramId: bigint): Promise<User | null> {
+  async findByIdentity(platform: Platform, platformId: bigint): Promise<User | null> {
     return this.client.user.findUnique({
-      where: { telegramId },
+      where: { platform_platformId: { platform, platformId } },
     });
   }
 
@@ -49,7 +55,8 @@ export class PrismaUserRepository implements IUserRepository {
   async create(data: CreateUserData): Promise<User> {
     return this.client.user.create({
       data: {
-        telegramId: data.telegramId,
+        platform: data.platform,
+        platformId: data.platformId,
         username: data.username,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -59,9 +66,9 @@ export class PrismaUserRepository implements IUserRepository {
     });
   }
 
-  async findOrCreateByTelegramId(data: CreateUserData): Promise<{ user: User; created: boolean }> {
+  async findOrCreateByIdentity(data: CreateUserData): Promise<{ user: User; created: boolean }> {
     const existing = await this.client.user.findUnique({
-      where: { telegramId: data.telegramId },
+      where: { platform_platformId: { platform: data.platform, platformId: data.platformId } },
     });
     if (existing) {
       return { user: existing, created: false };
@@ -69,7 +76,8 @@ export class PrismaUserRepository implements IUserRepository {
     try {
       const user = await this.client.user.create({
         data: {
-          telegramId: data.telegramId,
+          platform: data.platform,
+          platformId: data.platformId,
           username: data.username,
           firstName: data.firstName,
           lastName: data.lastName,
@@ -82,7 +90,7 @@ export class PrismaUserRepository implements IUserRepository {
       const prismaError = error as { code?: string };
       if (prismaError.code === 'P2002') {
         const user = await this.client.user.findUniqueOrThrow({
-          where: { telegramId: data.telegramId },
+          where: { platform_platformId: { platform: data.platform, platformId: data.platformId } },
         });
         return { user, created: false };
       }
@@ -108,10 +116,14 @@ export class PrismaUserRepository implements IUserRepository {
     });
   }
 
-  async updateRoleByTelegramId(telegramId: bigint, role: UserRole): Promise<User | null> {
+  async updateRoleByIdentity(
+    platform: Platform,
+    platformId: bigint,
+    role: UserRole
+  ): Promise<User | null> {
     try {
       return await this.client.user.update({
-        where: { telegramId },
+        where: { platform_platformId: { platform, platformId } },
         data: { role },
       });
     } catch (error: unknown) {

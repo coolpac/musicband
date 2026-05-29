@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import type Redis from 'ioredis';
+import type { Platform } from '@prisma/client';
 import {
   IUserRepository,
   CreateUserData,
@@ -15,7 +16,8 @@ const BLACKLIST_PREFIX = 'token_blacklist:';
 
 export interface JWTPayload {
   userId: string;
-  telegramId: string;
+  platform: Platform;
+  platformId: string;
   role: string;
   jti?: string;
   iat?: number;
@@ -25,7 +27,8 @@ export interface JWTPayload {
 export interface AuthResult {
   user: {
     id: string;
-    telegramId: string;
+    platform: Platform;
+    platformId: string;
     username?: string;
     firstName?: string;
     lastName?: string;
@@ -80,11 +83,12 @@ export class AuthService {
     const sessionStartParam = startParam || initData.start_param;
 
     const telegramUser = initData.user;
-    const telegramId = BigInt(telegramUser.id);
+    const platformId = BigInt(telegramUser.id);
 
     // Ищем или создаём пользователя (findOrCreate предотвращает duplicate key при race condition)
     const createData: CreateUserData = {
-      telegramId,
+      platform: 'telegram',
+      platformId,
       username: telegramUser.username,
       firstName: telegramUser.first_name,
       lastName: telegramUser.last_name,
@@ -92,13 +96,13 @@ export class AuthService {
     };
 
     const { user: foundOrCreated, created } =
-      await this.userRepository.findOrCreateByTelegramId(createData);
+      await this.userRepository.findOrCreateByIdentity(createData);
     let user = foundOrCreated;
 
     if (created) {
       logger.info('New user created from Telegram', {
         userId: user.id,
-        telegramId: telegramUser.id,
+        platformId: telegramUser.id,
       });
 
       // Отправляем уведомление админам о новом пользователе
@@ -107,7 +111,8 @@ export class AuthService {
         const botManager = getBotManager();
         if (botManager) {
           await botManager.notifyNewUser({
-            telegramId: user.telegramId.toString(),
+            platform: user.platform,
+            platformId: user.platformId.toString(),
             username: user.username || undefined,
             firstName: user.firstName || undefined,
             lastName: user.lastName || undefined,
@@ -135,7 +140,8 @@ export class AuthService {
     // Генерируем JWT токен
     const token = this.generateToken({
       userId: user.id,
-      telegramId: user.telegramId.toString(),
+      platform: user.platform,
+      platformId: user.platformId.toString(),
       role: user.role,
     });
 
@@ -148,7 +154,8 @@ export class AuthService {
     return {
       user: {
         id: user.id,
-        telegramId: user.telegramId.toString(),
+        platform: user.platform,
+        platformId: user.platformId.toString(),
         username: user.username || undefined,
         firstName: user.firstName || undefined,
         lastName: user.lastName || undefined,
@@ -163,7 +170,8 @@ export class AuthService {
    * Авторизация админа через email/password (для админки)
    */
   async authenticateAdmin(telegramId: number, password: string): Promise<AuthResult> {
-    const user = await this.userRepository.findByTelegramId(BigInt(telegramId));
+    // Админ всегда привязан к telegram-аккаунту.
+    const user = await this.userRepository.findByIdentity('telegram', BigInt(telegramId));
 
     if (!user) {
       throw new UnauthorizedError('Invalid credentials');
@@ -194,14 +202,16 @@ export class AuthService {
     // Генерируем JWT токен
     const token = this.generateToken({
       userId: user.id,
-      telegramId: user.telegramId.toString(),
+      platform: user.platform,
+      platformId: user.platformId.toString(),
       role: user.role,
     });
 
     return {
       user: {
         id: user.id,
-        telegramId: user.telegramId.toString(),
+        platform: user.platform,
+        platformId: user.platformId.toString(),
         username: user.username || undefined,
         firstName: user.firstName || undefined,
         lastName: user.lastName || undefined,

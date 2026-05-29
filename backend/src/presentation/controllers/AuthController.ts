@@ -22,7 +22,8 @@ export class AuthController {
 
       logger.info('User authenticated via Telegram', {
         userId: result.user.id,
-        telegramId: result.user.telegramId,
+        platform: result.user.platform,
+        platformId: result.user.platformId,
         role: result.user.role,
         startParam: result.startParam,
       });
@@ -60,7 +61,8 @@ export class AuthController {
 
       logger.info('Admin authenticated', {
         userId: result.user.id,
-        telegramId: result.user.telegramId,
+        platform: result.user.platform,
+        platformId: result.user.platformId,
       });
 
       // Устанавливаем токен в cookie
@@ -114,12 +116,19 @@ export class AuthController {
       return;
     }
 
-    const data: { userId: string; telegramId: string; role: string; avatarUrl?: string } = {
+    const data: {
+      userId: string;
+      platform: string;
+      platformId: string;
+      role: string;
+      avatarUrl?: string;
+    } = {
       userId: req.user.userId,
-      telegramId: req.user.telegramId,
+      platform: req.user.platform,
+      platformId: req.user.platformId,
       role: req.user.role,
     };
-    if (req.user.telegramId) {
+    if (req.user.platformId) {
       data.avatarUrl = '/api/auth/me/avatar';
     }
     res.json({ success: true, data });
@@ -131,7 +140,12 @@ export class AuthController {
    */
   async getAvatar(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.user?.telegramId) {
+      if (!req.user?.platformId) {
+        res.status(404).send();
+        return;
+      }
+      // Max-аватары реализуются в Phase 7. Пока что отдаём 404 для не-telegram.
+      if (req.user.platform !== 'telegram') {
         res.status(404).send();
         return;
       }
@@ -140,7 +154,7 @@ export class AuthController {
         res.status(503).send();
         return;
       }
-      const telegramId = req.user.telegramId;
+      const telegramId = req.user.platformId;
       const base = `https://api.telegram.org/bot${token}`;
 
       const photosRes = await fetch(`${base}/getUserProfilePhotos?user_id=${telegramId}&limit=1`);
