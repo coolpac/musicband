@@ -135,11 +135,15 @@ export class MaxBots implements PlatformBots {
     logger.info('Max bots started');
   }
 
-  /** Остановка обоих клиентов (graceful shutdown). */
+  /**
+   * Остановка обоих ботов (graceful shutdown). Делегируем внутренним ботам, а не
+   * клиентам напрямую: MaxAdminBot.stop() помимо client.stop() очищает таймер
+   * перезагрузки списка админов (иначе он остаётся висеть).
+   */
   async stop(): Promise<void> {
     await Promise.all([
-      Promise.resolve(this.userClient.stop()),
-      Promise.resolve(this.adminClient.stop()),
+      Promise.resolve(this.userBot.stop()),
+      Promise.resolve(this.adminBot.stop()),
     ]);
   }
 

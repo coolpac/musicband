@@ -39,6 +39,24 @@ describe('AuthService token round-trip', () => {
     expect(decoded).not.toHaveProperty('telegramId');
     expect(typeof decoded.jti).toBe('string');
   });
+
+  it('verifyToken normalizes a legacy token (telegramId, no platform) to telegram', () => {
+    const jwt = require('jsonwebtoken') as typeof import('jsonwebtoken');
+    const service = new AuthService(makeRepo(), 'test-secret', '1h', 'admin-token');
+
+    // Токен, выпущенный ДО перехода на (platform, platformId): только telegramId.
+    const legacyToken = jwt.sign(
+      { userId: 'u9', telegramId: '777', role: 'user', jti: 'legacy-jti' },
+      'test-secret'
+    );
+
+    const decoded = service.verifyToken(legacyToken);
+
+    expect(decoded.platform).toBe('telegram');
+    expect(decoded.platformId).toBe('777');
+    expect(decoded.userId).toBe('u9');
+    expect(decoded.role).toBe('user');
+  });
 });
 
 const MAX_USER_TOKEN = 'max-user-token';

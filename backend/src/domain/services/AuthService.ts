@@ -352,7 +352,17 @@ export class AuthService {
    */
   verifyToken(token: string): JWTPayload {
     try {
-      const payload = jwt.verify(token, this.jwtSecret) as JWTPayload;
+      const payload = jwt.verify(token, this.jwtSecret) as JWTPayload & { telegramId?: string };
+      // Обратная совместимость: токены, выпущенные ДО перехода на (platform, platformId),
+      // несут только telegramId. Чтобы существующие Telegram-пользователи не потеряли
+      // platform/platformId в req.user (иначе ломается, например, аватарка) до истечения
+      // токена (≤7д), нормализуем такие токены как telegram.
+      if (!payload.platform) {
+        payload.platform = 'telegram';
+      }
+      if (!payload.platformId && payload.telegramId) {
+        payload.platformId = payload.telegramId;
+      }
       return payload;
     } catch (error) {
       throw new UnauthorizedError('Invalid or expired token');
