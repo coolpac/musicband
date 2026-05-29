@@ -28,16 +28,20 @@ router.use(asyncHandler(adminRateLimiter));
 router.get('/export', asyncHandler(async (req: Request, res: Response) => {
   const segment = (req.query.segment as string) || 'all';
 
-  let whereClause = {};
+  // CSV export covers Telegram users only (header is telegram_id). Max users are
+  // exported via their own platform-specific flow once that exists.
+  let whereClause: { platform: 'telegram'; platformId?: { in: bigint[] } } = {
+    platform: 'telegram',
+  };
   if (segment === 'just_person' || segment === 'organizer') {
     const role = segment === 'just_person' ? 'just_person' : 'organizer';
     // Get telegram IDs from onboarding_answers with this role
     const onboardingAnswers = await prisma.onboardingAnswer.findMany({
-      where: { role },
+      where: { role, platform: 'telegram' },
       select: { platformId: true },
     });
     const platformIds = onboardingAnswers.map((a) => a.platformId);
-    whereClause = { platformId: { in: platformIds } };
+    whereClause = { platform: 'telegram', platformId: { in: platformIds } };
   }
 
   const users = await prisma.user.findMany({
@@ -54,6 +58,7 @@ router.get('/export', asyncHandler(async (req: Request, res: Response) => {
 
   // Get all onboarding answers to map roles
   const allOnboarding = await prisma.onboardingAnswer.findMany({
+    where: { platform: 'telegram' },
     select: { platformId: true, role: true },
   });
   const roleMap = new Map(allOnboarding.map((a) => [a.platformId.toString(), a.role]));
@@ -94,14 +99,19 @@ router.post('/export-bot', asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  let whereClause = {};
+  let whereClause: { platform: 'telegram'; platformId?: { in: bigint[] } } = {
+    platform: 'telegram',
+  };
   if (segment === 'just_person' || segment === 'organizer') {
     const role = segment === 'just_person' ? 'just_person' : 'organizer';
     const onboardingAnswers = await prisma.onboardingAnswer.findMany({
-      where: { role },
+      where: { role, platform: 'telegram' },
       select: { platformId: true },
     });
-    whereClause = { platformId: { in: onboardingAnswers.map((a) => a.platformId) } };
+    whereClause = {
+      platform: 'telegram',
+      platformId: { in: onboardingAnswers.map((a) => a.platformId) },
+    };
   }
 
   const users = await prisma.user.findMany({
@@ -111,6 +121,7 @@ router.post('/export-bot', asyncHandler(async (req: Request, res: Response) => {
   });
 
   const allOnboarding = await prisma.onboardingAnswer.findMany({
+    where: { platform: 'telegram' },
     select: { platformId: true, role: true },
   });
   const roleMap = new Map(allOnboarding.map((a) => [a.platformId.toString(), a.role]));
