@@ -409,7 +409,10 @@ export default function App() {
       return;
     }
 
-    // 3. Проверяем pending session в Redis (сохраняется ботом при /start vote_SESSION)
+    // 3. Проверяем pending session в Redis (сохраняется ботом при /start vote_SESSION).
+    // Намеренно только Telegram: pending-сессия кладётся Telegram-ботом по ключу
+    // pending_vote:<id>. На Max getTelegramUserId() вернёт null и проверка пропускается
+    // (Max сидит на own deep link/startapp; pending-vote для Max — отдельная задача).
     const telegramId = getTelegramUserId();
     if (telegramId) {
       const base = import.meta.env.VITE_API_URL || '';
