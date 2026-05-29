@@ -151,9 +151,11 @@ router.post('/export-bot', asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  // Phase 3: платформа захардкожена 'telegram' (CSV-экспорт идёт админу в Telegram).
+  // CSV отправляется самому запросившему админу — на ЕГО платформу (req.user.platform).
+  // Если платформа не указана в токене (старые токены) — fallback на telegram.
+  const adminPlatform = req.user?.platform ?? 'telegram';
   await botManager.sendCsvToAdmin(
-    { platform: 'telegram', platformId: String(adminTelegramId) },
+    { platform: adminPlatform, platformId: String(adminTelegramId) },
     Buffer.from(csv, 'utf-8'),
     filename
   );

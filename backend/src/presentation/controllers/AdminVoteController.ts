@@ -177,11 +177,12 @@ export class AdminVoteController {
         });
       }
 
-      // Уведомления проголосовавшим через бота (fire-and-forget)
+      // Уведомления проголосовавшим через бота (fire-and-forget).
+      // Получатели несут платформу — BotManager фан-аутит по платформам.
       const botManager = getBotManager();
-      if (botManager && result.winningSong && result.voterTelegramIds.length > 0) {
+      if (botManager && result.winningSong && result.voters.length > 0) {
         void botManager
-          .notifyVotingWinner(result.voterTelegramIds, result.winningSong, id)
+          .notifyVotingWinner(result.voters, result.winningSong, id)
           .catch((err: unknown) => logger.error('Failed to notify voters', { err, sessionId: id }));
       }
 

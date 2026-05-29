@@ -40,28 +40,27 @@ export class BookingController {
       const botManager = getBotManager();
       if (botManager) {
         const bookingDateStr = formatDateInTimezone(booking.bookingDate);
-        // Уведомление админам
-        // Phase 3: платформа захардкожена 'telegram' (все текущие пользователи — Telegram).
-        // Реальная платформа из записи — Phase 5.
-        await botManager.notifyNewBooking(
-          { platform: 'telegram' },
-          {
-            id: booking.id,
-            bookingDate: bookingDateStr,
-            formatName: booking.format?.name,
-            fullName: booking.fullName,
-            contactValue: booking.contactValue,
-            city: booking.city || undefined,
-            telegramId: booking.user.platformId.toString(),
-            username: booking.user.username ?? undefined,
-            firstName: booking.user.firstName ?? undefined,
-            lastName: booking.user.lastName ?? undefined,
-          }
-        );
+        // Уведомление админам: фан-аут на админов ВСЕХ платформ, чтобы ни один админ
+        // не пропустил заявку (независимо от платформы клиента).
+        await botManager.notifyNewBookingToAllAdmins({
+          id: booking.id,
+          bookingDate: bookingDateStr,
+          formatName: booking.format?.name,
+          fullName: booking.fullName,
+          contactValue: booking.contactValue,
+          city: booking.city || undefined,
+          telegramId: booking.user.platformId.toString(),
+          username: booking.user.username ?? undefined,
+          firstName: booking.user.firstName ?? undefined,
+          lastName: booking.user.lastName ?? undefined,
+        });
 
-        // Уведомление пользователю о получении заявки
+        // Уведомление пользователю о получении заявки — на ЕГО платформу.
         await botManager.sendBookingReceived(
-          { platform: 'telegram', platformId: booking.user.platformId.toString() },
+          {
+            platform: booking.user.platform,
+            platformId: booking.user.platformId.toString(),
+          },
           {
             bookingDate: bookingDateStr,
             formatName: booking.format?.name,

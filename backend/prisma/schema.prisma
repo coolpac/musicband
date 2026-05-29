@@ -175,7 +175,7 @@ model VotingSession {
 model VotingFollowUp {
   id          String    @id @default(uuid())
   sessionId   String    @map("session_id")
-  telegramIds Json      @map("telegram_ids") // string[] — id участников для рассылки
+  telegramIds Json      @map("telegram_ids") // Получатели рассылки. Новый формат: [{platform, platformId}]. Старый/совместимый: string[] голых id (трактуется как telegram). Имя поля историческое (миграция не требуется — JSON-колонка).
   campaignDay Int       @default(1) @map("campaign_day") // 1 = День 1 (рассылка №1), 2 = День 3 (рассылка №2)
   scheduledAt DateTime  @map("scheduled_at")
   sentAt      DateTime? @map("sent_at")

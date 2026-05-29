@@ -12,10 +12,18 @@ export interface OnboardingAnswerRow {
 export interface IOnboardingRepository {
   findByIdentity(platform: Platform, platformId: bigint): Promise<OnboardingAnswerRow | null>;
   create(platform: Platform, platformId: bigint, role: string): Promise<OnboardingAnswerRow>;
-  /** Кол-во пользователей (в таблице users) с определённой onboarding-ролью */
-  countUsersByRole(role: string): Promise<number>;
-  /** Общее кол-во пользователей в таблице users */
-  countAllUsers(): Promise<number>;
+  /**
+   * Кол-во пользователей (в таблице users) с определённой onboarding-ролью.
+   * Опциональный platform-фильтр — чтобы каждый admin-бот показывал счётчик
+   * только по своей платформе (telegram-бот → telegram-пользователи и т.д.).
+   * Без фильтра считаем по всем платформам (обратная совместимость).
+   */
+  countUsersByRole(role: string, platform?: Platform): Promise<number>;
+  /**
+   * Общее кол-во пользователей в таблице users.
+   * Опциональный platform-фильтр (см. countUsersByRole).
+   */
+  countAllUsers(platform?: Platform): Promise<number>;
 }
 
 export class PrismaOnboardingRepository implements IOnboardingRepository {
@@ -36,17 +44,25 @@ export class PrismaOnboardingRepository implements IOnboardingRepository {
     return row;
   }
 
-  async countUsersByRole(role: string): Promise<number> {
-    const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
-      SELECT COUNT(*) as count
-      FROM users u
-      INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
-      WHERE oa.role = ${role}
-    `;
+  async countUsersByRole(role: string, platform?: Platform): Promise<number> {
+    // Платформенный фильтр опционален: без него считаем по всем платформам (как раньше).
+    const result = platform
+      ? await prisma.$queryRaw<Array<{ count: bigint }>>`
+          SELECT COUNT(*) as count
+          FROM users u
+          INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
+          WHERE oa.role = ${role} AND u.platform::text = ${platform}
+        `
+      : await prisma.$queryRaw<Array<{ count: bigint }>>`
+          SELECT COUNT(*) as count
+          FROM users u
+          INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
+          WHERE oa.role = ${role}
+        `;
     return Number(result[0].count);
   }
 
-  async countAllUsers(): Promise<number> {
-    return prisma.user.count();
+  async countAllUsers(platform?: Platform): Promise<number> {
+    return prisma.user.count(platform ? { where: { platform } } : undefined);
   }
 }

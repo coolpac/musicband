@@ -390,16 +390,20 @@ export class VoteService {
     // Получаем голоса для подсчёта уникальных voters и telegramId
     const votes = await this.voteRepository.findBySession(sessionId);
 
-    // Собираем telegramId всех проголосовавших (ДО deleteMany в транзакции).
-    // Рассылка идёт через Telegram-бота, поэтому берём только telegram-пользователей.
+    // Собираем получателей рассылки всех проголосовавших (ДО deleteMany в транзакции).
+    // Несём платформу каждого голосующего — рассылка фан-аутится по платформам (Phase 5).
     const uniqueUserIds = [...new Set(votes.map((v) => v.userId))];
-    const voterTelegramIds =
+    const voterRecords =
       uniqueUserIds.length > 0
         ? await prisma.user.findMany({
-            where: { id: { in: uniqueUserIds }, platform: 'telegram' },
-            select: { platformId: true },
+            where: { id: { in: uniqueUserIds } },
+            select: { platform: true, platformId: true },
           })
         : [];
+    const voters = voterRecords.map((u) => ({
+      platform: u.platform,
+      platformId: u.platformId.toString(),
+    }));
 
     // Победитель — песня с максимумом голосов (results уже отсортированы по votes DESC)
     const winningSongId = results.length > 0 ? results[0].songId : null;
@@ -467,8 +471,9 @@ export class VoteService {
 
     // Планируем рассылки по челябинскому времени (UTC+5):
     // Первое сообщение — в 18:00, второе — в 20:00
-    if (voterTelegramIds.length > 0) {
-      const telegramIds = voterTelegramIds.map((u) => u.platformId.toString());
+    if (voters.length > 0) {
+      // Новый формат хранения: [{platform, platformId}] — BotManager группирует по платформе.
+      const recipients = voters.map((v) => ({ platform: v.platform, platformId: v.platformId }));
 
       const CHELYABINSK_OFFSET = 5; // UTC+5
       const now = new Date();
@@ -497,7 +502,7 @@ export class VoteService {
       await prisma.votingFollowUp.create({
         data: {
           sessionId,
-          telegramIds,
+          telegramIds: recipients,
           campaignDay: 1,
           scheduledAt: day1At,
         },
@@ -506,7 +511,7 @@ export class VoteService {
       await prisma.votingFollowUp.create({
         data: {
           sessionId,
-          telegramIds,
+          telegramIds: recipients,
           campaignDay: 2,
           scheduledAt: day2At,
         },
@@ -514,7 +519,7 @@ export class VoteService {
 
       logger.info('Voting follow-ups scheduled (18:00 + 20:00 Chelyabinsk)', {
         sessionId,
-        voterCount: voterTelegramIds.length,
+        voterCount: voters.length,
         day1At: day1At.toISOString(),
         day2At: day2At.toISOString(),
       });
@@ -538,7 +543,8 @@ export class VoteService {
             coverUrl: winningSong.coverUrl,
           }
         : null,
-      voterTelegramIds: voterTelegramIds.map((u) => u.platformId),
+      // Получатели уведомления о победителе с платформой (Phase 5 fan-out).
+      voters,
     };
   }
 }

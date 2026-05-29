@@ -17,6 +17,8 @@ import type {
   NewUserNotice,
   SongNotice,
   MessageTarget,
+  ReviewNotice,
+  ReviewRequestResult,
 } from './types';
 
 export type { MessageTarget };
@@ -177,7 +179,7 @@ export class BotManager {
   }
 
   /**
-   * Отправка уведомления о новом бронировании (админам платформы).
+   * Отправка уведомления о новом бронировании (админам конкретной платформы).
    */
   async notifyNewBooking(
     target: { platform: Platform },
@@ -190,11 +192,55 @@ export class BotManager {
   }
 
   /**
+   * Уведомление о новом бронировании ВСЕМ админам на ВСЕХ зарегистрированных платформах.
+   * Замысел: ни один админ не должен пропустить заявку, независимо от того, на какой
+   * платформе он сидит и на какой платформе сделана бронь. Каждый admin-бот сам
+   * рассылает только своим админам (loadAdmins фильтрует по своей платформе), поэтому
+   * с Telegram-only данными поведение идентично прежнему (Max-адаптер просто не зарегистрирован).
+   */
+  async notifyNewBookingToAllAdmins(bookingData: NewBookingNotice): Promise<void> {
+    for (const bots of this.platforms.values()) {
+      try {
+        await bots.notifyNewBooking(bookingData);
+      } catch (error) {
+        logger.error('Failed to notify admins of new booking', {
+          platform: bots.platform,
+          bookingId: bookingData.id,
+          error,
+        });
+      }
+    }
+  }
+
+  /**
+   * Уведомление о новом пользователе ВСЕМ админам на ВСЕХ платформах (см. notifyNewBookingToAllAdmins).
+   * Сам факт регистрации нового пользователя важен для всех админов, а не только для
+   * админов платформы этого пользователя.
+   */
+  async notifyNewUserToAllAdmins(userData: NewUserNotice): Promise<void> {
+    for (const bots of this.platforms.values()) {
+      try {
+        await bots.notifyNewUser(userData);
+      } catch (error) {
+        logger.error('Failed to notify admins of new user', {
+          platform: bots.platform,
+          userPlatform: userData.platform,
+          error,
+        });
+      }
+    }
+  }
+
+  /**
    * Рассылка пользователям. Разрешение сегмента в список получателей остаётся
    * здесь (БД), сама отправка с throttling — в адаптере.
    *
-   * Сейчас сегментация и аудитория — только Telegram, поэтому маршрутизируем в telegram.
-   * Поддержка Max-аудитории — Phase 5.
+   * Fan-out по платформам: для КАЖДОГО зарегистрированного адаптера разрешаем
+   * аудиторию его платформы и вызываем его broadcast. С Telegram-only данными
+   * (Max не зарегистрирован / нет Max-пользователей) поведение идентично прежнему.
+   *
+   * onProgress агрегируется по всем платформам (накопительные sent/failed/total),
+   * чтобы admin-бот видел общий прогресс.
    */
   async broadcastToUsers(payload: {
     text: string;
@@ -203,46 +249,76 @@ export class BotManager {
     segment?: 'all' | 'just_person' | 'organizer';
     onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
   }): Promise<{ sent: number; failed: number; total: number }> {
-    const bots = this.getPlatform('telegram');
-    if (!bots) {
-      logger.warn('Telegram bots not initialized, broadcast skipped');
+    const segment = payload.segment ?? 'all';
+
+    if (this.platforms.size === 0) {
+      logger.warn('No platforms registered, broadcast skipped');
       return { sent: 0, failed: 0, total: 0 };
     }
 
-    // Получаем список telegramId с учётом сегмента
-    const telegramIds = await this.getAudienceTelegramIds(payload.segment ?? 'all');
-    const platformIds = telegramIds.map((id) => id.toString());
+    // Аккумулируем прогресс по уже завершённым платформам, чтобы onProgress
+    // (один индикатор у admin-бота) показывал суммарные числа по всем платформам.
+    let baseSent = 0;
+    let baseFailed = 0;
+    let baseTotal = 0;
 
-    const result = await bots.broadcast(platformIds, {
-      text: payload.text,
-      buttons: payload.buttons,
-      media: payload.media,
-      onProgress: payload.onProgress,
-    });
+    const aggregate = { sent: 0, failed: 0, total: 0 };
+
+    for (const [platform, bots] of this.platforms) {
+      const platformIds = await this.getAudienceIds(platform, segment);
+
+      const result = await bots.broadcast(platformIds, {
+        text: payload.text,
+        buttons: payload.buttons,
+        media: payload.media,
+        onProgress: payload.onProgress
+          ? async (progress) => {
+              await payload.onProgress!({
+                sent: baseSent + progress.sent,
+                failed: baseFailed + progress.failed,
+                total: baseTotal + progress.total,
+              });
+            }
+          : undefined,
+      });
+
+      baseSent += result.sent;
+      baseFailed += result.failed;
+      baseTotal += result.total;
+      aggregate.sent += result.sent;
+      aggregate.failed += result.failed;
+      aggregate.total += result.total;
+    }
 
     logger.info('Broadcast finished', {
-      sent: result.sent,
-      failed: result.failed,
-      total: result.total,
-      segment: payload.segment ?? 'all',
+      sent: aggregate.sent,
+      failed: aggregate.failed,
+      total: aggregate.total,
+      segment,
     });
-    return result;
+    return aggregate;
   }
 
   /**
-   * Получить список telegramId по сегменту аудитории.
-   * - 'all' — все пользователи
+   * Получить список platformId (строки) по платформе и сегменту аудитории.
+   * - 'all' — все пользователи платформы
    * - 'just_person' / 'organizer' — только те, кто прошёл onboarding с соответствующей ролью
+   *
+   * Telegram-ветка идентична прежнему getAudienceTelegramIds (числа → строки),
+   * Max-ветка использует ту же логику с platform='max'.
    */
-  private async getAudienceTelegramIds(
+  private async getAudienceIds(
+    platform: Platform,
     segment: 'all' | 'just_person' | 'organizer'
-  ): Promise<number[]> {
+  ): Promise<string[]> {
     if (segment === 'all') {
       const users = await prisma.user.findMany({
-        where: { platform: 'telegram' },
+        where: { platform },
         select: { platformId: true },
       });
-      return users.map((user) => Number(user.platformId)).filter((id) => !Number.isNaN(id));
+      return users
+        .map((user) => user.platformId.toString())
+        .filter((id) => id !== '' && id !== 'NaN');
     }
 
     // Фильтрация по onboarding-роли через JOIN
@@ -250,9 +326,11 @@ export class BotManager {
       SELECT u.platform_id
       FROM users u
       INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
-      WHERE u.platform = 'telegram' AND oa.role = ${segment}
+      WHERE u.platform::text = ${platform} AND oa.role = ${segment}
     `;
-    return rows.map((row) => Number(row.platform_id)).filter((id) => !Number.isNaN(id));
+    return rows
+      .map((row) => row.platform_id.toString())
+      .filter((id) => id !== '' && id !== 'NaN');
   }
 
   /**
@@ -273,14 +351,28 @@ export class BotManager {
   }
 
   /**
+   * Запрос отзыва пользователю на его платформе (после «Выполнено»).
+   * Если платформа не зарегистрирована — возвращаем not-sent (как UserBot отсутствует).
+   */
+  async sendReviewRequest(target: MessageTarget, review: ReviewNotice): Promise<ReviewRequestResult> {
+    const bots = this.getPlatform(target.platform);
+    if (!bots) {
+      return { sent: false, errorMessage: `Platform ${target.platform} not registered` };
+    }
+    return bots.sendReviewRequest(target.platformId, review);
+  }
+
+  /**
    * Обработка отложенных рассылок участникам голосования.
    * Вызывается каждые 15 мин. Находит записи с scheduledAt <= now и sentAt = null,
    * отправляет сообщение по campaignDay (1 = День 1, 2 = День 3) с кнопкой в приложение, помечает sentAt.
+   *
+   * Получатели сгруппированы по платформе (см. parseFollowUpRecipients для
+   * обратной совместимости со старым форматом — массивом «голых» id-строк) и
+   * отправляются через адаптер соответствующей платформы.
    */
   async processScheduledVotingFollowUps(): Promise<void> {
-    // follow-up аудитория — пока только Telegram (telegramIds в записи)
-    const bots = this.getPlatform('telegram');
-    if (!bots) return;
+    if (this.platforms.size === 0) return;
 
     const now = new Date();
     const due = await prisma.votingFollowUp.findMany({
@@ -292,17 +384,39 @@ export class BotManager {
     });
 
     for (const row of due) {
-      const telegramIds = Array.isArray(row.telegramIds) ? (row.telegramIds as string[]) : [];
-      if (telegramIds.length === 0) {
+      const byPlatform = this.parseFollowUpRecipients(row.telegramIds);
+      const totalRecipients = [...byPlatform.values()].reduce((sum, ids) => sum + ids.length, 0);
+
+      if (totalRecipients === 0) {
         await prisma.votingFollowUp.update({
           where: { id: row.id },
           data: { sentAt: now },
         });
         continue;
       }
+
       try {
         const campaignDay = row.campaignDay ?? 1;
-        const { sent, failed } = await bots.sendVotingFollowUp(telegramIds, campaignDay);
+        let sent = 0;
+        let failed = 0;
+
+        for (const [platform, ids] of byPlatform) {
+          if (ids.length === 0) continue;
+          const bots = this.getPlatform(platform);
+          if (!bots) {
+            // Платформа не зарегистрирована (например, нет Max-токенов) — пропускаем её получателей.
+            logger.warn('Voting follow-up skipped: platform not registered', {
+              followUpId: row.id,
+              platform,
+              skipped: ids.length,
+            });
+            continue;
+          }
+          const result = await bots.sendVotingFollowUp(ids, campaignDay);
+          sent += result.sent;
+          failed += result.failed;
+        }
+
         await prisma.votingFollowUp.update({
           where: { id: row.id },
           data: { sentAt: new Date() },
@@ -325,44 +439,100 @@ export class BotManager {
   }
 
   /**
-   * Уведомление проголосовавших о победителе голосования (массовая рассылка с учётом rate limit)
+   * Разбор поля VotingFollowUp.telegramIds (JSON) в Map<Platform, platformId[]>.
+   *
+   * Обратная совместимость: старые/Telegram-записи хранят массив «голых» строк
+   * (например ["111","222"]) — каждая трактуется как {platform:'telegram', platformId}.
+   * Новые записи хранят массив объектов [{platform, platformId}].
+   */
+  private parseFollowUpRecipients(raw: unknown): Map<Platform, string[]> {
+    const byPlatform = new Map<Platform, string[]>();
+    const push = (platform: Platform, id: string) => {
+      const list = byPlatform.get(platform) ?? [];
+      list.push(id);
+      byPlatform.set(platform, list);
+    };
+
+    if (!Array.isArray(raw)) return byPlatform;
+
+    for (const entry of raw) {
+      if (typeof entry === 'string') {
+        // Старый формат: голый id → telegram
+        push('telegram', entry);
+      } else if (
+        entry &&
+        typeof entry === 'object' &&
+        'platformId' in entry &&
+        'platform' in entry
+      ) {
+        const e = entry as { platform: Platform; platformId: unknown };
+        push(e.platform, String(e.platformId));
+      }
+    }
+
+    return byPlatform;
+  }
+
+  /**
+   * Уведомление проголосовавших о победителе голосования (массовая рассылка с учётом rate limit).
+   * Получатели несут платформу — группируем по платформе и маршрутизируем в нужный адаптер.
+   * С только-Telegram голосующими поведение идентично прежнему.
    */
   async notifyVotingWinner(
-    voterTelegramIds: bigint[],
+    voters: Array<{ platform: Platform; platformId: string }>,
     winningSong: SongNotice,
     sessionId: string
   ): Promise<void> {
-    // Голосование — пока только Telegram-аудитория
-    const bots = this.getPlatform('telegram');
-    if (!bots) {
-      logger.warn('Telegram bots not initialized, skipping voting winner notifications');
+    if (this.platforms.size === 0) {
+      logger.warn('No platforms registered, skipping voting winner notifications');
       return;
     }
 
     logger.info('Sending voting winner notifications', {
       sessionId,
-      voterCount: voterTelegramIds.length,
+      voterCount: voters.length,
       winningSong: winningSong.title,
     });
+
+    // Группируем получателей по платформе
+    const byPlatform = new Map<Platform, string[]>();
+    for (const voter of voters) {
+      const list = byPlatform.get(voter.platform) ?? [];
+      list.push(voter.platformId);
+      byPlatform.set(voter.platform, list);
+    }
 
     let sent = 0;
     let failed = 0;
 
-    for (const telegramId of voterTelegramIds) {
-      try {
-        await bots.sendVotingWinner(telegramId.toString(), winningSong, sessionId);
-        sent++;
-      } catch (error) {
-        failed++;
-        logger.error('Failed to send winner notification', {
-          telegramId: telegramId.toString(),
-          error,
+    for (const [platform, ids] of byPlatform) {
+      const bots = this.getPlatform(platform);
+      if (!bots) {
+        logger.warn('Voting winner skipped: platform not registered', {
+          platform,
+          skipped: ids.length,
+          sessionId,
         });
+        continue;
       }
 
-      // Telegram rate limit: ~30 msg/sec. Задержка 1s каждые 25 сообщений = ~25 msg/sec (с запасом)
-      if (sent % 25 === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      for (const platformId of ids) {
+        try {
+          await bots.sendVotingWinner(platformId, winningSong, sessionId);
+          sent++;
+        } catch (error) {
+          failed++;
+          logger.error('Failed to send winner notification', {
+            platform,
+            platformId,
+            error,
+          });
+        }
+
+        // Rate limit: ~30 msg/sec. Задержка 1s каждые 25 сообщений = ~25 msg/sec (с запасом)
+        if (sent % 25 === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
       }
     }
 
@@ -370,7 +540,7 @@ export class BotManager {
       sessionId,
       sent,
       failed,
-      total: voterTelegramIds.length,
+      total: voters.length,
     });
   }
 

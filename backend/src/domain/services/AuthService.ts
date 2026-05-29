@@ -113,7 +113,10 @@ export class AuthService {
         const { getBotManager } = await import('../../infrastructure/telegram/botManager');
         const botManager = getBotManager();
         if (botManager) {
-          await botManager.notifyNewUser({
+          // Фан-аут на админов всех платформ: о новом пользователе должны узнать
+          // все админы, а не только админы платформы этого пользователя.
+          // platform в notice — реальная платформа пользователя (user.platform).
+          await botManager.notifyNewUserToAllAdmins({
             platform: user.platform,
             platformId: user.platformId.toString(),
             username: user.username || undefined,
@@ -228,7 +231,10 @@ export class AuthService {
         const { getBotManager } = await import('../../infrastructure/telegram/botManager');
         const botManager = getBotManager();
         if (botManager) {
-          await botManager.notifyNewUser({
+          // Фан-аут на админов всех платформ: о новом пользователе должны узнать
+          // все админы, а не только админы платформы этого пользователя.
+          // platform в notice — реальная платформа пользователя (user.platform).
+          await botManager.notifyNewUserToAllAdmins({
             platform: user.platform,
             platformId: user.platformId.toString(),
             username: user.username || undefined,

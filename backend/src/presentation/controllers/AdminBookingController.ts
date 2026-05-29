@@ -155,37 +155,33 @@ export class AdminBookingController {
       let reviewRequestError: { code?: number; message?: string } | undefined;
       const botManager = getBotManager();
       // Отправляем запрос отзыва при "Выполнено" (включая повторную отправку, если нужно).
-      // Важно: сообщение отправляет UserBot — пользователь должен иметь диалог с ботом.
-      const userTelegramId = updated.user?.platformId;
-      if (botManager && userTelegramId !== undefined && userTelegramId !== null) {
-        const userBot = botManager.getUserBot();
-        const telegramIdStr =
-          typeof userTelegramId === 'bigint' ? userTelegramId.toString() : String(userTelegramId);
-        if (userBot) {
-          try {
-            const result = await userBot.sendReviewRequest(telegramIdStr, {
+      // Маршрутизируем на платформу пользователя (Phase 5): сообщение отправляет
+      // user-бот соответствующей платформы — пользователь должен иметь с ним диалог.
+      const userPlatformId = updated.user?.platformId;
+      if (botManager && userPlatformId !== undefined && userPlatformId !== null) {
+        const platformIdStr =
+          typeof userPlatformId === 'bigint' ? userPlatformId.toString() : String(userPlatformId);
+        try {
+          const result = await botManager.sendReviewRequest(
+            { platform: updated.user.platform, platformId: platformIdStr },
+            {
               bookingId: updated.id,
               bookingDate: formatDateInTimezone(updated.bookingDate),
               formatName: updated.format?.name ?? undefined,
               fullName: updated.fullName ?? '',
-            });
-            reviewRequestSent = result.sent;
-            if (!result.sent) {
-              reviewRequestError = { code: result.errorCode, message: result.errorMessage };
             }
-          } catch (err: unknown) {
-            // На всякий случай: sendReviewRequest возвращает boolean и сам обрабатывает ошибки.
-            // Но если что-то пойдёт не так — не блокируем «Выполнено».
-            logger.warn('Review request send threw unexpectedly', {
-              bookingId: id,
-              telegramId: telegramIdStr,
-              error: err,
-            });
+          );
+          reviewRequestSent = result.sent;
+          if (!result.sent) {
+            reviewRequestError = { code: result.errorCode, message: result.errorMessage };
           }
-        } else {
-          logger.warn('UserBot not initialized, review request not sent', {
+        } catch (err: unknown) {
+          // sendReviewRequest сам обрабатывает ошибки доставки; но если что-то пойдёт
+          // не так — не блокируем «Выполнено».
+          logger.warn('Review request send threw unexpectedly', {
             bookingId: id,
-            telegramId: telegramIdStr,
+            platformId: platformIdStr,
+            error: err,
           });
         }
       }
