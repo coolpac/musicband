@@ -568,6 +568,12 @@ export class BotManager {
     for (const [platform, bots] of this.platforms) {
       try {
         const botUsername = this.getVotingBotUsername(platform);
+        if (!botUsername) {
+          // Без username получится битый deep link (например, https://max.ru/?start=...),
+          // поэтому пропускаем платформу, а не шлём админам нерабочий QR.
+          logger.warn('Voting QR skipped: bot username not configured', { platform, sessionId });
+          continue;
+        }
         const qr = await generateVotingSessionQRForPlatforms(sessionId, platform, botUsername);
         if (!qr.qrCodeBuffer) {
           logger.error('Voting QR buffer not generated', { platform, sessionId });
