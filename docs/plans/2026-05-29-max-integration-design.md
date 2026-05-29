@@ -55,11 +55,42 @@ repo.
 - Inline keyboards: attachment `{type:'inline_keyboard', payload:{buttons:[[...]]}}`,
   button types `callback|link|message|open_app|request_contact|request_geo_location|clipboard`.
 
+### Installed lib facts (`@maxhub/max-bot-api` v0.2.2) — confirmed by inspection
+- Exports: `Bot`, `Api`, `Composer`, `Context`, `Keyboard` (namespace), `MaxError`,
+  and attachment classes (`ImageAttachment`, `VideoAttachment`, ...).
+- **Polling-only.** `bot.start({ allowedUpdates })` runs `GET /updates` loop;
+  `bot.stop()` stops it. No public webhook handler, no subscription register.
+- Handlers (grammy-like): `bot.command(trigger, fn)`, `bot.hears(trigger, fn)`,
+  `bot.action(trigger, fn)` (filters `message_callback`), `bot.on(updateType, fn)`
+  (`'bot_started'|'message_created'|'message_callback'|...`).
+- Context: `ctx.startPayload` (bot_started deep-link payload), `ctx.user` (Max
+  `User`), `ctx.callback`, `ctx.chatId`, `ctx.reply(text, extra)`,
+  `ctx.answerOnCallback(extra)`.
+- Send without ctx: `bot.api.sendMessageToUser(userId, text, extra)` /
+  `sendMessageToChat`. `extra: SendMessageExtra` carries `attachments` (incl.
+  inline keyboard).
+- Keyboards: `import { Keyboard } from '@maxhub/max-bot-api'` →
+  `Keyboard.inlineKeyboard([[ Keyboard.button.callback(text, payload),
+  Keyboard.button.link(text, url) ]])`.
+- Media: `bot.api.uploadImage|uploadVideo|uploadFile(options)` → attachment, then
+  pass via `extra.attachments`.
+- Commands: `bot.api.setMyCommands([{name, description}])`.
+- **Bot-side `User` has only `name`** (full name), `username`, `user_id`,
+  `is_bot` — NO first/last split. The **Mini App `initData`** user DOES split
+  `first_name`/`last_name`/`photo_url`. So: bot onboarding stores `name` →
+  `firstName` (lastName null); Mini App auth stores first/last separately.
+- **No initData validator ships in the lib** — `validateMaxInitData` must be
+  implemented from the bridge docs and its HMAC algorithm confirmed.
+
 ## Decisions
 
 1. **Mini App scope:** full parity — UI runs inside Max with native auth.
 2. **Identity model:** `platform` + `platformId` with composite uniqueness.
-3. **Update delivery for Max:** webhook (prod-recommended).
+3. **Update delivery for Max:** long polling via `bot.start()`. The official
+   lib `@maxhub/max-bot-api` v0.2.2 is **polling-only** — `handleUpdate` is
+   private and there is no webhook subscription API in the lib (only `GET
+   /updates` polling). Polling also matches the existing Telegram integration.
+   (Original choice was webhook; revised after inspecting the lib.)
 4. **Transport architecture:** A — unified `BotManager` + per-platform adapters.
 
 ## Architecture A
@@ -93,12 +124,12 @@ mini-app SDK on frontend) is platform-specific. Telegram behavior is unchanged.
 - `BotManager` holds `Map<Platform, PlatformBots>` and routes notifications by
   `user.platform`.
 
-### 3. Max update delivery — webhook
-- `POST /api/max/webhook/user` and `/api/max/webhook/admin` (through existing
-  `/api/` proxy; no new nginx). Verify by secret (path/header), return 200 fast,
-  process async, idempotent by update id.
-- On startup register subscription `POST /subscriptions` with
-  `https://vgulcover.ru/api/max/webhook/...`.
+### 3. Max update delivery — long polling
+- `MaxBots.start()` calls `bot.start()` on the user and admin bots (lib's
+  built-in `GET /updates` loop); `MaxBots.stop()` calls `bot.stop()`. Mirrors
+  the existing Telegram polling lifecycle in `BotManager`.
+- No webhook endpoint, no subscription registration, no public-URL/secret config.
+- Wired into `app.ts` graceful shutdown (SIGTERM/SIGINT) alongside Telegram.
 
 ### 4. Mini App auth
 - `shared/utils/max.ts` → `validateMaxInitData(raw, botToken)` (Max HMAC scheme).
@@ -137,8 +168,8 @@ mini-app SDK on frontend) is platform-specific. Telegram behavior is unchanged.
 
 ### 10. Env / config
 - New: `MAX_USER_BOT_TOKEN`, `MAX_ADMIN_BOT_TOKEN`, `MAX_USER_BOT_USERNAME`
-  (`id744719465529_bot`), `MAX_ADMIN_BOT_USERNAME` (`id744719465529_1_bot`),
-  `MAX_WEBHOOK_SECRET`, `PUBLIC_BASE_URL` (`https://vgulcover.ru`).
+  (`id744719465529_bot`), `MAX_ADMIN_BOT_USERNAME` (`id744719465529_1_bot`).
+  (No webhook secret / public URL needed — polling.)
 - Added to `.env.example` and `backend/.env.example`. `BotManager.initialize`
   reads them; skips Max if absent.
 
@@ -146,17 +177,15 @@ mini-app SDK on frontend) is platform-specific. Telegram behavior is unchanged.
 - Unit: `validateMaxInitData` (valid/expired/tampered), deep-link URL builders,
   platform routing in `BotManager` (mock adapters), `/api/auth/max`.
 - TDD. Manual limits: cannot fully test inside Max without verified org/device —
-  webhook tested with simulated payloads, mini-app auth via token-signed
+  bot handlers tested with mocked ctx/api, mini-app auth via token-signed
   initData.
 
 ## Risks to confirm during implementation
-1. Exact Max initData HMAC algorithm (confirm against `@maxhub/max-bot-api`
-   source) — security-critical.
+1. Exact Max initData HMAC algorithm (bridge docs; lib ships no validator) —
+   security-critical.
 2. Max mini-app deep-link/`startapp` format and whether `open_app` needs app
    registration.
 3. `X-Frame-Options: SAMEORIGIN` / CSP — if Max embeds the mini app in an
    iframe, may need to allow `max.ru`.
-4. `@maxhub/max-bot-api` webhook helper surface (handleUpdate / subscription
-   registration).
-5. Max media upload (two-step `/uploads`) and presence of `web_app`-equivalent
-   buttons (`open_app`).
+4. Max media upload (`bot.api.uploadImage/uploadVideo/uploadFile`) behavior and
+   `open_app` button support for the Mini App launch button.

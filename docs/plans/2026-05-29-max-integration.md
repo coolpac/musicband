@@ -4,7 +4,7 @@
 
 **Goal:** Add full Max (max.ru) messenger support — Mini App parity plus every bot feature — by introducing a platform abstraction so the existing Telegram behavior is unchanged.
 
-**Architecture:** Platform abstraction (design doc: `docs/plans/2026-05-29-max-integration-design.md`, architecture A). Service/DB layer becomes platform-agnostic via a `platform` + `platformId` identity model. A unified `BotManager` holds a `Map<Platform, PlatformBots>` and routes by `user.platform`. Telegram code is wrapped behind a `PlatformBots` adapter; a new Max adapter uses `@maxhub/max-bot-api` with webhook delivery. The frontend gains a platform facade that detects Telegram vs Max and auths against the right endpoint.
+**Architecture:** Platform abstraction (design doc: `docs/plans/2026-05-29-max-integration-design.md`, architecture A). Service/DB layer becomes platform-agnostic via a `platform` + `platformId` identity model. A unified `BotManager` holds a `Map<Platform, PlatformBots>` and routes by `user.platform`. Telegram code is wrapped behind a `PlatformBots` adapter; a new Max adapter uses `@maxhub/max-bot-api` with long-polling delivery. The frontend gains a platform facade that detects Telegram vs Max and auths against the right endpoint.
 
 **Tech Stack:** TypeScript, Express, Prisma/PostgreSQL, Redis, Jest, `node-telegram-bot-api` (existing), `@maxhub/max-bot-api` (new), React/Vite frontend, Telegram + Max Mini App SDKs.
 
@@ -33,12 +33,19 @@ git add backend/package.json backend/package-lock.json
 git commit -m "build: add @maxhub/max-bot-api dependency"
 ```
 
-### Task 0.2: Confirm the Max SDK surface (research, no code)
+### Task 0.2: Confirm the Max SDK surface (research, no code) — DONE
 
-Read the installed lib to ground later tasks. Record findings as a comment block in the plan-tracking notes (not committed):
-- `node -e "console.log(Object.keys(require('@maxhub/max-bot-api')))"` — confirm `Bot` export.
-- Inspect `node_modules/@maxhub/max-bot-api/` typings for: webhook handler (e.g. `bot.handleUpdate` / `bot.updates`), subscription/webhook registration on `bot.api`, `setMyCommands`, message sending with `inline_keyboard` attachment, media upload (`/uploads`) helper, and `ctx` shape for `bot_started` (start payload field) and `message_callback`.
-- Confirm the **initData HMAC algorithm** if the lib ships a validator (search for `initData`, `hmac`, `validate`). This is the source of truth for Task 2.1.
+Findings (inspected `@maxhub/max-bot-api` v0.2.2 typings/js):
+- Exports: `Bot, Api, Composer, Context, Keyboard` (namespace), `MaxError`, attachment classes.
+- **Polling-only.** `bot.start({ allowedUpdates })` = `GET /updates` loop; `bot.stop()`. No public webhook handler; no subscription register in the lib. → **Delivery = long polling** (user-confirmed change from webhook).
+- Handlers: `bot.command(t, fn)`, `bot.hears(t, fn)`, `bot.action(t, fn)` (message_callback), `bot.on('bot_started'|'message_created'|'message_callback', fn)`.
+- Context: `ctx.startPayload` (bot_started deep-link), `ctx.user` (Max `User`), `ctx.callback`, `ctx.chatId`, `ctx.reply(text, extra)`, `ctx.answerOnCallback(extra)`.
+- Send w/o ctx: `bot.api.sendMessageToUser(userId:number, text, extra:SendMessageExtra)`; `extra.attachments` carries keyboards/media.
+- Keyboards: `import { Keyboard } from '@maxhub/max-bot-api'` → `Keyboard.inlineKeyboard([[ Keyboard.button.callback(text,payload), Keyboard.button.link(text,url) ]])`.
+- Media: `bot.api.uploadImage|uploadVideo|uploadFile(options)` → attachment, pass via `extra.attachments`.
+- Commands: `bot.api.setMyCommands([{ name, description }])`.
+- **Bot-side `User` = `{ user_id, name, username, is_bot, last_activity_time }`** — only `name` (no first/last). Mini App `initData` user splits first_name/last_name/photo_url.
+- **No initData validator in the lib** → Task 2.1 implements + confirms HMAC from bridge docs.
 
 No commit (research only).
 
@@ -278,7 +285,7 @@ git commit -m "refactor(messaging): BotManager routes notifications by platform"
 
 ---
 
-## Phase 4 — Max bot adapters + webhook ingest
+## Phase 4 — Max bot adapters + long polling
 
 ### Task 4.1: Max API client wrapper + error mapping
 
@@ -288,7 +295,7 @@ git commit -m "refactor(messaging): BotManager routes notifications by platform"
 
 **Step 1 (test):** Failing test for `maxErrors.ts`: maps a "user blocked bot"/forbidden response to a typed `MaxSendError` with `isUserUnreachable===true`; rate-limit response → `shouldRetry===true`.
 **Step 2:** `npm test -- maxErrors` → FAIL.
-**Step 3:** Implement error mapping (mirror what `botManager.ts` does for Telegram failures). Implement `maxClient` exposing `sendMessage`, `sendMessageWithKeyboard`, `uploadAndSendMedia`, `answerCallback`, `setMyCommands`, `subscribeWebhook`, `deleteWebhook`, `getMe` using the lib (method names per Task 0.2).
+**Step 3:** Implement error mapping (mirror what `botManager.ts` does for Telegram failures; use the lib's `MaxError`). Implement `maxClient` exposing `sendMessage` (`bot.api.sendMessageToUser`), `sendMessageWithKeyboard` (via `Keyboard.inlineKeyboard` in `extra.attachments`), `uploadAndSendMedia` (`bot.api.uploadImage/uploadVideo/uploadFile` then attach), `answerCallback` (`bot.api.answerOnCallback`), `setMyCommands`, `getMe` (`bot.api.getMyInfo`), plus `start()`/`stop()` wrapping `bot.start()/bot.stop()`. No webhook methods (polling).
 **Step 4:** `npm test -- maxErrors` → PASS.
 **Step 5:** Commit.
 ```bash
@@ -328,21 +335,21 @@ git add backend/src/infrastructure/messaging/max/MaxAdminBot.ts backend/src/infr
 git commit -m "feat(max): MaxAdminBot mirroring Telegram admin flows"
 ```
 
-### Task 4.4: MaxBots adapter + webhook route + subscription
+### Task 4.4: MaxBots adapter + polling lifecycle
 
 **Files:**
-- Create: `backend/src/infrastructure/messaging/max/MaxBots.ts` (implements `PlatformBots`, owns user+admin bots), `backend/src/presentation/routes/max.routes.ts` (`POST /api/max/webhook/:botType`).
-- Modify: `backend/src/app.ts` (mount route), `backend/src/infrastructure/messaging/botManager.ts` (construct `MaxBots` when Max tokens present), `backend/src/config/container.ts`.
-- Test: `backend/src/presentation/routes/__tests__/max.webhook.test.ts`
+- Create: `backend/src/infrastructure/messaging/max/MaxBots.ts` (implements `PlatformBots`, owns user+admin `MaxUserBot`/`MaxAdminBot`).
+- Modify: `backend/src/infrastructure/messaging/botManager.ts` (construct + register `MaxBots` when Max tokens present), `backend/src/config/container.ts` (read Max tokens/usernames). `app.ts` needs no new route — `BotManager.initialize()`/`stop()` already run on boot/shutdown.
+- Test: `backend/src/infrastructure/messaging/max/__tests__/MaxBots.test.ts`
 
-**Step 1 (test):** Failing tests (supertest): webhook with wrong secret → 401; valid secret + a `message_created` body → 200 and the matching bot's `handleUpdate` is called; duplicate update id → processed once (idempotency via Redis set with TTL).
-**Step 2:** `npm test -- max.webhook` → FAIL.
-**Step 3:** Implement: route validates `MAX_WEBHOOK_SECRET` (header `X-Max-Secret` or path segment), responds 200 immediately, dispatches to `MaxBots.handleUpdate(botType, body)`. `MaxBots.start()` registers the webhook subscription with `${PUBLIC_BASE_URL}/api/max/webhook/user|admin` and sets commands; `stop()` deletes the subscription. Register Max in `BotManager.initialize()` guarded by env presence.
-**Step 4:** `npm test -- max.webhook` → PASS; full `npm test` → PASS; `npm run type-check` → PASS.
+**Step 1 (test):** Failing tests: `MaxBots.platform==='max'`; `start()` calls `userBot.start()` + `adminBot.start()` and `setMyCommands`; `stop()` calls both `bot.stop()`; user-facing/admin-facing `PlatformBots` methods delegate to the right bot.
+**Step 2:** `npm test -- MaxBots` → FAIL.
+**Step 3:** Implement `MaxBots`: owns the two Max bots, `start()` registers commands then `bot.start({ allowedUpdates })` for each (non-blocking — `start()` loops internally; call without awaiting completion, like Telegram polling), `stop()` stops both. Register Max in `BotManager.initialize()` guarded by env presence (mirror the Telegram graceful-skip). Ensure `BotManager.stop()` stops Max bots too.
+**Step 4:** `npm test -- MaxBots` → PASS; full `npm test` → PASS; `npm run type-check` → PASS.
 **Step 5:** Commit.
 ```bash
 git add -A backend/src
-git commit -m "feat(max): MaxBots adapter, webhook ingest, subscription lifecycle"
+git commit -m "feat(max): MaxBots adapter with long-polling lifecycle"
 ```
 
 ---
@@ -446,7 +453,7 @@ git commit -m "feat(frontend): init Max SDK and auth via platform-aware endpoint
 
 **Files:** `.env.example`, `backend/.env.example`, `backend/src/config/container.ts` (confirm all Max env read here).
 
-**Step 1:** Add documented vars: `MAX_USER_BOT_TOKEN`, `MAX_ADMIN_BOT_TOKEN`, `MAX_USER_BOT_USERNAME=id744719465529_bot`, `MAX_ADMIN_BOT_USERNAME=id744719465529_1_bot`, `MAX_WEBHOOK_SECRET`, `PUBLIC_BASE_URL=https://vgulcover.ru`. Note tokens are server-only and must be rotated (they were shared in chat).
+**Step 1:** Add documented vars: `MAX_USER_BOT_TOKEN`, `MAX_ADMIN_BOT_TOKEN`, `MAX_USER_BOT_USERNAME=id744719465529_bot`, `MAX_ADMIN_BOT_USERNAME=id744719465529_1_bot`. (No webhook secret / public URL — polling.) Note tokens are server-only and must be rotated (they were shared in chat).
 **Step 2:** Commit.
 ```bash
 git add .env.example backend/.env.example backend/src/config/container.ts
@@ -468,8 +475,8 @@ git commit -m "docs(config): document Max env vars"
 **Step 1:** `cd backend && npm run lint && npm run type-check && npm test && npm run build:dev` → all pass.
 **Step 2:** `cd frontend && npm run build` → passes.
 
-### Task 10.2: Webhook + auth smoke (local)
-**Step 1:** Start backend with Max test env. POST a simulated `message_created` to `/api/max/webhook/user` with the secret → 200, handler invoked (check logs).
+### Task 10.2: Polling + auth smoke (local)
+**Step 1:** Start backend with Max test env (real or stub token). Confirm `BotManager.initialize()` starts the Max polling loop without throwing and `bot.stop()` runs cleanly on shutdown (check logs). Unit-level: a simulated `message_created`/`bot_started` ctx routed through the handlers triggers the expected service calls.
 **Step 2:** POST a token-signed Max initData to `/api/auth/max` → returns a JWT with `platform:'max'`; a `users` row exists with `platform='max'`.
 
 ### Task 10.3: In-Max manual verification (requires verified org device)
@@ -487,5 +494,5 @@ Use @superpowers:finishing-a-development-branch to decide merge/PR.
 1. Exact Max initData HMAC algorithm — Task 2.1 (security-critical).
 2. Max mini-app `startapp` deep-link format and `open_app` button/app registration.
 3. iframe embedding / CSP — Task 9.2.
-4. `@maxhub/max-bot-api` webhook + subscription API surface — Task 0.2 / 4.4.
+4. ~~webhook surface~~ — resolved: lib is polling-only, using `bot.start()`.
 5. Max media two-step `/uploads` and `web_app`-equivalent (`open_app`) buttons.
