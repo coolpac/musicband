@@ -2,6 +2,7 @@ import type { Platform } from '@prisma/client';
 import { UserBot } from '../telegram/UserBot';
 import { AdminBot } from '../telegram/AdminBot';
 import { TelegramBots } from './telegram/TelegramBots';
+import { MaxBots } from './max/MaxBots';
 import { ReferralService } from '../../domain/services/ReferralService';
 import { BookingService } from '../../domain/services/BookingService';
 import { IUserRepository } from '../database/repositories/UserRepository';
@@ -96,14 +97,45 @@ export class BotManager {
       // Регистрируем Telegram-адаптер в реестре платформ (и запускаем его).
       await this.registerPlatform(new TelegramBots(this.userBot, this.adminBot));
 
-      // SEAM (Phase 4): здесь будет регистрация Max-адаптера, когда появится MaxBots:
-      //   if (maxTokensPresent) await this.registerPlatform(new MaxBots(...));
+      // SEAM (Phase 4): регистрация Max-адаптера. Только если ОБА токена заданы —
+      // иначе пропускаем (как Telegram при отсутствии токенов). Колбэки
+      // onBookingConfirmed/onBroadcast — те же, что у Telegram (BotManager оркестрирует БД).
+      await this.initializeMaxPlatform();
 
       logger.info('Telegram bots initialized successfully');
     } catch (error) {
       logger.error('Failed to initialize Telegram bots', { error });
       throw error;
     }
+  }
+
+  /**
+   * Регистрация Max-адаптера. Запускается только если заданы ОБА токена
+   * (MAX_USER_BOT_TOKEN + MAX_ADMIN_BOT_TOKEN). Иначе — graceful skip с логом,
+   * чтобы поведение при отсутствии Max-токенов оставалось Telegram-only (как раньше).
+   */
+  private async initializeMaxPlatform(): Promise<void> {
+    const maxUserToken = process.env.MAX_USER_BOT_TOKEN;
+    const maxAdminToken = process.env.MAX_ADMIN_BOT_TOKEN;
+
+    if (!maxUserToken || !maxAdminToken) {
+      logger.info('Max bot tokens not configured, Max platform will not be registered');
+      return;
+    }
+
+    const maxBots = MaxBots.fromTokens(maxUserToken, maxAdminToken, {
+      referralService: this.referralService,
+      userRepository: this.userRepository,
+      bookingRepository: this.bookingRepository,
+      onboardingRepository: this.onboardingRepository,
+      onBookingConfirmed: async (payload) => {
+        await this.notifyBookingConfirmed(payload);
+      },
+      onBroadcast: async (payload) => this.broadcastToUsers(payload),
+    });
+
+    await this.registerPlatform(maxBots);
+    logger.info('Max bots initialized successfully');
   }
 
   /**
