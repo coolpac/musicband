@@ -363,6 +363,8 @@ git commit -m "feat(max): MaxBots adapter with long-polling lifecycle"
 **Step 1 (test):** For one representative site (e.g. `BookingController` new-booking), add/extend a test asserting the booking's user platform is passed through so admins on that platform get notified.
 **Step 2:** `npm test` → FAIL for the new assertion.
 **Step 3:** Update each call site to pass `{platform, platformId}` (load from the user/booking). `processScheduledVotingFollowUps` and `notifyVotingWinner`: group recipients by platform (the `VotingFollowUp` recipients JSON now carries platform — update `VoteService`/`OnboardingRepository` producers accordingly).
+
+**Carry-over from Phase 1 review (display-count scoping):** the broadcast *send* queries are already scoped to `platform='telegram'`, but the *display counts* are not — scope these to the relevant platform(s) when broadcasts become per-platform here: `AdminBot.getAudienceCount` (`'all'` branch `prisma.user.count()` + the segment JOIN), and `OnboardingRepository.countUsersByRole`/`countAllUsers`. Otherwise the admin's pre-send "~N чел." is inflated once Max users exist.
 **Step 4:** `npm test` → PASS; `npm run type-check` → PASS.
 **Step 5:** Commit.
 ```bash
