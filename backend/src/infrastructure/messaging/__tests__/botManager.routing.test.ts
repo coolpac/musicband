@@ -40,12 +40,12 @@ describe('BotManager platform routing', () => {
   let maxBots: jest.Mocked<PlatformBots>;
   let manager: BotManager;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     telegramBots = makeFakeBots('telegram');
     maxBots = makeFakeBots('max');
     manager = makeManager();
-    manager.registerPlatform(telegramBots);
-    manager.registerPlatform(maxBots);
+    await manager.registerPlatform(telegramBots);
+    await manager.registerPlatform(maxBots);
   });
 
   it('sendBookingReceived routes only to the telegram adapter', async () => {
@@ -94,7 +94,7 @@ describe('BotManager platform routing', () => {
 
   it('is a no-op when the target platform is not registered', async () => {
     const onlyTelegram = makeManager();
-    onlyTelegram.registerPlatform(telegramBots);
+    await onlyTelegram.registerPlatform(telegramBots);
 
     await expect(
       onlyTelegram.sendBookingReceived(

@@ -2,6 +2,12 @@ import type { Platform } from '@prisma/client';
 
 export type { Platform };
 
+/** Цель уведомления: платформа + идентификатор получателя на ней. */
+export interface MessageTarget {
+  platform: Platform;
+  platformId: string;
+}
+
 /**
  * Уведомление пользователю о бронировании (получено / подтверждено).
  * Поля идентичны тем, что UserBot.sendBookingReceived / sendBookingConfirmation принимают сегодня.

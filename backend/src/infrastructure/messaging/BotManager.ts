@@ -15,13 +15,10 @@ import type {
   NewBookingNotice,
   NewUserNotice,
   SongNotice,
+  MessageTarget,
 } from './types';
 
-/** Цель уведомления: платформа + идентификатор получателя на ней. */
-export interface MessageTarget {
-  platform: Platform;
-  platformId: string;
-}
+export type { MessageTarget };
 
 /**
  * BotManager — реестр мессенджер-платформ. Хранит Map<Platform, PlatformBots>
@@ -53,10 +50,13 @@ export class BotManager {
   }
 
   /**
-   * Регистрация адаптера платформы в реестре.
+   * Регистрация адаптера платформы в реестре + запуск его жизненного цикла.
+   * start() обязателен: Telegram-боты начинают polling в конструкторе (no-op),
+   * а Max-адаптер (Phase 4) запускает long polling именно здесь.
    */
-  registerPlatform(bots: PlatformBots): void {
+  async registerPlatform(bots: PlatformBots): Promise<void> {
     this.platforms.set(bots.platform, bots);
+    await bots.start();
   }
 
   /**
@@ -69,14 +69,14 @@ export class BotManager {
   /**
    * Инициализация ботов
    */
-  initialize(): Promise<void> {
+  async initialize(): Promise<void> {
     try {
       const userBotToken = process.env.TELEGRAM_USER_BOT_TOKEN;
       const adminBotToken = process.env.TELEGRAM_ADMIN_BOT_TOKEN;
 
       if (!userBotToken || !adminBotToken) {
         logger.warn('Telegram bot tokens not configured, bots will not be initialized');
-        return Promise.resolve();
+        return;
       }
 
       // Инициализируем User Bot (онбординг «Кто вы?» перед приветствием)
@@ -93,17 +93,16 @@ export class BotManager {
         async (payload) => this.broadcastToUsers(payload)
       );
 
-      // Регистрируем Telegram-адаптер в реестре платформ.
-      this.registerPlatform(new TelegramBots(this.userBot, this.adminBot));
+      // Регистрируем Telegram-адаптер в реестре платформ (и запускаем его).
+      await this.registerPlatform(new TelegramBots(this.userBot, this.adminBot));
 
       // SEAM (Phase 4): здесь будет регистрация Max-адаптера, когда появится MaxBots:
-      //   if (maxTokensPresent) this.registerPlatform(new MaxBots(...));
+      //   if (maxTokensPresent) await this.registerPlatform(new MaxBots(...));
 
       logger.info('Telegram bots initialized successfully');
-      return Promise.resolve();
     } catch (error) {
       logger.error('Failed to initialize Telegram bots', { error });
-      return Promise.reject(error);
+      throw error;
     }
   }
 
