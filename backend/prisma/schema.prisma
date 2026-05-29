@@ -11,6 +11,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Platform {
+  telegram
+  max
+}
+
 enum UserRole {
   user
   admin
@@ -43,8 +48,10 @@ enum ReferralEventStatus {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  telegramId BigInt   @unique @map("telegram_id")
+  id         String   @id @default(uuid())
+  platform   Platform @default(telegram)
+  platformId BigInt   @map("platform_id")
+  photoUrl   String?  @map("photo_url")
   username   String?
   firstName  String?  @map("first_name")
   lastName   String?  @map("last_name")
@@ -55,13 +62,14 @@ model User {
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  agent           Agent?
-  bookings        Booking[]
-  votes           Vote[]
-  reviews         Review[]
-  activityLogs    UserActivityLog[]
-  referralEvents  ReferralEvent[]
+  agent          Agent?
+  bookings       Booking[]
+  votes          Vote[]
+  reviews        Review[]
+  activityLogs   UserActivityLog[]
+  referralEvents ReferralEvent[]
 
+  @@unique([platform, platformId])
   @@index([referrerId])
   @@map("users")
 }
@@ -105,19 +113,19 @@ model ReferralLink {
 }
 
 model ReferralEvent {
-  id            String              @id @default(uuid())
-  agentId       String              @map("agent_id")
-  agent         Agent               @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  referralLinkId String?            @map("referral_link_id")
-  referralLink    ReferralLink?     @relation(fields: [referralLinkId], references: [id], onDelete: SetNull)
-  referredUserId  String?           @map("referred_user_id")
-  referredUser    User?             @relation(fields: [referredUserId], references: [id], onDelete: Cascade)
-  eventType      ReferralEventType  @map("event_type")
-  ipAddress      String?           @map("ip_address")
-  userAgent      String?           @map("user_agent")
+  id             String              @id @default(uuid())
+  agentId        String              @map("agent_id")
+  agent          Agent               @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  referralLinkId String?             @map("referral_link_id")
+  referralLink   ReferralLink?       @relation(fields: [referralLinkId], references: [id], onDelete: SetNull)
+  referredUserId String?             @map("referred_user_id")
+  referredUser   User?               @relation(fields: [referredUserId], references: [id], onDelete: Cascade)
+  eventType      ReferralEventType   @map("event_type")
+  ipAddress      String?             @map("ip_address")
+  userAgent      String?             @map("user_agent")
   status         ReferralEventStatus @default(pending)
   metadata       Json?
-  createdAt      DateTime          @default(now()) @map("created_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
 
   @@index([agentId, createdAt])
   @@index([referredUserId])
@@ -127,16 +135,16 @@ model ReferralEvent {
 }
 
 model Song {
-  id            String   @id @default(uuid())
-  title         String
-  artist        String
-  coverUrl      String?  @map("cover_url")
-  artistImageUrl String? @map("artist_image_url")
-  lyrics        String?
-  isActive      Boolean  @default(false) @map("is_active")
-  orderIndex    Int      @default(0) @map("order_index")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  title          String
+  artist         String
+  coverUrl       String?  @map("cover_url")
+  artistImageUrl String?  @map("artist_image_url")
+  lyrics         String?
+  isActive       Boolean  @default(false) @map("is_active")
+  orderIndex     Int      @default(0) @map("order_index")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   votes Vote[]
 
@@ -145,15 +153,15 @@ model Song {
 }
 
 model VotingSession {
-  id             String    @id @default(uuid())
-  startedAt      DateTime  @default(now()) @map("started_at")
-  endedAt        DateTime? @map("ended_at")
-  isActive       Boolean   @default(true) @map("is_active")
-  totalVoters    Int       @default(0) @map("total_voters")
-  winningSongId  String?   @map("winning_song_id")
-  expiresAt      DateTime? @map("expires_at")
-  finalResults   Json?     @map("final_results") // Снимок результатов на момент завершения (песни+голоса+проценты)
-  createdAt      DateTime  @default(now()) @map("created_at")
+  id            String    @id @default(uuid())
+  startedAt     DateTime  @default(now()) @map("started_at")
+  endedAt       DateTime? @map("ended_at")
+  isActive      Boolean   @default(true) @map("is_active")
+  totalVoters   Int       @default(0) @map("total_voters")
+  winningSongId String?   @map("winning_song_id")
+  expiresAt     DateTime? @map("expires_at")
+  finalResults  Json?     @map("final_results") // Снимок результатов на момент завершения (песни+голоса+проценты)
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   votes Vote[]
 
@@ -178,14 +186,14 @@ model VotingFollowUp {
 }
 
 model Vote {
-  id        String         @id @default(uuid())
-  userId    String         @map("user_id")
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  songId    String         @map("song_id")
-  song      Song           @relation(fields: [songId], references: [id], onDelete: Cascade)
-  sessionId String         @map("session_id")
-  session   VotingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  createdAt DateTime       @default(now()) @map("created_at")
+  id        String        @id @default(uuid())
+  userId    String        @map("user_id")
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  songId    String        @map("song_id")
+  song      Song          @relation(fields: [songId], references: [id], onDelete: Cascade)
+  sessionId String        @map("session_id")
+  session   VotingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now()) @map("created_at")
 
   @@unique([userId, sessionId])
   @@index([sessionId, songId])
@@ -226,44 +234,44 @@ model Partner {
 }
 
 model Poster {
-  id        String   @id @default(uuid())
-  title     String
+  id          String   @id @default(uuid())
+  title       String
   description String?
-  imageUrl  String?  @map("image_url")
-  link      String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  imageUrl    String?  @map("image_url")
+  link        String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("posters")
 }
 
 model BlockedDate {
-  id         String   @id @default(uuid())
+  id          String   @id @default(uuid())
   blockedDate DateTime @unique @map("blocked_date") @db.Date
-  reason     String?
-  createdAt  DateTime @default(now()) @map("created_at")
+  reason      String?
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@index([blockedDate])
   @@map("blocked_dates")
 }
 
 model Booking {
-  id          String        @id @default(uuid())
-  userId      String        @map("user_id")
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  formatId    String?       @map("format_id")
-  format      Format?       @relation(fields: [formatId], references: [id], onDelete: SetNull)
-  bookingDate DateTime      @map("booking_date") @db.Date
-  fullName    String        @map("full_name")
-  contactType String?       @map("contact_type")
-  contactValue String       @map("contact_value")
-  city        String?
-  source      String?
-  income      Decimal?      @db.Decimal(10, 2)
-  status      BookingStatus @default(pending)
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
+  id           String        @id @default(uuid())
+  userId       String        @map("user_id")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formatId     String?       @map("format_id")
+  format       Format?       @relation(fields: [formatId], references: [id], onDelete: SetNull)
+  bookingDate  DateTime      @map("booking_date") @db.Date
+  fullName     String        @map("full_name")
+  contactType  String?       @map("contact_type")
+  contactValue String        @map("contact_value")
+  city         String?
+  source       String?
+  income       Decimal?      @db.Decimal(10, 2)
+  status       BookingStatus @default(pending)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
 
   // PERFORMANCE INDEXES
   @@index([bookingDate])
@@ -284,7 +292,7 @@ model Review {
 
   // PERFORMANCE INDEXES
   @@index([userId, createdAt(sort: Desc)]) // Для findByUserId + сортировка (до 100x быстрее!)
-  @@index([createdAt(sort: Desc)])         // Для списка всех отзывов с сортировкой
+  @@index([createdAt(sort: Desc)]) // Для списка всех отзывов с сортировкой
   @@map("reviews")
 }
 
@@ -304,10 +312,12 @@ model UserActivityLog {
 /// Ответы при первом старте бота (до приветственного сообщения): «Кто вы?» → «Просто чел» / «Орг»
 model OnboardingAnswer {
   id         String   @id @default(uuid())
-  telegramId BigInt   @unique @map("telegram_id")
+  platform   Platform @default(telegram)
+  platformId BigInt   @map("platform_id")
   role       String   @map("role") // "just_guy" | "org"
   createdAt  DateTime @default(now()) @map("created_at")
 
-  @@index([telegramId])
+  @@unique([platform, platformId])
+  @@index([platformId])
   @@map("onboarding_answers")
 }
