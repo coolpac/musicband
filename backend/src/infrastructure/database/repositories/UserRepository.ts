@@ -27,6 +27,7 @@ export interface CreateUserData {
   username?: string;
   firstName?: string;
   lastName?: string;
+  photoUrl?: string;
   role?: UserRole;
   referrerId?: string;
 }
@@ -35,6 +36,7 @@ export interface UpdateUserData {
   username?: string;
   firstName?: string;
   lastName?: string;
+  photoUrl?: string;
 }
 
 export class PrismaUserRepository implements IUserRepository {
@@ -60,6 +62,7 @@ export class PrismaUserRepository implements IUserRepository {
         username: data.username,
         firstName: data.firstName,
         lastName: data.lastName,
+        photoUrl: data.photoUrl,
         role: data.role || 'user',
         referrerId: data.referrerId,
       },
@@ -81,6 +84,7 @@ export class PrismaUserRepository implements IUserRepository {
           username: data.username,
           firstName: data.firstName,
           lastName: data.lastName,
+          photoUrl: data.photoUrl,
           role: data.role || 'user',
           referrerId: data.referrerId,
         },
@@ -105,6 +109,7 @@ export class PrismaUserRepository implements IUserRepository {
         username: data.username,
         firstName: data.firstName,
         lastName: data.lastName,
+        photoUrl: data.photoUrl,
       },
     });
   }

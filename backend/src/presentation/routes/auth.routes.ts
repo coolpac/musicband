@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
 import { AuthController } from '../controllers/AuthController';
 import { validate } from '../middleware/validator';
-import { TelegramAuthSchema, AdminAuthSchema } from '../../application/dto/auth.dto';
+import { TelegramAuthSchema, MaxAuthSchema, AdminAuthSchema } from '../../application/dto/auth.dto';
 import { authenticate } from '../middleware/auth';
 import { AuthService } from '../../domain/services/AuthService';
 import { PrismaUserRepository } from '../../infrastructure/database/repositories/UserRepository';
@@ -19,7 +19,9 @@ const authService = new AuthService(
   process.env.JWT_EXPIRES_IN || '7d',
   process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
   process.env.TELEGRAM_USER_BOT_TOKEN || undefined,
-  redis
+  redis,
+  process.env.MAX_ADMIN_BOT_TOKEN || undefined,
+  process.env.MAX_USER_BOT_TOKEN || undefined
 );
 const authController = new AuthController(authService);
 
@@ -29,6 +31,13 @@ router.post(
   asyncHandler(authRateLimiter),
   validate(TelegramAuthSchema),
   asyncHandler(authController.authenticateTelegram.bind(authController))
+);
+
+router.post(
+  '/max',
+  asyncHandler(authRateLimiter),
+  validate(MaxAuthSchema),
+  asyncHandler(authController.authenticateMax.bind(authController))
 );
 
 router.post(

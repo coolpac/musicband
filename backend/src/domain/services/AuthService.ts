@@ -8,6 +8,7 @@ import {
   CreateUserData,
 } from '../../infrastructure/database/repositories/UserRepository';
 import { validateInitData } from '../../shared/utils/telegram';
+import { validateMaxInitData } from '../../shared/utils/max';
 import { UnauthorizedError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
 import { USER_ROLES } from '../../shared/constants';
@@ -45,7 +46,9 @@ export class AuthService {
     private jwtExpiresIn: string,
     private adminBotToken: string,
     private userBotToken?: string, // Токен User Bot для валидации initData от пользователей
-    private redis?: Redis
+    private redis?: Redis,
+    private maxAdminBotToken?: string, // Токен Admin Bot для валидации Max initData
+    private maxUserBotToken?: string // Токен User Bot для валидации Max initData
   ) {}
 
   /**
@@ -133,6 +136,123 @@ export class AuthService {
           username: telegramUser.username,
           firstName: telegramUser.first_name,
           lastName: telegramUser.last_name,
+        });
+      }
+    }
+
+    // Генерируем JWT токен
+    const token = this.generateToken({
+      userId: user.id,
+      platform: user.platform,
+      platformId: user.platformId.toString(),
+      role: user.role,
+    });
+
+    // Обрабатываем startParam если есть (для голосования)
+    let processedStartParam: string | undefined;
+    if (sessionStartParam && sessionStartParam.startsWith('vote_')) {
+      processedStartParam = sessionStartParam; // vote_{sessionId}
+    }
+
+    return {
+      user: {
+        id: user.id,
+        platform: user.platform,
+        platformId: user.platformId.toString(),
+        username: user.username || undefined,
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+        role: user.role,
+      },
+      token,
+      startParam: processedStartParam,
+    };
+  }
+
+  /**
+   * Авторизация через Max Mini App
+   * Поддерживает initData от обоих ботов (Admin Bot и User Bot Max)
+   * @param rawInitData - initData от Max
+   * @param startParam - опциональный start_param из deep link (например, vote_{sessionId})
+   */
+  async authenticateWithMax(rawInitData: string, startParam?: string): Promise<AuthResult> {
+    // Пробуем валидировать initData от обоих ботов Max
+    // Сначала пробуем User Bot (для обычных пользователей)
+    let initData = this.maxUserBotToken
+      ? validateMaxInitData(rawInitData, this.maxUserBotToken, 3600, { logFailures: false })
+      : null;
+
+    // Если не прошло, пробуем Admin Bot (для админов)
+    if (!initData && this.maxAdminBotToken) {
+      initData = validateMaxInitData(rawInitData, this.maxAdminBotToken);
+    }
+
+    if (!initData || !initData.user) {
+      logger.warn('auth/max initData validation failed', {
+        hadUserBot: !!this.maxUserBotToken,
+        hadAdminBot: !!this.maxAdminBotToken,
+        rawLength: typeof rawInitData === 'string' ? rawInitData.length : 0,
+      });
+      throw new UnauthorizedError('Invalid or expired initData');
+    }
+
+    // Используем startParam из initData или переданный параметр
+    const sessionStartParam = startParam || initData.start_param;
+
+    const maxUser = initData.user;
+    const platformId = BigInt(maxUser.id);
+
+    // Ищем или создаём пользователя (findOrCreate предотвращает duplicate key при race condition)
+    const createData: CreateUserData = {
+      platform: 'max',
+      platformId,
+      username: maxUser.username,
+      firstName: maxUser.first_name,
+      lastName: maxUser.last_name,
+      photoUrl: maxUser.photo_url,
+      role: USER_ROLES.USER, // По умолчанию user, админ назначается вручную
+    };
+
+    const { user: foundOrCreated, created } =
+      await this.userRepository.findOrCreateByIdentity(createData);
+    let user = foundOrCreated;
+
+    if (created) {
+      logger.info('New user created from Max', {
+        userId: user.id,
+        platformId: maxUser.id,
+      });
+
+      // Отправляем уведомление админам о новом пользователе
+      try {
+        const { getBotManager } = await import('../../infrastructure/telegram/botManager');
+        const botManager = getBotManager();
+        if (botManager) {
+          await botManager.notifyNewUser({
+            platform: user.platform,
+            platformId: user.platformId.toString(),
+            username: user.username || undefined,
+            firstName: user.firstName || undefined,
+            lastName: user.lastName || undefined,
+          });
+        }
+      } catch (error) {
+        logger.warn('Failed to send new user notification', { error });
+      }
+    } else {
+      // Обновляем данные пользователя если изменились
+      const needsUpdate =
+        user.username !== maxUser.username ||
+        user.firstName !== maxUser.first_name ||
+        user.lastName !== maxUser.last_name ||
+        user.photoUrl !== (maxUser.photo_url ?? null);
+
+      if (needsUpdate) {
+        user = await this.userRepository.update(user.id, {
+          username: maxUser.username,
+          firstName: maxUser.first_name,
+          lastName: maxUser.last_name,
+          photoUrl: maxUser.photo_url,
         });
       }
     }

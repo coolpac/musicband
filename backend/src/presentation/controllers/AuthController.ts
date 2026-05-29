@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../../domain/services/AuthService';
-import { TelegramAuthDto, AdminAuthDto } from '../../application/dto/auth.dto';
+import { TelegramAuthDto, MaxAuthDto, AdminAuthDto } from '../../application/dto/auth.dto';
 import { logger } from '../../shared/utils/logger';
 
 export class AuthController {
@@ -21,6 +21,45 @@ export class AuthController {
       );
 
       logger.info('User authenticated via Telegram', {
+        userId: result.user.id,
+        platform: result.user.platform,
+        platformId: result.user.platformId,
+        role: result.user.role,
+        startParam: result.startParam,
+      });
+
+      // Устанавливаем токен в cookie (опционально)
+      res.cookie('token', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 дней
+      });
+
+      res.json({
+        success: true,
+        data: {
+          user: result.user,
+          token: result.token,
+          startParam: result.startParam, // Для фронтенда (vote_{sessionId})
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/auth/max
+   * Авторизация через Max Mini App
+   */
+  async authenticateMax(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { initData, startParam } = req.body as MaxAuthDto;
+
+      const result = await this.authService.authenticateWithMax(initData, startParam);
+
+      logger.info('User authenticated via Max', {
         userId: result.user.id,
         platform: result.user.platform,
         platformId: result.user.platformId,
