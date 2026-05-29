@@ -34,9 +34,9 @@ export type { MessageTarget };
 export class BotManager {
   private readonly platforms = new Map<Platform, PlatformBots>();
 
-  // Прямые ссылки на Telegram-боты сохраняются для обратной совместимости:
-  // некоторые контроллеры обращаются к getUserBot()/getAdminBot() напрямую
-  // (sendReviewRequest, notifyVotingQrToAdmins). Это убирается в Phase 5.
+  // Прямая ссылка на Telegram admin-бот сохраняется для одного ещё не
+  // обобщённого пути: AdminVoteController.notifyVotingQrToAdmins (QR кодирует
+  // t.me-ссылку, поэтому шлётся только Telegram-админам). Обобщение — Phase 6.
   private userBot: UserBot | null = null;
   private adminBot: AdminBot | null = null;
 
@@ -144,13 +144,6 @@ export class BotManager {
     } catch (error) {
       logger.error('Max platform init failed; continuing Telegram-only', { error });
     }
-  }
-
-  /**
-   * Получить User Bot
-   */
-  getUserBot(): UserBot | null {
-    return this.userBot;
   }
 
   /**
@@ -265,29 +258,36 @@ export class BotManager {
     const aggregate = { sent: 0, failed: 0, total: 0 };
 
     for (const [platform, bots] of this.platforms) {
-      const platformIds = await this.getAudienceIds(platform, segment);
+      // Изоляция по платформам: сбой одной платформы (запрос аудитории или
+      // отправка) не должен прерывать рассылку в остальные — иначе admin-бот
+      // не получит финальное «Рассылка завершена».
+      try {
+        const platformIds = await this.getAudienceIds(platform, segment);
 
-      const result = await bots.broadcast(platformIds, {
-        text: payload.text,
-        buttons: payload.buttons,
-        media: payload.media,
-        onProgress: payload.onProgress
-          ? async (progress) => {
-              await payload.onProgress!({
-                sent: baseSent + progress.sent,
-                failed: baseFailed + progress.failed,
-                total: baseTotal + progress.total,
-              });
-            }
-          : undefined,
-      });
+        const result = await bots.broadcast(platformIds, {
+          text: payload.text,
+          buttons: payload.buttons,
+          media: payload.media,
+          onProgress: payload.onProgress
+            ? async (progress) => {
+                await payload.onProgress!({
+                  sent: baseSent + progress.sent,
+                  failed: baseFailed + progress.failed,
+                  total: baseTotal + progress.total,
+                });
+              }
+            : undefined,
+        });
 
-      baseSent += result.sent;
-      baseFailed += result.failed;
-      baseTotal += result.total;
-      aggregate.sent += result.sent;
-      aggregate.failed += result.failed;
-      aggregate.total += result.total;
+        baseSent += result.sent;
+        baseFailed += result.failed;
+        baseTotal += result.total;
+        aggregate.sent += result.sent;
+        aggregate.failed += result.failed;
+        aggregate.total += result.total;
+      } catch (error) {
+        logger.error('Broadcast failed for platform', { platform, error });
+      }
     }
 
     logger.info('Broadcast finished', {

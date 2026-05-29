@@ -947,16 +947,17 @@ export class AdminBot {
     segment: 'all' | 'just_person' | 'organizer'
   ): Promise<number> {
     try {
-      // Это Telegram admin-бот: счётчик «~N чел.» должен совпадать с тем, кто реально
-      // получит рассылку через этот бот — т.е. только Telegram-пользователи.
+      // Рассылка (broadcastToUsers) веерно уходит на ВСЕ зарегистрированные
+      // платформы, поэтому счётчик «~N чел.» считает получателей по всем
+      // платформам, а не только Telegram — иначе превью занижало бы охват.
       if (segment === 'all') {
-        return await prisma.user.count({ where: { platform: 'telegram' } });
+        return await prisma.user.count();
       }
       const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*) as count
         FROM users u
         INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
-        WHERE oa.role = ${segment} AND u.platform = 'telegram'
+        WHERE oa.role = ${segment}
       `;
       return Number(result[0].count);
     } catch (error) {
