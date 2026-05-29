@@ -5,6 +5,7 @@ import { logger } from '../../../shared/utils/logger';
 // (dist/core/... или subpath ./types) хрупок и зависит от moduleResolution.
 // Поэтому извлекаем их из публично экспортированного Bot через Parameters<>.
 type SendMessageExtra = NonNullable<Parameters<Bot['api']['sendMessageToUser']>[2]>;
+type MessageAttachment = NonNullable<SendMessageExtra['attachments']>[number];
 type AnswerOnCallbackExtra = NonNullable<Parameters<Bot['api']['answerOnCallback']>[1]>;
 type BotCommand = Parameters<Bot['api']['setMyCommands']>[0][number];
 type UpdateType = NonNullable<Parameters<Bot['start']>[0]>['allowedUpdates'][number];
@@ -84,6 +85,40 @@ export class MaxClient {
   ): Promise<void> {
     const video = await this.bot.api.uploadVideo({ source });
     const attachments = [video, ...(opts?.attachments ?? [])];
+    if (buttonRows?.length) {
+      attachments.push(
+        Keyboard.inlineKeyboard(
+          buttonRows.map((row) =>
+            row.map((b) =>
+              b.kind === 'callback'
+                ? Keyboard.button.callback(b.text, b.payload)
+                : Keyboard.button.link(b.text, b.url)
+            )
+          )
+        )
+      );
+    }
+    await this.bot.api.sendMessageToUser(userId, caption, { ...opts, attachments });
+  }
+
+  /**
+   * Загрузка изображения (Buffer/URL/path) и отправка его пользователю с подписью
+   * и (опционально) inline-клавиатурой. Зеркалит uploadAndSendVideo.
+   * Используется для отправки QR-кода голосования админам Max.
+   */
+  async uploadAndSendImage(
+    userId: number,
+    source: Buffer | string,
+    caption: string,
+    buttonRows?: MaxButton[][],
+    opts?: SendMessageExtra
+  ): Promise<void> {
+    // uploadImage возвращает ImageAttachment без литерального поля `type` (в отличие
+    // от VideoAttachment), поэтому SDK-тип SendMessageExtra['attachments'] его прямо не
+    // принимает. SDK сериализует вложение через toJson() во время отправки, так что в
+    // рантайме это корректное вложение — приводим к типу элемента массива attachments.
+    const image = (await this.bot.api.uploadImage({ source })) as unknown as MessageAttachment;
+    const attachments: MessageAttachment[] = [image, ...(opts?.attachments ?? [])];
     if (buttonRows?.length) {
       attachments.push(
         Keyboard.inlineKeyboard(

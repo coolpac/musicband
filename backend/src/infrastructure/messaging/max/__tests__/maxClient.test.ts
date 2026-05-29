@@ -13,6 +13,7 @@ function makeFakeBot() {
       setMyCommands: jest.fn().mockResolvedValue({}),
       getMyInfo: jest.fn().mockResolvedValue({ user_id: 1, name: 'bot' }),
       uploadVideo: jest.fn().mockResolvedValue({ type: 'video', payload: { token: 't' } }),
+      uploadImage: jest.fn().mockResolvedValue({ type: 'image', payload: { token: 'img' } }),
     },
     start: jest.fn(),
     stop: jest.fn(),
@@ -62,6 +63,35 @@ describe('MaxClient', () => {
       [{ type: 'callback', text: 'A', payload: 'onb:a' }],
       [{ type: 'link', text: 'Open', url: 'https://app.example/x' }],
     ]);
+  });
+
+  it('uploadAndSendImage uploads a buffer then attaches it with the caption', async () => {
+    const bot = makeFakeBot();
+    const client = new MaxClient(bot as never);
+    const png = Buffer.from('fake-png');
+
+    await client.uploadAndSendImage(123, png, 'caption text');
+
+    expect(bot.api.uploadImage).toHaveBeenCalledWith({ source: png });
+    expect(bot.api.sendMessageToUser).toHaveBeenCalledTimes(1);
+    const [userId, text, extra] = bot.api.sendMessageToUser.mock.calls[0];
+    expect(userId).toBe(123);
+    expect(text).toBe('caption text');
+    expect(extra.attachments[0]).toEqual({ type: 'image', payload: { token: 'img' } });
+  });
+
+  it('uploadAndSendImage appends an inline keyboard when button rows are given', async () => {
+    const bot = makeFakeBot();
+    const client = new MaxClient(bot as never);
+
+    await client.uploadAndSendImage(123, Buffer.from('x'), 'cap', [
+      [{ kind: 'link', text: 'Open', url: 'https://max.ru/bot?start=vote_s' }],
+    ]);
+
+    const [, , extra] = bot.api.sendMessageToUser.mock.calls[0];
+    expect(extra.attachments).toHaveLength(2);
+    expect(extra.attachments[0]).toEqual({ type: 'image', payload: { token: 'img' } });
+    expect(extra.attachments[1].type).toBe('inline_keyboard');
   });
 
   it('answerCallback delegates to bot.api.answerOnCallback', async () => {

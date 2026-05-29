@@ -16,6 +16,7 @@ import type {
   BroadcastProgress,
   BatchSendResult,
   BroadcastButton,
+  VotingQrNotice,
 } from '../types';
 import { MaxClient, type MaxButton } from './maxClient';
 import { MaxUserBot } from './MaxUserBot';
@@ -176,6 +177,11 @@ export class MaxBots implements PlatformBots {
 
   async sendCsvToAdmin(platformId: string, csv: Buffer, filename: string): Promise<void> {
     await this.adminBot.sendCsvToAdmin(platformId, csv, filename);
+  }
+
+  /** QR голосования Max-админам (QR кодирует max.ru-ссылку, построенную BotManager). */
+  async sendVotingQrToAdmins(notice: VotingQrNotice): Promise<void> {
+    await this.adminBot.notifyVotingQrToAdmins(notice);
   }
 
   /**

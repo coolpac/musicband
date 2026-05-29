@@ -6,7 +6,10 @@ const countMock = jest.fn().mockResolvedValue(0);
 const queryRawMock = jest.fn().mockResolvedValue([{ count: 0n }]);
 jest.mock('../../../../config/database', () => ({
   prisma: {
-    user: { findMany: (...a: unknown[]) => findManyMock(...a), count: (...a: unknown[]) => countMock(...a) },
+    user: {
+      findMany: (...a: unknown[]) => findManyMock(...a),
+      count: (...a: unknown[]) => countMock(...a),
+    },
     $queryRaw: (...a: unknown[]) => queryRawMock(...a),
   },
 }));
@@ -22,6 +25,7 @@ function makeClient() {
     sendMessage: jest.fn().mockResolvedValue(undefined),
     sendMessageWithKeyboard: jest.fn().mockResolvedValue(undefined),
     uploadAndSendVideo: jest.fn().mockResolvedValue(undefined),
+    uploadAndSendImage: jest.fn().mockResolvedValue(undefined),
     answerCallback: jest.fn().mockResolvedValue(undefined),
     setMyCommands: jest.fn().mockResolvedValue(undefined),
     getMe: jest.fn().mockResolvedValue({ user_id: 1, name: 'bot' }),
@@ -265,7 +269,10 @@ describe('MaxAdminBot', () => {
       expect(client.sendMessageWithKeyboard).toHaveBeenCalledTimes(1);
       const [userId, , rows] = client.sendMessageWithKeyboard.mock.calls[0];
       expect(userId).toBe(ADMIN_ID);
-      const payloads = rows.flat().map((b: { payload?: string }) => b.payload).filter(Boolean);
+      const payloads = rows
+        .flat()
+        .map((b: { payload?: string }) => b.payload)
+        .filter(Boolean);
       expect(payloads).toContain('booking_confirm:b-9');
       expect(payloads).toContain('booking_cancel:b-9');
     });
@@ -281,6 +288,30 @@ describe('MaxAdminBot', () => {
       const { bot, client } = await makeBot();
       await bot.sendCsvToAdmin('100', Buffer.from('a,b'), 'export.csv');
       expect(client.sendMessage).toHaveBeenCalled();
+    });
+
+    it('notifyVotingQrToAdmins sends the QR image + max.ru link to all admins', async () => {
+      const { bot, client } = await makeBot();
+      const qr = Buffer.from('png');
+
+      await bot.notifyVotingQrToAdmins({
+        sessionId: 'sess1',
+        deepLink: 'https://max.ru/id1_bot?start=vote_sess1',
+        qrPngBuffer: qr,
+        requestedByAdminId: 'admin-7',
+      });
+
+      expect(client.uploadAndSendImage).toHaveBeenCalledTimes(1);
+      const [userId, buffer, caption, rows] = client.uploadAndSendImage.mock.calls[0];
+      expect(userId).toBe(ADMIN_ID);
+      expect(buffer).toBe(qr);
+      expect(caption).toContain('sess1');
+      expect(caption).toContain('https://max.ru/id1_bot?start=vote_sess1');
+      const links = rows
+        .flat()
+        .map((b: { url?: string }) => b.url)
+        .filter(Boolean);
+      expect(links).toContain('https://max.ru/id1_bot?start=vote_sess1');
     });
   });
 

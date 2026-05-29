@@ -14,6 +14,7 @@ import type {
   BroadcastProgress,
   BatchSendResult,
   BroadcastButton,
+  VotingQrNotice,
 } from '../types';
 
 /**
@@ -75,6 +76,11 @@ export class TelegramBots implements PlatformBots {
 
   async sendCsvToAdmin(platformId: string, csv: Buffer, filename: string): Promise<void> {
     await this.adminBot.sendCsvToAdmin(Number(platformId), csv, filename);
+  }
+
+  /** QR голосования Telegram-админам — поведение байт-в-байт прежнего AdminVoteController. */
+  async sendVotingQrToAdmins(notice: VotingQrNotice): Promise<void> {
+    await this.adminBot.notifyVotingQrToAdmins(notice);
   }
 
   /**

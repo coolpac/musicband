@@ -10,6 +10,11 @@ import { IBookingRepository } from '../database/repositories/BookingRepository';
 import { IOnboardingRepository } from '../database/repositories/OnboardingRepository';
 import { logger } from '../../shared/utils/logger';
 import { prisma } from '../../config/database';
+import {
+  generateVotingSessionQRForPlatforms,
+  normalizeTelegramBotUsername,
+  normalizeMaxBotUsername,
+} from '../utils/qrcode';
 import type {
   PlatformBots,
   BookingNotice,
@@ -34,9 +39,9 @@ export type { MessageTarget };
 export class BotManager {
   private readonly platforms = new Map<Platform, PlatformBots>();
 
-  // Прямая ссылка на Telegram admin-бот сохраняется для одного ещё не
-  // обобщённого пути: AdminVoteController.notifyVotingQrToAdmins (QR кодирует
-  // t.me-ссылку, поэтому шлётся только Telegram-админам). Обобщение — Phase 6.
+  // Прямые ссылки на Telegram-боты сохраняются для обратной совместимости
+  // (getAdminBot()). Рассылка QR голосования обобщена в Phase 6 —
+  // см. notifyVotingQrToAdmins (фан-аут по платформам с per-platform deep link).
   private userBot: UserBot | null = null;
   private adminBot: AdminBot | null = null;
 
@@ -542,6 +547,54 @@ export class BotManager {
       failed,
       total: voters.length,
     });
+  }
+
+  /**
+   * Рассылка QR-кода сессии голосования админам ВСЕХ зарегистрированных платформ.
+   *
+   * Для каждой платформы строится СВОЙ deep link (t.me для Telegram, max.ru для Max)
+   * с username бота этой платформы, генерируется QR именно под эту ссылку и
+   * отправляется админам платформы через её адаптер. Так Telegram-админы получают
+   * привычный t.me-QR (байт-в-байт прежнее поведение), а Max-админы — max.ru-QR.
+   *
+   * Изоляция по платформам: сбой одной платформы не прерывает рассылку в остальные.
+   */
+  async notifyVotingQrToAdmins(sessionId: string, requestedByAdminId?: string): Promise<void> {
+    if (this.platforms.size === 0) {
+      logger.warn('No platforms registered, skipping voting QR to admins');
+      return;
+    }
+
+    for (const [platform, bots] of this.platforms) {
+      try {
+        const botUsername = this.getVotingBotUsername(platform);
+        const qr = await generateVotingSessionQRForPlatforms(sessionId, platform, botUsername);
+        if (!qr.qrCodeBuffer) {
+          logger.error('Voting QR buffer not generated', { platform, sessionId });
+          continue;
+        }
+        await bots.sendVotingQrToAdmins({
+          sessionId,
+          deepLink: qr.deepLink,
+          qrPngBuffer: qr.qrCodeBuffer,
+          requestedByAdminId,
+        });
+      } catch (error) {
+        logger.error('Failed to send voting QR to admins', { platform, sessionId, error });
+      }
+    }
+  }
+
+  /**
+   * username бота для построения deep link конкретной платформы.
+   * telegram → TELEGRAM_USER_BOT_USERNAME (fallback vgulbot, как в AdminVoteController);
+   * max → MAX_USER_BOT_USERNAME.
+   */
+  private getVotingBotUsername(platform: Platform): string {
+    if (platform === 'max') {
+      return normalizeMaxBotUsername(process.env.MAX_USER_BOT_USERNAME);
+    }
+    return normalizeTelegramBotUsername(process.env.TELEGRAM_USER_BOT_USERNAME, 'vgulbot');
   }
 
   /**

@@ -633,6 +633,42 @@ export class MaxAdminBot {
   }
 
   /**
+   * Отправка QR-кода сессии голосования всем админам Max (зеркало
+   * AdminBot.notifyVotingQrToAdmins). QR кодирует max.ru-ссылку, поэтому шлётся
+   * именно Max-админам. Изображение загружается и отправляется через
+   * MaxClient.uploadAndSendImage; deepLink дублируется в подписи и в link-кнопке.
+   */
+  async notifyVotingQrToAdmins(payload: {
+    sessionId: string;
+    deepLink: string;
+    qrPngBuffer: Buffer;
+    requestedByAdminId?: string;
+  }): Promise<void> {
+    const caption =
+      '🗳️ QR-код для голосования\n\n' +
+      `Сессия: ${payload.sessionId}\n` +
+      `Ссылка: ${payload.deepLink}\n` +
+      (payload.requestedByAdminId ? `Инициатор: #${payload.requestedByAdminId}` : '');
+
+    const rows: MaxButton[][] = [[{ kind: 'link', text: 'Открыть ссылку', url: payload.deepLink }]];
+
+    for (const adminId of this.adminMaxIds) {
+      try {
+        await this.client.uploadAndSendImage(adminId, payload.qrPngBuffer, caption, rows);
+      } catch (err: unknown) {
+        const info = classifyMaxError(err);
+        if (!info.isUserUnreachable) {
+          logger.error('Max: error sending voting QR to admin', {
+            error: err,
+            adminId,
+            sessionId: payload.sessionId,
+          });
+        }
+      }
+    }
+  }
+
+  /**
    * Отправка CSV-экспорта администратору. В Max Bot API (через MaxClient) нет хелпера
    * для отправки документов, поэтому CSV вкладывается в текст сообщения.
    */

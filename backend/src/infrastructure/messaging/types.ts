@@ -129,6 +129,18 @@ export interface BatchSendResult {
 }
 
 /**
+ * QR-код сессии голосования для рассылки админам платформы.
+ * deepLink уже построен под конкретную платформу (t.me / max.ru), а qrPngBuffer
+ * кодирует именно эту ссылку. BotManager строит QR per-platform и передаёт сюда готовый.
+ */
+export interface VotingQrNotice {
+  sessionId: string;
+  deepLink: string;
+  qrPngBuffer: Buffer;
+  requestedByAdminId?: string;
+}
+
+/**
  * Абстракция мессенджер-платформы. BotManager хранит реестр Map<Platform, PlatformBots>
  * и маршрутизирует уведомления в нужный адаптер.
  *
@@ -165,4 +177,9 @@ export interface PlatformBots {
    */
   broadcast(platformIds: string[], payload: BroadcastPayload): Promise<BroadcastProgress>;
   sendCsvToAdmin(platformId: string, csv: Buffer, filename: string): Promise<void>;
+  /**
+   * Рассылка QR-кода сессии голосования админам этой платформы. deepLink/QR уже
+   * построены под платформу (BotManager строит per-platform).
+   */
+  sendVotingQrToAdmins(notice: VotingQrNotice): Promise<void>;
 }

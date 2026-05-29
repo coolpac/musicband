@@ -38,6 +38,7 @@ function makeFakeBots(platform: Platform): jest.Mocked<PlatformBots> {
     notifyNewUser: jest.fn().mockResolvedValue(undefined),
     broadcast: jest.fn().mockResolvedValue({ sent: 0, failed: 0, total: 0 }),
     sendCsvToAdmin: jest.fn().mockResolvedValue(undefined),
+    sendVotingQrToAdmins: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<PlatformBots>;
 }
 
@@ -188,6 +189,46 @@ describe('BotManager Phase 5 fan-out', () => {
 
       expect(telegramBots.notifyNewUser).toHaveBeenCalledWith(notice);
       expect(maxBots.notifyNewUser).toHaveBeenCalledWith(notice);
+    });
+  });
+
+  describe('voting QR per-platform fan-out', () => {
+    const ORIG_TG = process.env.TELEGRAM_USER_BOT_USERNAME;
+    const ORIG_MAX = process.env.MAX_USER_BOT_USERNAME;
+
+    beforeEach(() => {
+      process.env.TELEGRAM_USER_BOT_USERNAME = 'vgulbot';
+      process.env.MAX_USER_BOT_USERNAME = 'id1_bot';
+    });
+
+    afterEach(() => {
+      if (ORIG_TG === undefined) delete process.env.TELEGRAM_USER_BOT_USERNAME;
+      else process.env.TELEGRAM_USER_BOT_USERNAME = ORIG_TG;
+      if (ORIG_MAX === undefined) delete process.env.MAX_USER_BOT_USERNAME;
+      else process.env.MAX_USER_BOT_USERNAME = ORIG_MAX;
+    });
+
+    it('sends each platform a QR encoding its own platform deep link', async () => {
+      await manager.notifyVotingQrToAdmins('sess1', 'admin-7');
+
+      expect(telegramBots.sendVotingQrToAdmins).toHaveBeenCalledTimes(1);
+      const tgNotice = telegramBots.sendVotingQrToAdmins.mock.calls[0][0];
+      expect(tgNotice.sessionId).toBe('sess1');
+      expect(tgNotice.deepLink).toBe('https://t.me/vgulbot?start=vote_sess1');
+      expect(tgNotice.qrPngBuffer).toBeInstanceOf(Buffer);
+      expect(tgNotice.requestedByAdminId).toBe('admin-7');
+
+      expect(maxBots.sendVotingQrToAdmins).toHaveBeenCalledTimes(1);
+      const maxNotice = maxBots.sendVotingQrToAdmins.mock.calls[0][0];
+      expect(maxNotice.deepLink).toBe('https://max.ru/id1_bot?start=vote_sess1');
+      expect(maxNotice.qrPngBuffer).toBeInstanceOf(Buffer);
+    });
+
+    it('isolates platform failures (one platform throwing does not block the other)', async () => {
+      telegramBots.sendVotingQrToAdmins.mockRejectedValueOnce(new Error('tg down'));
+
+      await expect(manager.notifyVotingQrToAdmins('sess1')).resolves.toBeUndefined();
+      expect(maxBots.sendVotingQrToAdmins).toHaveBeenCalledTimes(1);
     });
   });
 

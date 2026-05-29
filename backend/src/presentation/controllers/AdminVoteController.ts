@@ -205,7 +205,8 @@ export class AdminVoteController {
 
   /**
    * POST /api/admin/votes/sessions/:id/qr/send-to-admins
-   * Отправить QR-код сессии всем администраторам в Telegram Admin Bot.
+   * Отправить QR-код сессии админам всех зарегистрированных платформ.
+   * Каждой платформе шлётся СВОЙ QR (t.me / max.ru) — фан-аут в BotManager.
    */
   async sendSessionQRToAdmins(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -219,32 +220,16 @@ export class AdminVoteController {
         return;
       }
 
-      const botUsername = this.getVotingBotUsername();
-      const qrData = await generateVotingSessionQR(session.id, botUsername);
-      if (!qrData.qrCodeBuffer) {
-        res.status(500).json({
-          success: false,
-          error: { message: 'QR buffer not generated', code: 'QR_GENERATION_FAILED' },
-        });
-        return;
-      }
-
       const botManager = getBotManager();
-      const adminBot = botManager?.getAdminBot();
-      if (!adminBot) {
+      if (!botManager) {
         res.status(503).json({
           success: false,
-          error: { message: 'Admin bot is not initialized', code: 'ADMIN_BOT_UNAVAILABLE' },
+          error: { message: 'Bot manager is not initialized', code: 'ADMIN_BOT_UNAVAILABLE' },
         });
         return;
       }
 
-      await adminBot.notifyVotingQrToAdmins({
-        sessionId: session.id,
-        deepLink: qrData.deepLink,
-        qrPngBuffer: qrData.qrCodeBuffer,
-        requestedByAdminId: req.user?.userId,
-      });
+      await botManager.notifyVotingQrToAdmins(session.id, req.user?.userId);
 
       res.json({
         success: true,
