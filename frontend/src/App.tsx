@@ -1,8 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { AnimatePresence } from 'framer-motion';
-import { useTelegramWebApp } from './telegram/useTelegramWebApp';
-import { hapticImpact, hapticNotification, showAlert, enableClosingConfirmation, disableClosingConfirmation, getTelegramUser, getStartParam, getTelegramUserId, getInitData } from './telegram/telegramWebApp';
+import { enableClosingConfirmation, disableClosingConfirmation, getTelegramUserId } from './telegram/telegramWebApp';
+import {
+  getPlatform,
+  isInsideMiniApp,
+  init as initPlatform,
+  getInitData,
+  getStartParam,
+  getUser,
+  hapticImpact,
+  hapticNotification,
+  showAlert,
+  showBackButton,
+  hideBackButton,
+  onBackButtonClick,
+} from './platform/platform';
 import { setBookingDraftToCloud, clearAllBookingFromCloud } from './telegram/cloudStorage';
 import { useVoteSubmit } from './hooks/useVoteSubmit';
 import { submitReview } from './services/reviewService';
@@ -67,7 +80,6 @@ export default function App() {
   const [authToken, setAuthToken] = useState<string | null>(() =>
     localStorage.getItem('auth_token') || localStorage.getItem('admin_token')
   );
-  const tg = useTelegramWebApp({ initOnMount: true });
   const currentScreenRef = useRef<Screen>(initialScreen);
   const handleVoteSubmit = useVoteSubmit({
     authToken,
@@ -144,11 +156,22 @@ export default function App() {
     });
   };
 
-  // Авторизация Mini App через Telegram initData → JWT (cookie + localStorage для сокетов)
-  // initData может быть пустой при первом рендере — на Android особенно часто (WebView асинхронно)
+  // Инициализация платформы при монтировании (ready/expand/viewport).
+  // Сохраняет прежнее поведение useTelegramWebApp({ initOnMount: true }) для Telegram
+  // и инициализирует Max, когда мы запущены внутри него.
   useEffect(() => {
-    if (!tg.isTelegram) return;
+    if (isInsideMiniApp()) initPlatform();
+  }, []);
+
+  // Авторизация Mini App через initData → JWT (cookie + localStorage для сокетов).
+  // Платформа выбирает эндпоинт: Telegram → /api/auth/telegram, Max → /api/auth/max.
+  // initData может быть пустой при первом рендере — на Android особенно часто (WebView асинхронно).
+  useEffect(() => {
+    if (!isInsideMiniApp()) return;
     if (authToken) return;
+
+    const platform = getPlatform();
+    const endpoint = platform === 'max' ? '/api/auth/max' : '/api/auth/telegram';
 
     let cancelled = false;
     let attempt = 0;
@@ -162,13 +185,13 @@ export default function App() {
       const initData = getInitData();
       if (!initData) {
         if (attempt < MAX_ATTEMPTS) {
-          if (import.meta.env.DEV) console.warn(`Telegram initData empty, retry ${attempt}/${MAX_ATTEMPTS}`);
+          if (import.meta.env.DEV) console.warn(`${platform} initData empty, retry ${attempt}/${MAX_ATTEMPTS}`);
           setTimeout(tryAuth, RETRY_DELAY);
         }
         return;
       }
 
-      apiPost<{ user: unknown; token: string; startParam?: string }>('/api/auth/telegram', {
+      apiPost<{ user: unknown; token: string; startParam?: string }>(endpoint, {
         initData,
         startParam: getStartParam(),
       })
@@ -179,7 +202,7 @@ export default function App() {
           }
         })
         .catch((error) => {
-          console.error('Telegram auth failed:', error);
+          console.error(`${platform} auth failed:`, error);
         });
     };
 
@@ -188,29 +211,29 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [tg.isTelegram, authToken]);
+  }, [authToken]);
 
   // Кнопка «Назад»: при открытом меню — закрываем меню; иначе — навигация по экранам.
   // Иначе в Telegram при нажатии «Назад» в меню закрывается всё приложение.
   useEffect(() => {
-    if (!tg.isTelegram) return;
+    if (!isInsideMiniApp()) return;
     if (menuOpen) {
-      tg.showBackButton();
-      const cleanup = tg.onBackButtonClick(() => {
+      showBackButton();
+      const cleanup = onBackButtonClick(() => {
         hapticImpact('light');
         setMenuOpen(false);
       });
       return () => {
         cleanup?.();
-        tg.hideBackButton();
+        hideBackButton();
       };
     }
     if (currentScreen === 'home') {
-      tg.hideBackButton();
+      hideBackButton();
       return;
     }
-    tg.showBackButton();
-    const cleanup = tg.onBackButtonClick(() => {
+    showBackButton();
+    const cleanup = onBackButtonClick(() => {
       hapticImpact('light');
       if (currentScreen === 'format-detail') {
         setCurrentScreen('formats');
@@ -229,19 +252,20 @@ export default function App() {
     });
     return () => {
       cleanup?.();
-      tg.hideBackButton();
+      hideBackButton();
     };
-  }, [currentScreen, menuOpen, tg.isTelegram, tg.showBackButton, tg.hideBackButton, tg.onBackButtonClick]);
+  }, [currentScreen, menuOpen]);
 
-  // Подтверждение закрытия на экране формы заявки — чтобы не потерять данные
+  // Подтверждение закрытия на экране формы заявки — чтобы не потерять данные.
+  // Доступно только в Telegram (Max SDK не предоставляет closingConfirmation).
   useEffect(() => {
-    if (!tg.isTelegram) return;
+    if (getPlatform() !== 'telegram') return;
     if (currentScreen === 'form') {
       enableClosingConfirmation();
       return () => disableClosingConfirmation();
     }
     disableClosingConfirmation();
-  }, [currentScreen, tg.isTelegram]);
+  }, [currentScreen]);
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
@@ -568,7 +592,7 @@ export default function App() {
         return (
           <RequestFormScreen
             bookingDraft={bookingDraft}
-            initialFullName={getTelegramUser()?.fullName}
+            initialFullName={getUser()?.fullName}
             onSubmit={() => {
               hapticNotification('success');
               setCurrentScreen('success');

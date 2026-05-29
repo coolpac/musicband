@@ -13,6 +13,7 @@
 
 import {
   isInsideTelegram,
+  isTelegramWebAppVersionAtLeast,
   initTelegramWebApp,
   getInitData as tgGetInitData,
   getStartParam as tgGetStartParam,
@@ -162,12 +163,16 @@ export function openMessengerLink(url: string): void {
   }
 }
 
-/** Показать кнопку «Назад». */
+/**
+ * Показать кнопку «Назад».
+ * Telegram-путь повторяет логику useTelegramWebApp (version-guard 6.1+),
+ * чтобы поведение внутри Telegram оставалось байт-идентичным.
+ */
 export function showBackButton(): void {
   switch (getPlatform()) {
     case 'telegram': {
-      const tg = getTelegramWebApp();
-      tg?.BackButton?.show();
+      if (!isTelegramWebAppVersionAtLeast('6.1')) return;
+      getTelegramWebApp()?.BackButton?.show();
       return;
     }
     case 'max':
@@ -182,8 +187,8 @@ export function showBackButton(): void {
 export function hideBackButton(): void {
   switch (getPlatform()) {
     case 'telegram': {
-      const tg = getTelegramWebApp();
-      tg?.BackButton?.hide();
+      if (!isTelegramWebAppVersionAtLeast('6.1')) return;
+      getTelegramWebApp()?.BackButton?.hide();
       return;
     }
     case 'max':
@@ -198,6 +203,7 @@ export function hideBackButton(): void {
 export function onBackButtonClick(handler: () => void): () => void {
   switch (getPlatform()) {
     case 'telegram': {
+      if (!isTelegramWebAppVersionAtLeast('6.1')) return () => {};
       const tg = getTelegramWebApp();
       if (!tg?.BackButton) return () => {};
       tg.BackButton.onClick(handler);

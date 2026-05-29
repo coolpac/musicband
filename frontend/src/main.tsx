@@ -4,7 +4,7 @@ import App from './App';
 import AppLoader from './components/AppLoader';
 import AdminTerminalLoader, { MIN_LOADER_DISPLAY_MS } from './admin/components/AdminTerminalLoader';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { initTelegramWebApp, isInsideTelegram } from './telegram/telegramWebApp';
+import { init as initPlatform, isInsideMiniApp } from './platform/platform';
 import './styles/base.css';
 import './styles/home.css';
 import './styles/admin.css';
@@ -19,12 +19,12 @@ function ClientRoot() {
 
   useEffect(() => {
     if (isAdminRoute) {
-      if (isInsideTelegram()) initTelegramWebApp();
+      if (isInsideMiniApp()) initPlatform();
       const t = setTimeout(() => setMinLoaderElapsed(true), MIN_LOADER_DISPLAY_MS);
       return () => clearTimeout(t);
     }
-    // Основное приложение: сразу сообщаем Telegram ready(), чтобы скрыть сплэш и показать наш лоадер
-    if (isInsideTelegram()) initTelegramWebApp();
+    // Основное приложение: сразу сообщаем платформе ready(), чтобы скрыть сплэш и показать наш лоадер
+    if (isInsideMiniApp()) initPlatform();
   }, [isAdminRoute]);
 
   if (isAdminRoute) {
