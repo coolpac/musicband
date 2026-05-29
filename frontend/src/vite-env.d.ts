@@ -91,6 +91,50 @@ declare global {
         };
       };
     };
+    /**
+     * Max Web App SDK (https://st.max.ru/js/max-web-app.js).
+     * Минимальная декларация поверхности, которую использует наш фасад.
+     * Все методы помечены optional — реальный набор зависит от клиента/версии,
+     * фасад вызывает их защищённо (guarded optional calls).
+     */
+    WebApp?: {
+      initData?: string;
+      initDataUnsafe?: {
+        user?: {
+          id: number;
+          first_name: string;
+          last_name?: string;
+          username?: string;
+          photo_url?: string;
+          language_code?: string;
+        };
+        auth_date?: number;
+        hash?: string;
+        start_param?: string;
+        query_id?: string;
+        chat?: unknown;
+        [key: string]: unknown;
+      };
+      platform?: string;
+      version?: string;
+      openLink?(url: string): void;
+      openMaxLink?(url: string): void;
+      requestContact?(): void;
+      ready?(): void;
+      expand?(): void;
+      BackButton?: {
+        show?(): void;
+        hide?(): void;
+        onClick?(cb: () => void): void;
+        offClick?(cb: () => void): void;
+      };
+      HapticFeedback?: {
+        impactOccurred?(style: string): void;
+        notificationOccurred?(type: string): void;
+        selectionChanged?(): void;
+      };
+      [key: string]: unknown;
+    };
   }
 }
 export {};

@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "analyze": "ANALYZE=true vite build",
-    "optimize": "node scripts/optimize-assets.mjs"
+    "optimize": "node scripts/optimize-assets.mjs",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -33,6 +34,7 @@
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.2",
+    "jsdom": "^29.1.1",
     "playwright": "^1.58.2",
     "rollup-plugin-visualizer": "^5.12.0",
     "sharp": "^0.34.0",
@@ -41,6 +43,7 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-compression": "^0.5.1",
-    "vite-plugin-image-optimizer": "^2.0.3"
+    "vite-plugin-image-optimizer": "^2.0.3",
+    "vitest": "^3.2.4"
   }
 }
