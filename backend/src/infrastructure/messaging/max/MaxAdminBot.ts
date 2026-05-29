@@ -72,6 +72,7 @@ export class MaxAdminBot {
   private readonly awaitingBroadcastText = new Set<number>();
   private readonly awaitingBroadcastButtons = new Set<number>();
   private readonly pendingBroadcasts = new Map<number, BroadcastDraft>();
+  private readonly reloadTimer: NodeJS.Timeout;
 
   /** Интервал перезагрузки списка админов из БД (мс). */
   private static readonly ADMIN_RELOAD_INTERVAL_MS = 60_000;
@@ -84,9 +85,11 @@ export class MaxAdminBot {
     private readonly onBroadcast?: OnBroadcast
   ) {
     void this.loadAdmins();
-    setInterval(() => {
+    this.reloadTimer = setInterval(() => {
       void this.loadAdmins();
     }, MaxAdminBot.ADMIN_RELOAD_INTERVAL_MS);
+    // Не держим event loop открытым из-за таймера перезагрузки админов.
+    this.reloadTimer.unref?.();
 
     this.registerHandlers();
     logger.info('Max Admin Bot initialized');
@@ -653,6 +656,7 @@ export class MaxAdminBot {
 
   /** Остановка long-poll. */
   stop(): void {
+    clearInterval(this.reloadTimer);
     this.client.stop();
   }
 }

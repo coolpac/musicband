@@ -40,6 +40,7 @@ export class AdminBot {
     onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
   }) => Promise<{ sent: number; failed: number; total: number }>;
   private chatsWithKeyboard: Set<number>;
+  private readonly reloadTimer: NodeJS.Timeout;
 
   private static readonly BUTTON_LABELS = {
     adminPanel: '🔗 Админка',
@@ -89,9 +90,10 @@ export class AdminBot {
     this.chatsWithKeyboard = new Set();
 
     void this.loadAdmins();
-    setInterval(() => {
+    this.reloadTimer = setInterval(() => {
       void this.loadAdmins();
     }, AdminBot.ADMIN_RELOAD_INTERVAL_MS);
+    this.reloadTimer.unref?.();
     this.setupCommands();
     this.setupCallbacks();
 
@@ -1159,6 +1161,7 @@ export class AdminBot {
    * Остановка polling (для graceful shutdown)
    */
   async stop(): Promise<void> {
+    clearInterval(this.reloadTimer);
     await this.bot.stopPolling();
   }
 

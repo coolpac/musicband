@@ -123,19 +123,25 @@ export class BotManager {
       return;
     }
 
-    const maxBots = MaxBots.fromTokens(maxUserToken, maxAdminToken, {
-      referralService: this.referralService,
-      userRepository: this.userRepository,
-      bookingRepository: this.bookingRepository,
-      onboardingRepository: this.onboardingRepository,
-      onBookingConfirmed: async (payload) => {
-        await this.notifyBookingConfirmed(payload);
-      },
-      onBroadcast: async (payload) => this.broadcastToUsers(payload),
-    });
+    // Изолируем инициализацию Max: её сбой НЕ должен ронять старт сервера,
+    // когда Telegram уже успешно поднялся (Telegram-only режим переживает это).
+    try {
+      const maxBots = MaxBots.fromTokens(maxUserToken, maxAdminToken, {
+        referralService: this.referralService,
+        userRepository: this.userRepository,
+        bookingRepository: this.bookingRepository,
+        onboardingRepository: this.onboardingRepository,
+        onBookingConfirmed: async (payload) => {
+          await this.notifyBookingConfirmed(payload);
+        },
+        onBroadcast: async (payload) => this.broadcastToUsers(payload),
+      });
 
-    await this.registerPlatform(maxBots);
-    logger.info('Max bots initialized successfully');
+      await this.registerPlatform(maxBots);
+      logger.info('Max bots initialized successfully');
+    } catch (error) {
+      logger.error('Max platform init failed; continuing Telegram-only', { error });
+    }
   }
 
   /**
