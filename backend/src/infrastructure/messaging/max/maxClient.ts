@@ -1,11 +1,13 @@
 import { Bot, Keyboard } from '@maxhub/max-bot-api';
-import type {
-  AnswerOnCallbackExtra,
-  BotCommand,
-  SendMessageExtra,
-  UpdateType,
-} from '@maxhub/max-bot-api/dist/core/network/api';
 import { logger } from '../../../shared/utils/logger';
+
+// Эти типы пакет не реэкспортирует из корня, а импорт из внутренних путей
+// (dist/core/... или subpath ./types) хрупок и зависит от moduleResolution.
+// Поэтому извлекаем их из публично экспортированного Bot через Parameters<>.
+type SendMessageExtra = NonNullable<Parameters<Bot['api']['sendMessageToUser']>[2]>;
+type AnswerOnCallbackExtra = NonNullable<Parameters<Bot['api']['answerOnCallback']>[1]>;
+type BotCommand = Parameters<Bot['api']['setMyCommands']>[0][number];
+type UpdateType = NonNullable<Parameters<Bot['start']>[0]>['allowedUpdates'][number];
 
 /**
  * Описание inline-кнопки в нейтральном виде (без привязки к SDK).

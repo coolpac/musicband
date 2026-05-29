@@ -18,12 +18,12 @@ describe('classifyMaxError', () => {
     expect(result.code).toBe('forbidden');
   });
 
-  it('marks a 404 chat-not-found error as user-unreachable', () => {
-    const err = new MaxError(404, { code: 'not.found', message: 'chat not found' });
+  it('does NOT treat a 404 as user-unreachable (could mask a request bug)', () => {
+    const err = new MaxError(404, { code: 'not.found', message: 'not found' });
 
     const result = classifyMaxError(err);
 
-    expect(result.isUserUnreachable).toBe(true);
+    expect(result.isUserUnreachable).toBe(false);
     expect(result.shouldRetry).toBe(false);
   });
 

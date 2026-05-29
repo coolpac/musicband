@@ -10,7 +10,7 @@ const redisMock = {
 jest.mock('../../../../config/redis', () => ({ redis: redisMock }));
 // config паттерн config/* находится на src/config; из __tests__ это 4 уровня вверх.
 
-// Сем BotManager: notifyNewUser вызывается через getBotManager() (как в UserBot).
+// Сам BotManager: notifyNewUser вызывается через getBotManager() (как в UserBot).
 const notifyNewUser = jest.fn().mockResolvedValue(undefined);
 jest.mock('../../BotManager', () => ({
   getBotManager: () => ({ notifyNewUser }),

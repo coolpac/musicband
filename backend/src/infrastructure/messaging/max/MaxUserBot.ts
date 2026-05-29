@@ -254,7 +254,7 @@ export class MaxUserBot {
       await redis.del(key);
       await this.onboardingRepository.create('max', BigInt(userId), role);
 
-      // Уведомляем админов о новом пользователе (через сем BotManager, как UserBot).
+      // Уведомляем админов о новом пользователе (через сам BotManager, как UserBot).
       try {
         const { getBotManager } = await import('../BotManager');
         const botManager = getBotManager();

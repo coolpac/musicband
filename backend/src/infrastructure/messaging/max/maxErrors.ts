@@ -8,7 +8,7 @@ import { MaxError } from '@maxhub/max-bot-api';
  * (rate-limit / 5xx) можно повторить.
  */
 export interface MaxErrorInfo {
-  /** Пользователь недоступен (заблокировал бота / чат не найден) — сообщение глотаем. */
+  /** Пользователь недоступен (заблокировал бота, 403) — сообщение глотаем. */
   isUserUnreachable: boolean;
   /** Временная ошибка (rate-limit / 5xx) — отправку имеет смысл повторить. */
   shouldRetry: boolean;
@@ -30,14 +30,16 @@ export function isMaxError(error: unknown): error is MaxError {
 /**
  * Классифицирует ошибку Max API в типизированный результат.
  *
- * - 403 (forbidden) / 404 (not found) → пользователь недоступен: бот заблокирован
- *   или чат не существует. Такие ошибки при отправке глотаем (как 403 в Telegram).
+ * - 403 (forbidden) → пользователь недоступен: бот заблокирован. Глотаем при
+ *   отправке (как 403 в Telegram-адаптере). 404 НЕ считаем недоступностью —
+ *   на эндпоинтах отправки 404 чаще означает ошибку запроса (неизвестный метод/
+ *   ресурс), её лучше не маскировать.
  * - 429 (too many requests) / 5xx → временная ошибка, отправку можно повторить.
  */
 export function classifyMaxError(error: unknown): MaxErrorInfo {
   if (isMaxError(error)) {
     const status = error.status;
-    const isUserUnreachable = status === 403 || status === 404;
+    const isUserUnreachable = status === 403;
     const shouldRetry = !isUserUnreachable && (status === 429 || status >= 500);
     return {
       isUserUnreachable,
