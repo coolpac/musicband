@@ -43,3 +43,6 @@ backend/uploads/
 backend/exports/
 !backend/exports/.gitkeep
 
+
+# git worktrees
+.worktrees/
