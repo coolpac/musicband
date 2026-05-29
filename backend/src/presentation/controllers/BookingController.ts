@@ -48,14 +48,14 @@ export class BookingController {
           fullName: booking.fullName,
           contactValue: booking.contactValue,
           city: booking.city || undefined,
-          telegramId: booking.user.telegramId.toString(),
+          telegramId: booking.user.platformId.toString(),
           username: booking.user.username ?? undefined,
           firstName: booking.user.firstName ?? undefined,
           lastName: booking.user.lastName ?? undefined,
         });
 
         // Уведомление пользователю о получении заявки
-        await botManager.sendBookingReceived(Number(booking.user.telegramId), {
+        await botManager.sendBookingReceived(Number(booking.user.platformId), {
           bookingDate: bookingDateStr,
           formatName: booking.format?.name,
           fullName: booking.fullName,

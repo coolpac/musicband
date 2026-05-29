@@ -156,7 +156,7 @@ export class AdminBookingController {
       const botManager = getBotManager();
       // Отправляем запрос отзыва при "Выполнено" (включая повторную отправку, если нужно).
       // Важно: сообщение отправляет UserBot — пользователь должен иметь диалог с ботом.
-      const userTelegramId = updated.user?.telegramId;
+      const userTelegramId = updated.user?.platformId;
       if (botManager && userTelegramId !== undefined && userTelegramId !== null) {
         const userBot = botManager.getUserBot();
         const telegramIdStr =

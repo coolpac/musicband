@@ -106,8 +106,9 @@ export class VoteService {
     sessionId?: string
   ): Promise<string> {
     const tid = BigInt(telegramId);
-    const { user, created } = await this.userRepository.findOrCreateByTelegramId({
-      telegramId: tid,
+    const { user, created } = await this.userRepository.findOrCreateByIdentity({
+      platform: 'telegram',
+      platformId: tid,
       role: 'user',
     });
     if (created) {
@@ -389,13 +390,14 @@ export class VoteService {
     // Получаем голоса для подсчёта уникальных voters и telegramId
     const votes = await this.voteRepository.findBySession(sessionId);
 
-    // Собираем telegramId всех проголосовавших (ДО deleteMany в транзакции)
+    // Собираем telegramId всех проголосовавших (ДО deleteMany в транзакции).
+    // Рассылка идёт через Telegram-бота, поэтому берём только telegram-пользователей.
     const uniqueUserIds = [...new Set(votes.map((v) => v.userId))];
     const voterTelegramIds =
       uniqueUserIds.length > 0
         ? await prisma.user.findMany({
-            where: { id: { in: uniqueUserIds } },
-            select: { telegramId: true },
+            where: { id: { in: uniqueUserIds }, platform: 'telegram' },
+            select: { platformId: true },
           })
         : [];
 
@@ -466,7 +468,7 @@ export class VoteService {
     // Планируем рассылки по челябинскому времени (UTC+5):
     // Первое сообщение — в 18:00, второе — в 20:00
     if (voterTelegramIds.length > 0) {
-      const telegramIds = voterTelegramIds.map((u) => u.telegramId.toString());
+      const telegramIds = voterTelegramIds.map((u) => u.platformId.toString());
 
       const CHELYABINSK_OFFSET = 5; // UTC+5
       const now = new Date();
@@ -536,7 +538,7 @@ export class VoteService {
             coverUrl: winningSong.coverUrl,
           }
         : null,
-      voterTelegramIds: voterTelegramIds.map((u) => u.telegramId),
+      voterTelegramIds: voterTelegramIds.map((u) => u.platformId),
     };
   }
 }

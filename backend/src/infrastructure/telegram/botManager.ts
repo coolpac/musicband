@@ -1,3 +1,4 @@
+import type { Platform } from '@prisma/client';
 import { UserBot } from './UserBot';
 import { AdminBot } from './AdminBot';
 import { ReferralService } from '../../domain/services/ReferralService';
@@ -77,7 +78,8 @@ export class BotManager {
    * Отправка уведомления о новом пользователе
    */
   async notifyNewUser(userData: {
-    telegramId: string;
+    platform: Platform;
+    platformId: string;
     username?: string;
     firstName?: string;
     lastName?: string;
@@ -224,22 +226,23 @@ export class BotManager {
   ): Promise<number[]> {
     if (segment === 'all') {
       const users = await prisma.user.findMany({
-        select: { telegramId: true },
+        where: { platform: 'telegram' },
+        select: { platformId: true },
       });
       return users
-        .map((user) => Number(user.telegramId))
+        .map((user) => Number(user.platformId))
         .filter((id) => !Number.isNaN(id));
     }
 
     // Фильтрация по onboarding-роли через JOIN
-    const rows = await prisma.$queryRaw<Array<{ telegram_id: bigint }>>`
-      SELECT u.telegram_id
+    const rows = await prisma.$queryRaw<Array<{ platform_id: bigint }>>`
+      SELECT u.platform_id
       FROM users u
-      INNER JOIN onboarding_answers oa ON oa.telegram_id = u.telegram_id
-      WHERE oa.role = ${segment}
+      INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
+      WHERE u.platform = 'telegram' AND oa.role = ${segment}
     `;
     return rows
-      .map((row) => Number(row.telegram_id))
+      .map((row) => Number(row.platform_id))
       .filter((id) => !Number.isNaN(id));
   }
 
@@ -391,14 +394,14 @@ export class BotManager {
       }
 
       if (this.userBot) {
-        await this.userBot.sendBookingConfirmation(booking.user.telegramId.toString(), {
+        await this.userBot.sendBookingConfirmation(booking.user.platformId.toString(), {
           bookingDate: bookingData.bookingDate,
           formatName: bookingData.formatName,
           fullName: bookingData.fullName,
         });
         logger.info('Booking confirmation sent to user', {
           bookingId: bookingData.bookingId,
-          telegramId: booking.user.telegramId.toString(),
+          telegramId: booking.user.platformId.toString(),
         });
       }
     } catch (error) {

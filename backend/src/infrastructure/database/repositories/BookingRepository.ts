@@ -157,7 +157,7 @@ export class PrismaBookingRepository implements IBookingRepository {
           user: {
             select: {
               id: true,
-              telegramId: true,
+              platformId: true,
               username: true,
               firstName: true,
               lastName: true,

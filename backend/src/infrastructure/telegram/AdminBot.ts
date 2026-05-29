@@ -1,4 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api';
+import type { Platform } from '@prisma/client';
 import { logger } from '../../shared/utils/logger';
 import { runAsync } from '../../shared/utils/asyncHandler';
 import { getTelegramErrorCode } from '../../shared/utils/telegramErrors';
@@ -103,13 +104,13 @@ export class AdminBot {
   private async loadAdmins(): Promise<void> {
     try {
       const admins = await prisma.user.findMany({
-        where: { role: USER_ROLES.ADMIN },
-        select: { telegramId: true },
+        where: { role: USER_ROLES.ADMIN, platform: 'telegram' },
+        select: { platformId: true },
       });
 
       this.adminTelegramIds.clear();
       admins.forEach((admin) => {
-        const telegramId = Number(admin.telegramId);
+        const telegramId = Number(admin.platformId);
         if (!isNaN(telegramId)) {
           this.adminTelegramIds.add(telegramId);
         }
@@ -950,7 +951,7 @@ export class AdminBot {
       const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*) as count
         FROM users u
-        INNER JOIN onboarding_answers oa ON oa.telegram_id = u.telegram_id
+        INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
         WHERE oa.role = ${segment}
       `;
       return Number(result[0].count);
@@ -993,7 +994,8 @@ export class AdminBot {
    * Отправка уведомления о новом пользователе
    */
   async notifyNewUser(userData: {
-    telegramId: string;
+    platform: Platform;
+    platformId: string;
     username?: string;
     firstName?: string;
     lastName?: string;
@@ -1001,7 +1003,7 @@ export class AdminBot {
     try {
       const message =
         '👤 Новый пользователь зарегистрировался:\n\n' +
-        `🆔 Telegram ID: ${userData.telegramId}\n` +
+        `🆔 Telegram ID: ${userData.platformId}\n` +
         (userData.username ? `👤 Username: @${userData.username}\n` : '') +
         (userData.firstName || userData.lastName
           ? `📝 Имя: ${userData.firstName || ''} ${userData.lastName || ''}\n`

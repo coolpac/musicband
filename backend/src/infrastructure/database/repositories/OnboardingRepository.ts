@@ -1,15 +1,17 @@
+import { Platform } from '@prisma/client';
 import { prisma } from '../../../config/database';
 
 export interface OnboardingAnswerRow {
   id: string;
-  telegramId: bigint;
+  platform: Platform;
+  platformId: bigint;
   role: string;
   createdAt: Date;
 }
 
 export interface IOnboardingRepository {
-  findByTelegramId(telegramId: bigint): Promise<OnboardingAnswerRow | null>;
-  create(telegramId: bigint, role: string): Promise<OnboardingAnswerRow>;
+  findByIdentity(platform: Platform, platformId: bigint): Promise<OnboardingAnswerRow | null>;
+  create(platform: Platform, platformId: bigint, role: string): Promise<OnboardingAnswerRow>;
   /** Кол-во пользователей (в таблице users) с определённой onboarding-ролью */
   countUsersByRole(role: string): Promise<number>;
   /** Общее кол-во пользователей в таблице users */
@@ -17,16 +19,19 @@ export interface IOnboardingRepository {
 }
 
 export class PrismaOnboardingRepository implements IOnboardingRepository {
-  async findByTelegramId(telegramId: bigint): Promise<OnboardingAnswerRow | null> {
+  async findByIdentity(
+    platform: Platform,
+    platformId: bigint
+  ): Promise<OnboardingAnswerRow | null> {
     const row = await prisma.onboardingAnswer.findUnique({
-      where: { telegramId },
+      where: { platform_platformId: { platform, platformId } },
     });
     return row;
   }
 
-  async create(telegramId: bigint, role: string): Promise<OnboardingAnswerRow> {
+  async create(platform: Platform, platformId: bigint, role: string): Promise<OnboardingAnswerRow> {
     const row = await prisma.onboardingAnswer.create({
-      data: { telegramId, role },
+      data: { platform, platformId, role },
     });
     return row;
   }
@@ -35,7 +40,7 @@ export class PrismaOnboardingRepository implements IOnboardingRepository {
     const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
       SELECT COUNT(*) as count
       FROM users u
-      INNER JOIN onboarding_answers oa ON oa.telegram_id = u.telegram_id
+      INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
       WHERE oa.role = ${role}
     `;
     return Number(result[0].count);
