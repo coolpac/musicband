@@ -328,6 +328,8 @@ git commit -m "feat(max): MaxUserBot mirroring Telegram user flows"
 **Step 1 (test):** Failing tests: `/stats` replies with booking stats; booking-confirm callback (`booking_confirm:<id>`) triggers the confirm callback; broadcast flow assembles a `BroadcastPayload`; admin allow-list loaded from `users` where `role='admin' AND platform='max'`.
 **Step 2:** `npm test -- MaxAdminBot` → FAIL.
 **Step 3:** Implement mirroring `AdminBot.ts` (commands, broadcast wizard with buttons/media, booking notifications with confirm/cancel inline buttons, admin allow-list refresh, CSV send, admin-panel link). Implement `PlatformBots` admin-facing methods.
+
+**DEFERRED (decided 2026-05-29):** the interactive **media-attachment** step of the broadcast wizard is NOT implemented for Max in Phase 4 — text + buttons + segment broadcast have full parity, but media is deferred. Reason: broadcast media is referenced today by a Telegram `file_id` (`BroadcastMedia.fileId`), which is NOT portable to Max (different media model; a Telegram file id can't be replayed on Max and vice-versa). Cross-platform media broadcast needs its own design (per-platform media upload/storage) — tracked as a later follow-up. The `media` field stays in the payload as a pass-through; `MaxBots.broadcast` sends text+buttons and skips media gracefully (logs and continues).
 **Step 4:** `npm test -- MaxAdminBot` → PASS.
 **Step 5:** Commit.
 ```bash
