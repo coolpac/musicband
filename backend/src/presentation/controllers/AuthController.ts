@@ -61,7 +61,8 @@ export class AuthController {
     try {
       const { initData, startParam } = req.body as MaxAuthDto;
 
-      const result = await this.authService.authenticateWithMax(initData, startParam);
+      // startParam может быть null (deep-link отсутствует) — нормализуем к undefined.
+      const result = await this.authService.authenticateWithMax(initData, startParam ?? undefined);
 
       logger.info('User authenticated via Max', {
         userId: result.user.id,

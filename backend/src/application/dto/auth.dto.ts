@@ -2,12 +2,14 @@ import { z } from 'zod';
 
 export const TelegramAuthSchema = z.object({
   initData: z.string().min(1, 'InitData is required'),
-  startParam: z.string().optional(), // Для deep links (например, vote_{sessionId})
+  // nullish: фронтенд шлёт startParam: getStartParam(), который === null без deep-link.
+  startParam: z.string().nullish(), // Для deep links (например, vote_{sessionId})
 });
 
 export const MaxAuthSchema = z.object({
   initData: z.string().min(1, 'InitData is required'),
-  startParam: z.string().optional(), // Для deep links (например, vote_{sessionId})
+  // nullish: см. TelegramAuthSchema — null допустим, когда deep-link отсутствует.
+  startParam: z.string().nullish(), // Для deep links (например, vote_{sessionId})
 });
 
 export const AdminAuthSchema = z.object({
