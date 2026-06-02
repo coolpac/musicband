@@ -4,16 +4,27 @@ import { StartSessionDto } from '../../application/dto/vote.dto';
 import { logger } from '../../shared/utils/logger';
 import { getSocketServer } from '../../app';
 import { getBotManager } from '../../infrastructure/telegram/botManager';
+import type { Platform } from '@prisma/client';
 import {
   generateVotingSessionQR,
+  generateVotingSessionQRForPlatforms,
   normalizeTelegramBotUsername,
+  normalizeMaxBotUsername,
 } from '../../infrastructure/utils/qrcode';
 
 export class AdminVoteController {
   constructor(private voteService: VoteService) {}
 
-  private getVotingBotUsername(): string {
+  private getVotingBotUsername(platform: Platform): string {
+    if (platform === 'max') {
+      return normalizeMaxBotUsername(process.env.MAX_USER_BOT_USERNAME);
+    }
     return normalizeTelegramBotUsername(process.env.TELEGRAM_USER_BOT_USERNAME, 'vgulbot');
+  }
+
+  /** Платформа QR из query (?platform=max|telegram), по умолчанию telegram. */
+  private parseQrPlatform(req: Request): Platform {
+    return req.query.platform === 'max' ? 'max' : 'telegram';
   }
 
   /**
@@ -105,7 +116,7 @@ export class AdminVoteController {
       // QR ведёт на t.me/bot?start=vote_SESSION — пользователь сначала попадает в бота,
       // бот сохраняет sessionId в Redis и отправляет web_app кнопку,
       // Mini App проверяет pending session и открывает голосование
-      const botUsername = this.getVotingBotUsername();
+      const botUsername = this.getVotingBotUsername('telegram');
       const qrData = await generateVotingSessionQR(session.id, botUsername);
 
       res.status(201).json({
@@ -115,6 +126,7 @@ export class AdminVoteController {
           qrCode: {
             dataURL: qrData.qrCodeDataURL,
             deepLink: qrData.deepLink,
+            platform: 'telegram' as Platform,
           },
         },
       });
@@ -139,9 +151,22 @@ export class AdminVoteController {
         return;
       }
 
-      // Генерируем QR-код (ведёт на бота: t.me/bot?start=vote_SESSION)
-      const botUsername = this.getVotingBotUsername();
-      const qrData = await generateVotingSessionQR(session.id, botUsername);
+      // QR ведёт на бота выбранной платформы:
+      //   telegram → t.me/bot?start=vote_SESSION, max → max.ru/bot?start=vote_SESSION
+      const platform = this.parseQrPlatform(req);
+      const botUsername = this.getVotingBotUsername(platform);
+      if (!botUsername) {
+        // Например, Max выбран, но MAX_USER_BOT_USERNAME не задан — QR был бы битым.
+        res.status(422).json({
+          success: false,
+          error: {
+            message: `Bot username for platform "${platform}" is not configured`,
+            code: 'BOT_USERNAME_NOT_CONFIGURED',
+          },
+        });
+        return;
+      }
+      const qrData = await generateVotingSessionQRForPlatforms(session.id, platform, botUsername);
 
       res.json({
         success: true,
@@ -149,6 +174,7 @@ export class AdminVoteController {
           qrCode: {
             dataURL: qrData.qrCodeDataURL,
             deepLink: qrData.deepLink,
+            platform,
           },
         },
       });
