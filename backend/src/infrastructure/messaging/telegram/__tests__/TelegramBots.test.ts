@@ -19,13 +19,20 @@ describe('TelegramBots adapter', () => {
       stop: jest.fn().mockResolvedValue(undefined),
     }) as unknown as jest.Mocked<UserBot>;
 
-  const makeAdminBot = () =>
-    ({
+  // adminRaw.getFileLink резолвит admin-овый file_id в URL (как реальный admin-бот).
+  const makeAdminBot = () => {
+    const adminRaw = {
+      getFileLink: jest.fn().mockResolvedValue('https://api.telegram.org/file/botADMIN/x.jpg'),
+    };
+    const adminBot = {
       notifyNewBooking: jest.fn().mockResolvedValue(undefined),
       notifyNewUser: jest.fn().mockResolvedValue(undefined),
       sendCsvToAdmin: jest.fn().mockResolvedValue(undefined),
       stop: jest.fn().mockResolvedValue(undefined),
-    }) as unknown as jest.Mocked<AdminBot>;
+      getBot: jest.fn(() => adminRaw),
+    } as unknown as jest.Mocked<AdminBot>;
+    return adminBot;
+  };
 
   it('exposes platform === "telegram"', () => {
     const adapter = new TelegramBots(makeUserBot(), makeAdminBot());
@@ -178,23 +185,51 @@ describe('TelegramBots adapter', () => {
       expect(onProgress).toHaveBeenCalledWith({ sent: 3, failed: 0, total: 3 });
     });
 
-    it('routes media by type (photo) with caption + markup', async () => {
+    it('resolves admin media file_id to a URL (user bot cannot use admin file_id)', async () => {
       const userBot = makeUserBot();
       const rawBot = makeRawBot();
       (userBot.getBot as jest.Mock).mockReturnValue(rawBot);
-      const adapter = new TelegramBots(userBot, makeAdminBot());
+      const adminBot = makeAdminBot();
+      const adapter = new TelegramBots(userBot, adminBot);
 
       await adapter.broadcast(['1'], {
         text: 'caption',
         buttons: [],
-        media: { type: 'photo', fileId: 'file-123' },
+        media: { type: 'photo', fileId: 'admin-file-123' },
       });
 
-      expect(rawBot.sendPhoto).toHaveBeenCalledWith('1', 'file-123', {
+      // admin-овый file_id резолвится в URL через admin-бота…
+      expect((adminBot.getBot() as unknown as { getFileLink: jest.Mock }).getFileLink).toHaveBeenCalledWith(
+        'admin-file-123'
+      );
+      // …и user-бот шлёт уже URL, а не admin file_id.
+      expect(rawBot.sendPhoto).toHaveBeenCalledWith('1', 'https://api.telegram.org/file/botADMIN/x.jpg', {
         caption: 'caption',
         reply_markup: undefined,
       });
       expect(rawBot.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('reuses the user-bot file_id from the first send for subsequent recipients', async () => {
+      const userBot = makeUserBot();
+      const rawBot = makeRawBot();
+      // sendPhoto возвращает Message с user-бот-овым file_id.
+      (rawBot.sendPhoto as jest.Mock).mockResolvedValue({ photo: [{ file_id: 'user-fid' }] });
+      (userBot.getBot as jest.Mock).mockReturnValue(rawBot);
+      const adapter = new TelegramBots(userBot, makeAdminBot());
+
+      await adapter.broadcast(['1', '2', '3'], {
+        text: 'cap',
+        buttons: [],
+        media: { type: 'photo', fileId: 'admin-file-123' },
+      });
+
+      // первому — по URL, остальным — переиспользуем user-бот-овый file_id.
+      expect((rawBot.sendPhoto as jest.Mock).mock.calls[0][1]).toBe(
+        'https://api.telegram.org/file/botADMIN/x.jpg'
+      );
+      expect((rawBot.sendPhoto as jest.Mock).mock.calls[1][1]).toBe('user-fid');
+      expect((rawBot.sendPhoto as jest.Mock).mock.calls[2][1]).toBe('user-fid');
     });
 
     it('counts a 403 (user blocked bot) as failed without throwing', async () => {

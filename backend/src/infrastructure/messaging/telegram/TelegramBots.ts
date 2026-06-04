@@ -99,27 +99,41 @@ export class TelegramBots implements PlatformBots {
     }
 
     const bot = this.userBot.getBot();
+
+    // Медиа в мастере загружается в ADMIN-бота, а рассылка идёт через USER-бота.
+    // file_id в Telegram привязан к боту — user-бот не примет admin-овый file_id
+    // ("400 wrong file identifier"). Резолвим файл через admin-бота в URL, шлём по
+    // URL первому получателю, а из ответа берём УЖЕ user-бот-овый file_id и
+    // переиспользуем его для остальных (быстро, без повторной загрузки).
+    let mediaSource: string | undefined;
+    if (payload.media) {
+      try {
+        mediaSource = await this.adminBot.getBot().getFileLink(payload.media.fileId);
+      } catch (error) {
+        logger.warn('Broadcast: failed to resolve media file link via admin bot', {
+          error,
+          fileId: payload.media.fileId,
+        });
+        mediaSource = payload.media.fileId; // не лучше прежнего, но и не хуже
+      }
+    }
+
     for (const platformId of platformIds) {
       try {
-        if (payload.media) {
+        if (payload.media && mediaSource) {
           const caption = payload.text;
+          const opts = { caption, reply_markup: replyMarkup };
+          let result: import('node-telegram-bot-api').Message;
           if (payload.media.type === 'photo') {
-            await bot.sendPhoto(platformId, payload.media.fileId, {
-              caption,
-              reply_markup: replyMarkup,
-            });
+            result = await bot.sendPhoto(platformId, mediaSource, opts);
           } else if (payload.media.type === 'video') {
-            await bot.sendVideo(platformId, payload.media.fileId, {
-              caption,
-              reply_markup: replyMarkup,
-            });
+            result = await bot.sendVideo(platformId, mediaSource, opts);
           } else {
-            // document
-            await bot.sendDocument(platformId, payload.media.fileId, {
-              caption,
-              reply_markup: replyMarkup,
-            });
+            result = await bot.sendDocument(platformId, mediaSource, opts);
           }
+          // Переиспользуем user-бот-овый file_id для следующих получателей.
+          const reusable = TelegramBots.extractFileId(payload.media.type, result);
+          if (reusable) mediaSource = reusable;
         } else {
           await bot.sendMessage(
             platformId,
@@ -153,6 +167,20 @@ export class TelegramBots implements PlatformBots {
     }
 
     return { sent, failed, total };
+  }
+
+  /** user-бот-овый file_id из ответа sendPhoto/Video/Document — для переиспользования. */
+  private static extractFileId(
+    type: 'photo' | 'video' | 'document',
+    message: import('node-telegram-bot-api').Message | undefined
+  ): string | undefined {
+    if (!message) return undefined;
+    if (type === 'photo') {
+      const sizes = message.photo;
+      return sizes && sizes.length ? sizes[sizes.length - 1].file_id : undefined;
+    }
+    if (type === 'video') return message.video?.file_id;
+    return message.document?.file_id;
   }
 
   private buildBroadcastReplyMarkup(buttons: BroadcastButton[]) {
