@@ -10,6 +10,7 @@ import type {
   BroadcastButton,
   BroadcastProgress,
 } from '../types';
+import { platformLabel } from '../types';
 import { MaxClient, type MaxButton } from './maxClient';
 import { classifyMaxError } from './maxErrors';
 
@@ -587,6 +588,7 @@ export class MaxAdminBot {
       `👤 Имя из формы: ${bookingData.fullName}\n` +
       `📞 Контакт: ${bookingData.contactValue}\n` +
       (bookingData.city ? `📍 Город: ${bookingData.city}\n` : '') +
+      `📲 Платформа: ${platformLabel(bookingData.platform)}\n` +
       (bookingData.username ? `👤 Username: @${bookingData.username}\n` : '') +
       (bookingData.firstName || bookingData.lastName
         ? `📋 Имя: ${[bookingData.firstName, bookingData.lastName].filter(Boolean).join(' ')}\n`
@@ -615,6 +617,7 @@ export class MaxAdminBot {
   async notifyNewUser(userData: NewUserNotice): Promise<void> {
     const message =
       '👤 Новый пользователь зарегистрировался:\n\n' +
+      `📲 Платформа: ${platformLabel(userData.platform)}\n` +
       `🆔 ID: ${userData.platformId}\n` +
       (userData.username ? `👤 Username: @${userData.username}\n` : '') +
       (userData.firstName || userData.lastName

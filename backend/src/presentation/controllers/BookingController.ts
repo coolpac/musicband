@@ -49,6 +49,7 @@ export class BookingController {
           fullName: booking.fullName,
           contactValue: booking.contactValue,
           city: booking.city || undefined,
+          platform: booking.user.platform,
           telegramId: booking.user.platformId.toString(),
           username: booking.user.username ?? undefined,
           firstName: booking.user.firstName ?? undefined,

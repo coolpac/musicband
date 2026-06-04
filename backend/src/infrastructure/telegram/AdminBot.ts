@@ -7,6 +7,7 @@ import { IUserRepository } from '../database/repositories/UserRepository';
 import { IBookingRepository } from '../database/repositories/BookingRepository';
 import { USER_ROLES } from '../../shared/constants';
 import { prisma } from '../../config/database';
+import { platformLabel } from '../messaging/types';
 
 export class AdminBot {
   private bot: TelegramBot;
@@ -1097,7 +1098,8 @@ export class AdminBot {
     try {
       const message =
         '👤 Новый пользователь зарегистрировался:\n\n' +
-        `🆔 Telegram ID: ${userData.platformId}\n` +
+        `📲 Платформа: ${platformLabel(userData.platform)}\n` +
+        `🆔 ID: ${userData.platformId}\n` +
         (userData.username ? `👤 Username: @${userData.username}\n` : '') +
         (userData.firstName || userData.lastName
           ? `📝 Имя: ${userData.firstName || ''} ${userData.lastName || ''}\n`
@@ -1127,6 +1129,7 @@ export class AdminBot {
     fullName: string;
     contactValue: string;
     city?: string;
+    platform?: Platform;
     telegramId?: string;
     username?: string;
     firstName?: string;
@@ -1141,7 +1144,8 @@ export class AdminBot {
         `👤 Имя из формы: ${bookingData.fullName}\n` +
         `📞 Контакт: ${bookingData.contactValue}\n` +
         (bookingData.city ? `📍 Город: ${bookingData.city}\n` : '') +
-        (bookingData.telegramId ? `🆔 Telegram ID: ${bookingData.telegramId}\n` : '') +
+        `📲 Платформа: ${platformLabel(bookingData.platform)}\n` +
+        (bookingData.telegramId ? `🆔 ID: ${bookingData.telegramId}\n` : '') +
         (bookingData.username ? `👤 Username: @${bookingData.username}\n` : '') +
         (bookingData.firstName || bookingData.lastName
           ? `📋 Имя в Telegram: ${[bookingData.firstName, bookingData.lastName].filter(Boolean).join(' ')}\n`

@@ -29,10 +29,16 @@ export interface NewBookingNotice {
   fullName: string;
   contactValue: string;
   city?: string;
+  platform?: Platform;
   telegramId?: string;
   username?: string;
   firstName?: string;
   lastName?: string;
+}
+
+/** Человекочитаемая метка платформы для уведомлений админам. */
+export function platformLabel(platform?: Platform): string {
+  return platform === 'max' ? 'Max' : 'Telegram';
 }
 
 /**
