@@ -156,54 +156,73 @@ export default function App() {
     });
   };
 
-  // Инициализация платформы при монтировании (ready/expand/viewport).
-  // Сохраняет прежнее поведение useTelegramWebApp({ initOnMount: true }) для Telegram
-  // и инициализирует Max, когда мы запущены внутри него.
+  // Инициализация платформы (ready/expand/viewport). SDK (telegram-web-app.js /
+  // max-web-app.js) грузятся async, поэтому ждём появления mini-app ретраями и
+  // только тогда вызываем initPlatform(). Без этого при async-загрузке SDK
+  // инициализация бы не вызвалась (на момент монтирования SDK ещё нет).
   useEffect(() => {
-    if (isInsideMiniApp()) initPlatform();
+    let cancelled = false;
+    let attempt = 0;
+    const tryInit = () => {
+      if (cancelled) return;
+      attempt++;
+      if (isInsideMiniApp()) {
+        initPlatform();
+        return;
+      }
+      if (attempt < 15) setTimeout(tryInit, 700);
+    };
+    tryInit();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Авторизация Mini App через initData → JWT (cookie + localStorage для сокетов).
-  // Платформа выбирает эндпоинт: Telegram → /api/auth/telegram, Max → /api/auth/max.
-  // initData может быть пустой при первом рендере — на Android особенно часто (WebView асинхронно).
+  // ВАЖНО: платформа и initData перепроверяются на КАЖДОЙ попытке — SDK грузятся
+  // async, и сессия (а значит и платформа) появляется не сразу. Эндпоинт
+  // выбирается по платформе с реальной сессией: Telegram → /api/auth/telegram,
+  // Max → /api/auth/max.
   useEffect(() => {
-    if (!isInsideMiniApp()) return;
     if (authToken) return;
-
-    const platform = getPlatform();
-    const endpoint = platform === 'max' ? '/api/auth/max' : '/api/auth/telegram';
 
     let cancelled = false;
     let attempt = 0;
-    const MAX_ATTEMPTS = 12; // Android: до ~10 сек ожидания
-    const RETRY_DELAY = 800; // ms
+    const MAX_ATTEMPTS = 15; // ~10 сек ожидания async-загрузки SDK
+    const RETRY_DELAY = 700; // ms
 
     const tryAuth = () => {
       if (cancelled) return;
       attempt++;
 
-      const initData = getInitData();
-      if (!initData) {
-        if (attempt < MAX_ATTEMPTS) {
-          if (import.meta.env.DEV) console.warn(`${platform} initData empty, retry ${attempt}/${MAX_ATTEMPTS}`);
-          setTimeout(tryAuth, RETRY_DELAY);
-        }
+      const platform = getPlatform();
+      const inMiniApp = platform === 'telegram' || platform === 'max';
+      const initData = inMiniApp ? getInitData() : null;
+
+      if (inMiniApp && initData) {
+        const endpoint = platform === 'max' ? '/api/auth/max' : '/api/auth/telegram';
+        apiPost<{ user: unknown; token: string; startParam?: string }>(endpoint, {
+          initData,
+          startParam: getStartParam(),
+        })
+          .then((data) => {
+            if (!cancelled && data?.token) {
+              localStorage.setItem('auth_token', data.token);
+              setAuthToken(data.token);
+            }
+          })
+          .catch((error) => {
+            console.error(`${platform} auth failed:`, error);
+          });
         return;
       }
 
-      apiPost<{ user: unknown; token: string; startParam?: string }>(endpoint, {
-        initData,
-        startParam: getStartParam(),
-      })
-        .then((data) => {
-          if (!cancelled && data?.token) {
-            localStorage.setItem('auth_token', data.token);
-            setAuthToken(data.token);
-          }
-        })
-        .catch((error) => {
-          console.error(`${platform} auth failed:`, error);
-        });
+      if (attempt < MAX_ATTEMPTS) {
+        if (import.meta.env.DEV) {
+          console.warn(`auth wait ${attempt}/${MAX_ATTEMPTS} (platform=${platform}, initData=${!!initData})`);
+        }
+        setTimeout(tryAuth, RETRY_DELAY);
+      }
     };
 
     tryAuth();

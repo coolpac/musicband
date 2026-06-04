@@ -29,6 +29,7 @@ import {
   getTelegramWebApp,
 } from '../telegram/telegramWebApp';
 import {
+  getMaxWebApp,
   isInsideMax,
   initMaxWebApp,
   getMaxInitData,
@@ -54,14 +55,34 @@ export type PlatformUser = {
   fullName: string;
 };
 
+/** Реальная сессия Telegram: есть initData или user (а не просто загруженный SDK). */
+function telegramHasSession(): boolean {
+  const tg = getTelegramWebApp();
+  return !!(tg && (tg.initData || tg.initDataUnsafe?.user));
+}
+
+/** Реальная сессия Max: есть initData или user. */
+function maxHasSession(): boolean {
+  const wa = getMaxWebApp();
+  return !!(wa && (wa.initData || wa.initDataUnsafe?.user));
+}
+
 /**
- * Определить текущую платформу.
+ * Определить текущую платформу ПО НАЛИЧИЮ РЕАЛЬНОЙ СЕССИИ, а не по факту
+ * загруженного SDK. Важно: telegram-web-app.js определяет window.Telegram.WebApp
+ * ВСЕГДА (даже вне Telegram и внутри Max), поэтому судить по присутствию объекта
+ * нельзя — иначе Max ошибочно определяется как Telegram и /api/auth/max не зовётся.
  *
- * Если по какой-то причине присутствуют ОБА глобала, предпочитаем Telegram:
- * исторически это Telegram-приложение, и parity с Telegram критичен. Max
- * добавлен поверх, поэтому при коллизии Telegram имеет приоритет.
+ * Приоритет — у платформы с реальной сессией (initData/user). Если сессии ещё нет
+ * (SDK грузятся async), отдаём по присутствию SDK как временный ответ — вызывающий
+ * код (бутстрап в App) перепроверяет платформу ретраями, пока не появится сессия.
  */
 export function getPlatform(): Platform {
+  if (maxHasSession() && !telegramHasSession()) return 'max';
+  if (telegramHasSession()) return 'telegram';
+  if (maxHasSession()) return 'max';
+  // Сессии пока нет — ориентируемся на присутствие SDK (приоритет Max, если только он).
+  if (isInsideMax() && !isInsideTelegram()) return 'max';
   if (isInsideTelegram()) return 'telegram';
   if (isInsideMax()) return 'max';
   return 'web';

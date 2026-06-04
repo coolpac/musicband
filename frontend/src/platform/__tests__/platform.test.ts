@@ -76,11 +76,21 @@ describe('getPlatform detection', () => {
     expect(getPlatform()).toBe('web');
   });
 
-  it('prefers "telegram" when BOTH globals are present', async () => {
+  it('prefers "telegram" when BOTH have a real session', async () => {
     setTelegram({ WebApp: fakeTelegramWebApp });
     setMax(fakeMaxWebApp);
     const { getPlatform } = await importPlatform();
     expect(getPlatform()).toBe('telegram');
+  });
+
+  // Регрессия: telegram-web-app.js определяет window.Telegram.WebApp ВСЕГДА
+  // (даже внутри Max), но без сессии. Раньше getPlatform по факту наличия объекта
+  // возвращал 'telegram' → /api/auth/max не вызывался → 0 Max-юзеров.
+  it('returns "max" when Telegram SDK is loaded WITHOUT a session but Max HAS one', async () => {
+    setTelegram({ WebApp: { initData: '', initDataUnsafe: {}, ready() {}, expand() {} } });
+    setMax(fakeMaxWebApp);
+    const { getPlatform } = await importPlatform();
+    expect(getPlatform()).toBe('max');
   });
 });
 
