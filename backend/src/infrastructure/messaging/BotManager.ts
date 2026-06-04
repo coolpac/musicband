@@ -268,6 +268,13 @@ export class BotManager {
       // не получит финальное «Рассылка завершена».
       try {
         const platformIds = await this.getAudienceIds(platform, segment);
+        logger.info('Broadcast: platform audience resolved', {
+          platform,
+          segment,
+          recipients: platformIds.length,
+          hasMedia: !!payload.media,
+          buttons: payload.buttons.length,
+        });
 
         const result = await bots.broadcast(platformIds, {
           text: payload.text,
@@ -290,8 +297,18 @@ export class BotManager {
         aggregate.sent += result.sent;
         aggregate.failed += result.failed;
         aggregate.total += result.total;
+        logger.info('Broadcast: platform done', {
+          platform,
+          sent: result.sent,
+          failed: result.failed,
+          total: result.total,
+        });
       } catch (error) {
-        logger.error('Broadcast failed for platform', { platform, error });
+        logger.error('Broadcast failed for platform', {
+          platform,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
       }
     }
 

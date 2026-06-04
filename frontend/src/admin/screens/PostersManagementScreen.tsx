@@ -94,7 +94,11 @@ export default function PostersManagementScreen() {
       order: index + 1,
     }));
 
-    const changed = normalized.filter((poster, index) => poster.order !== (posters[index].order ?? index + 1));
+    // Сравниваем новый порядок с прежним ПО ID афиши, а не по позиции в массиве.
+    // (Раньше сравнение шло по индексу: после свопа значения order на каждой позиции
+    //  оставались 1,2,3…, поэтому «изменённых» не находилось и порядок не сохранялся.)
+    const oldOrderById = new Map(posters.map((p) => [p.id, p.order ?? 0]));
+    const changed = normalized.filter((poster) => poster.order !== oldOrderById.get(poster.id));
     setPosters(normalized);
     setIsReordering(true);
 
