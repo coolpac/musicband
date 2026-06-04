@@ -38,6 +38,7 @@ type OnBroadcast = (payload: {
   buttons: BroadcastButton[];
   media?: { type: 'photo' | 'video' | 'document'; fileId: string };
   segment?: BroadcastSegment;
+  platform?: 'telegram' | 'max' | 'both';
   onProgress?: (progress: BroadcastProgress) => Promise<void>;
 }) => Promise<BroadcastProgress>;
 

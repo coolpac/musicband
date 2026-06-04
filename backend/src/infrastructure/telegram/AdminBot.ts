@@ -30,6 +30,7 @@ export class AdminBot {
       includeDefaultButton: boolean;
       media?: { type: 'photo' | 'video' | 'document'; fileId: string };
       segment: 'all' | 'just_person' | 'organizer';
+      platform: 'telegram' | 'max' | 'both';
     }
   >;
   private onBroadcast?: (payload: {
@@ -37,6 +38,7 @@ export class AdminBot {
     buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
     media?: { type: 'photo' | 'video' | 'document'; fileId: string };
     segment?: 'all' | 'just_person' | 'organizer';
+    platform?: 'telegram' | 'max' | 'both';
     onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
   }) => Promise<{ sent: number; failed: number; total: number }>;
   private chatsWithKeyboard: Set<number>;
@@ -75,6 +77,7 @@ export class AdminBot {
       buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
       media?: { type: 'photo' | 'video' | 'document'; fileId: string };
       segment?: 'all' | 'just_person' | 'organizer';
+      platform?: 'telegram' | 'max' | 'both';
       onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
     }) => Promise<{ sent: number; failed: number; total: number }>
   ) {
@@ -255,7 +258,13 @@ export class AdminBot {
                   text: textContent,
                   includeDefaultButton: existing.includeDefaultButton ?? false,
                 }
-              : { text: textContent, buttons: [], includeDefaultButton: false, segment: 'all' as const };
+              : {
+                  text: textContent,
+                  buttons: [],
+                  includeDefaultButton: false,
+                  segment: 'all' as const,
+                  platform: 'both' as const,
+                };
             this.pendingBroadcasts.set(telegramId, nextDraft);
 
             await this.sendBroadcastPreview(chatId, telegramId);
@@ -416,23 +425,48 @@ export class AdminBot {
               | 'all'
               | 'just_person'
               | 'organizer';
-            const count = await this.getAudienceCount(segment);
             const segmentLabel = this.getSegmentLabel(segment);
 
+            // Сегмент выбран — создаём черновик (платформа по умолчанию 'both',
+            // как прежнее поведение) и предлагаем выбрать целевую платформу.
             this.pendingBroadcasts.set(telegramId, {
               text: '',
               buttons: [],
               includeDefaultButton: false,
               segment,
+              platform: 'both',
             });
+
+            await this.bot.answerCallbackQuery(query.id, { text: segmentLabel });
+            await this.sendPlatformSelection(chatId);
+            return;
+          }
+
+          if (data?.startsWith('broadcast_platform:')) {
+            const platform = data.replace('broadcast_platform:', '') as
+              | 'telegram'
+              | 'max'
+              | 'both';
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет черновика рассылки.' });
+              return;
+            }
+
+            this.pendingBroadcasts.set(telegramId, { ...draft, platform });
             this.awaitingBroadcastText.add(telegramId);
 
+            const count = await this.getAudienceCount(draft.segment, platform);
+            const segmentLabel = this.getSegmentLabel(draft.segment);
+            const platformLabel = this.getPlatformLabel(platform);
+
             await this.bot.answerCallbackQuery(query.id, {
-              text: `${segmentLabel}: ~${count} чел.`,
+              text: `${platformLabel}: ~${count} чел.`,
             });
             await this.bot.sendMessage(
               chatId,
-              `👥 Аудитория: ${segmentLabel} (~${count} чел.)\n\n` +
+              `👥 Аудитория: ${segmentLabel} (~${count} чел.)\n` +
+                `🛰️ Платформа: ${platformLabel}\n\n` +
                 'Отправьте текст сообщения одним сообщением.',
               {
                 reply_markup: {
@@ -442,6 +476,17 @@ export class AdminBot {
                 },
               }
             );
+            return;
+          }
+
+          if (data === 'broadcast_change_platform') {
+            const draft = this.pendingBroadcasts.get(telegramId);
+            if (!draft) {
+              await this.bot.answerCallbackQuery(query.id, { text: 'Нет черновика рассылки.' });
+              return;
+            }
+            await this.bot.answerCallbackQuery(query.id);
+            await this.sendPlatformSelection(chatId);
             return;
           }
 
@@ -620,6 +665,7 @@ export class AdminBot {
                 buttons: finalButtons,
                 media: draft.media,
                 segment: draft.segment,
+                platform: draft.platform,
                 onProgress: async (progress) => {
                   lastProgress = progress;
                   if (progress.sent === progress.total) {
@@ -723,7 +769,10 @@ export class AdminBot {
               callback_data: draft.media ? 'broadcast_media_clear' : 'broadcast_media_prompt',
             },
           ],
-          [{ text: '👥 Изменить аудиторию', callback_data: 'broadcast_change_segment' }],
+          [
+            { text: '👥 Изменить аудиторию', callback_data: 'broadcast_change_segment' },
+            { text: '🛰️ Изменить платформу', callback_data: 'broadcast_change_platform' },
+          ],
           [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
         ],
       },
@@ -736,8 +785,10 @@ export class AdminBot {
     includeDefaultButton: boolean;
     media?: { type: 'photo' | 'video' | 'document'; fileId: string };
     segment?: 'all' | 'just_person' | 'organizer';
+    platform?: 'telegram' | 'max' | 'both';
   }): string {
     const segmentLine = `👥 Аудитория: ${this.getSegmentLabel(draft.segment ?? 'all')}`;
+    const platformLine = `🛰️ Платформа: ${this.getPlatformLabel(draft.platform ?? 'both')}`;
 
     const buttonLines: string[] = [];
     if (draft.buttons.length) {
@@ -765,7 +816,7 @@ export class AdminBot {
       ? `📎 Медиа: ${mediaLabel} прикреплено`
       : '📎 Медиа не прикреплена';
 
-    return `Черновик рассылки:\n\n${segmentLine}\n\n${draft.text}\n\nКнопки:\n${buttonLines.join('\n')}\n\n${mediaLine}`;
+    return `Черновик рассылки:\n\n${segmentLine}\n${platformLine}\n\n${draft.text}\n\nКнопки:\n${buttonLines.join('\n')}\n\n${mediaLine}`;
   }
 
   private parseBroadcastButtons(input: string): {
@@ -943,26 +994,64 @@ export class AdminBot {
     });
   }
 
+  private async sendPlatformSelection(chatId: number): Promise<void> {
+    await this.bot.sendMessage(chatId, '🛰️ Выберите платформу для рассылки:', {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🟦 Telegram', callback_data: 'broadcast_platform:telegram' }],
+          [{ text: '🟪 Max', callback_data: 'broadcast_platform:max' }],
+          [{ text: '🌐 Обе платформы', callback_data: 'broadcast_platform:both' }],
+          [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
+        ],
+      },
+    });
+  }
+
   private async getAudienceCount(
-    segment: 'all' | 'just_person' | 'organizer'
+    segment: 'all' | 'just_person' | 'organizer',
+    platform: 'telegram' | 'max' | 'both' = 'both'
   ): Promise<number> {
     try {
-      // Рассылка (broadcastToUsers) веерно уходит на ВСЕ зарегистрированные
-      // платформы, поэтому счётчик «~N чел.» считает получателей по всем
-      // платформам, а не только Telegram — иначе превью занижало бы охват.
+      // Рассылка (broadcastToUsers) уходит на выбранную платформу (или на обе),
+      // поэтому счётчик «~N чел.» считает получателей с учётом выбора платформы.
+      // 'both' — все платформы (прежнее поведение), 'telegram'/'max' — только эта.
       if (segment === 'all') {
-        return await prisma.user.count();
+        if (platform === 'both') {
+          return await prisma.user.count();
+        }
+        return await prisma.user.count({ where: { platform } });
+      }
+      if (platform === 'both') {
+        const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
+          SELECT COUNT(*) as count
+          FROM users u
+          INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
+          WHERE oa.role = ${segment}
+        `;
+        return Number(result[0].count);
       }
       const result = await prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*) as count
         FROM users u
         INNER JOIN onboarding_answers oa ON oa.platform = u.platform AND oa.platform_id = u.platform_id
-        WHERE oa.role = ${segment}
+        WHERE oa.role = ${segment} AND u.platform::text = ${platform}
       `;
       return Number(result[0].count);
     } catch (error) {
-      logger.error('Error counting audience', { segment, error });
+      logger.error('Error counting audience', { segment, platform, error });
       return 0;
+    }
+  }
+
+  private getPlatformLabel(platform: 'telegram' | 'max' | 'both'): string {
+    switch (platform) {
+      case 'telegram':
+        return '🟦 Telegram';
+      case 'max':
+        return '🟪 Max';
+      case 'both':
+      default:
+        return '🌐 Обе платформы';
     }
   }
 

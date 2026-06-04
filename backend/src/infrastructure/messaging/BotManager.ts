@@ -245,14 +245,22 @@ export class BotManager {
     buttons: Array<{ text: string; url: string; kind: 'url' | 'web_app' }>;
     media?: { type: 'photo' | 'video' | 'document'; fileId: string };
     segment?: 'all' | 'just_person' | 'organizer';
+    platform?: 'telegram' | 'max' | 'both';
     onProgress?: (progress: { sent: number; failed: number; total: number }) => Promise<void>;
   }): Promise<{ sent: number; failed: number; total: number }> {
     const segment = payload.segment ?? 'all';
+    const targetPlatform = payload.platform ?? 'both';
 
     if (this.platforms.size === 0) {
       logger.warn('No platforms registered, broadcast skipped');
       return { sent: 0, failed: 0, total: 0 };
     }
+
+    // Целевые платформы: 'both' (или не указано) — все зарегистрированные (прежнее
+    // поведение); 'telegram'/'max' — только эта одна, остальные пропускаем.
+    const targets = [...this.platforms].filter(
+      ([platform]) => targetPlatform === 'both' || platform === targetPlatform
+    );
 
     // Аккумулируем прогресс по уже завершённым платформам, чтобы onProgress
     // (один индикатор у admin-бота) показывал суммарные числа по всем платформам.
@@ -262,7 +270,7 @@ export class BotManager {
 
     const aggregate = { sent: 0, failed: 0, total: 0 };
 
-    for (const [platform, bots] of this.platforms) {
+    for (const [platform, bots] of targets) {
       // Изоляция по платформам: сбой одной платформы (запрос аудитории или
       // отправка) не должен прерывать рассылку в остальные — иначе admin-бот
       // не получит финальное «Рассылка завершена».
@@ -317,6 +325,7 @@ export class BotManager {
       failed: aggregate.failed,
       total: aggregate.total,
       segment,
+      platform: targetPlatform,
     });
     return aggregate;
   }

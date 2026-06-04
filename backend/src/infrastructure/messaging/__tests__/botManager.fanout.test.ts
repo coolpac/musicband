@@ -112,6 +112,48 @@ describe('BotManager Phase 5 fan-out', () => {
 
       expect(result).toEqual({ sent: 7, failed: 1, total: 8 });
     });
+
+    it('platform:"telegram" broadcasts only to the telegram adapter', async () => {
+      userFindMany.mockResolvedValue([{ platformId: 111n }]);
+
+      await manager.broadcastToUsers({
+        text: 'hi',
+        buttons: [],
+        segment: 'all',
+        platform: 'telegram',
+      });
+
+      expect(telegramBots.broadcast).toHaveBeenCalledWith(['111'], expect.anything());
+      expect(maxBots.broadcast).not.toHaveBeenCalled();
+    });
+
+    it('platform:"max" broadcasts only to the max adapter', async () => {
+      userFindMany.mockResolvedValue([{ platformId: 333n }]);
+
+      await manager.broadcastToUsers({
+        text: 'hi',
+        buttons: [],
+        segment: 'all',
+        platform: 'max',
+      });
+
+      expect(maxBots.broadcast).toHaveBeenCalledWith(['333'], expect.anything());
+      expect(telegramBots.broadcast).not.toHaveBeenCalled();
+    });
+
+    it('platform:"both" broadcasts to both adapters', async () => {
+      userFindMany.mockResolvedValue([{ platformId: 1n }]);
+
+      await manager.broadcastToUsers({
+        text: 'hi',
+        buttons: [],
+        segment: 'all',
+        platform: 'both',
+      });
+
+      expect(telegramBots.broadcast).toHaveBeenCalled();
+      expect(maxBots.broadcast).toHaveBeenCalled();
+    });
   });
 
   describe('(c) voting winner + follow-up grouping by platform', () => {
