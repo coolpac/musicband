@@ -52,3 +52,40 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+// ВРЕМЕННАЯ ДИАГНОСТИКА: сообщаем на бэкенд, что реально отдаёт Mini App SDK
+// внутри Max (чтобы понять пустой initData). Шлём дважды — SDK грузится async.
+function sendClientInfo(tag: string): void {
+  try {
+    const w = window as unknown as {
+      Telegram?: { WebApp?: { initData?: unknown; initDataUnsafe?: { user?: unknown } } };
+      WebApp?: { initData?: unknown; initDataUnsafe?: Record<string, unknown> };
+    };
+    const tg = w.Telegram?.WebApp;
+    const wa = w.WebApp;
+    const body = {
+      tag,
+      ua: navigator.userAgent,
+      href: location.href,
+      hasTelegram: !!tg,
+      tgInitDataLen: typeof tg?.initData === 'string' ? (tg.initData as string).length : 0,
+      tgHasUser: !!tg?.initDataUnsafe?.user,
+      hasWebApp: !!wa,
+      webAppKeys: wa ? Object.keys(wa).slice(0, 50) : null,
+      maxInitDataType: wa ? typeof wa.initData : 'no-webapp',
+      maxInitDataLen: typeof wa?.initData === 'string' ? (wa.initData as string).length : 0,
+      maxUnsafeKeys: wa?.initDataUnsafe ? Object.keys(wa.initDataUnsafe) : null,
+      maxHasUser: !!wa?.initDataUnsafe?.user,
+    };
+    fetch('/api/debug/clientinfo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    /* ignore */
+  }
+}
+setTimeout(() => sendClientInfo('t1500'), 1500);
+setTimeout(() => sendClientInfo('t4000'), 4000);

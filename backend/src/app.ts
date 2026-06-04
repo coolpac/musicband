@@ -140,6 +140,20 @@ app.get('/api', (_req, res) => {
   });
 });
 
+// ВРЕМЕННАЯ ДИАГНОСТИКА: клиент сообщает, что реально отдаёт Mini App SDK
+// (window.WebApp / window.Telegram) внутри Max — чтобы понять, почему пустой initData.
+// Без авторизации, только лог; удалить после диагностики.
+app.post('/api/debug/clientinfo', (req, res) => {
+  try {
+    const body =
+      req.body && typeof req.body === 'object' ? req.body : { raw: String(req.body).slice(0, 800) };
+    logger.info('clientinfo', { ...body });
+  } catch {
+    /* ignore */
+  }
+  res.status(204).end();
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/songs', songsRoutes);
