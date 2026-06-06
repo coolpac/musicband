@@ -16,6 +16,9 @@ export const VoteWithInitDataSchema = z.object({
   initData: z.string().min(1, 'InitData is required'),
   songId: z.string().uuid('Invalid song ID'),
   sessionId: z.string().uuid('Invalid session ID').optional(),
+  // Платформа определяет, каким секретом валидировать initData (Telegram vs Max).
+  // Необязательно ради обратной совместимости: при отсутствии считаем Telegram.
+  platform: z.enum(['telegram', 'max']).optional(),
 });
 
 export const StartSessionSchema = z.object({

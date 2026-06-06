@@ -213,13 +213,19 @@ export class PublicVoteController {
         return;
       }
 
-      const { initData, songId, sessionId: targetSessionId } = req.body as {
+      const { initData, songId, sessionId: targetSessionId, platform } = req.body as {
         initData: string;
         songId: string;
         sessionId?: string;
+        platform?: 'telegram' | 'max';
       };
 
-      const authResult = await this.authService.authenticateWithTelegram(initData);
+      // initData валидируется секретом своей платформы: Max-данные не пройдут
+      // проверку Telegram-секретом и наоборот. По умолчанию — Telegram (обратная совместимость).
+      const authResult =
+        platform === 'max'
+          ? await this.authService.authenticateWithMax(initData)
+          : await this.authService.authenticateWithTelegram(initData);
       const sessionId = await this.voteService.castVote(authResult.user.id, songId, targetSessionId);
 
       const socketServer = getSocketServer();

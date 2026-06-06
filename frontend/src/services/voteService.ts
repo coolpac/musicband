@@ -67,7 +67,8 @@ export async function castVote(songId: string): Promise<void> {
 export async function castVoteWithInitData(
   songId: string,
   initData: string,
-  sessionId?: string
+  sessionId?: string,
+  platform?: 'telegram' | 'max'
 ): Promise<{ token: string; sessionId: string }> {
   if (isMockMode()) {
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -76,6 +77,8 @@ export async function castVoteWithInitData(
   const res = await apiPost<{ sessionId: string; token: string }>('/api/public/vote/with-initdata', {
     initData,
     songId,
+    // Платформа нужна бэкенду, чтобы валидировать initData правильным секретом (Telegram vs Max).
+    ...(platform ? { platform } : {}),
     ...(sessionId ? { sessionId } : {}),
   });
   return { token: res.token, sessionId: res.sessionId };

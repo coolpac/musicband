@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { hapticNotification, showAlert, getTelegramUserId, getInitData } from '../telegram/telegramWebApp';
+import { hapticNotification, showAlert, getUserId, getInitData, getPlatform } from '../platform/platform';
 import { castVote, castVotePublic, castVoteWithInitData, getMyVote } from '../services/voteService';
 import { ApiError } from '../services/apiClient';
 
@@ -38,10 +38,13 @@ export function useVoteSubmit({
 
   const tryPublicVote = useCallback(
     async (songId: string): Promise<boolean> => {
-      const telegramId = getTelegramUserId();
-      if (telegramId == null) return false;
+      // Публичный fallback по id поддержан только для Telegram: бэкенд создаёт
+      // пользователя как telegram-идентичность, поэтому Max-id сюда слать нельзя.
+      if (getPlatform() !== 'telegram') return false;
+      const userId = getUserId();
+      if (userId == null) return false;
       try {
-        await castVotePublic(songId, telegramId, sid);
+        await castVotePublic(songId, userId, sid);
         return true;
       } catch (err) {
         if (err instanceof ApiError && err.statusCode === 409) return true;
@@ -56,7 +59,7 @@ export function useVoteSubmit({
       const initData = getInitData();
       if (!initData) return null;
       try {
-        return await castVoteWithInitData(songId, initData, sid);
+        return await castVoteWithInitData(songId, initData, sid, getPlatform() === 'max' ? 'max' : 'telegram');
       } catch (err) {
         if (err instanceof ApiError && err.statusCode === 409) {
           goToVotingResults(setCurrentScreen, votingSessionId);
@@ -85,11 +88,11 @@ export function useVoteSubmit({
           goToVotingResults(setCurrentScreen, votingSessionId);
           return;
         }
-        if (getTelegramUserId() == null) {
-          hapticNotification('error');
-          showAlert('Откройте приложение через Telegram, чтобы проголосовать.');
+        hapticNotification('error');
+        if (getUserId() == null) {
+          const where = getPlatform() === 'max' ? 'Max' : 'Telegram';
+          showAlert(`Откройте приложение через ${where}, чтобы проголосовать.`);
         } else {
-          hapticNotification('error');
           showAlert('Не удалось отправить голос. Попробуйте ещё раз.');
         }
         return;
