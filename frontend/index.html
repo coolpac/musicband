@@ -28,6 +28,10 @@
           var p = new URLSearchParams(h);
           var d = p.get('tgWebAppData');
           if (d) sessionStorage.setItem('tg_webapp_init_data', d);
+          // Max отдаёт launch-данные как #WebAppData=...; hash теряется при SPA-навигации,
+          // поэтому сохраняем сразу при первой загрузке (аналогично tgWebAppData).
+          var m = p.get('WebAppData');
+          if (m) sessionStorage.setItem('max_webapp_init_data', m);
         }
       } catch (e) {}
     </script>

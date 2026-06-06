@@ -29,7 +29,6 @@ import {
   getTelegramWebApp,
 } from '../telegram/telegramWebApp';
 import {
-  getMaxWebApp,
   isInsideMax,
   initMaxWebApp,
   getMaxInitData,
@@ -61,10 +60,9 @@ function telegramHasSession(): boolean {
   return !!(tg && (tg.initData || tg.initDataUnsafe?.user));
 }
 
-/** Реальная сессия Max: есть initData или user. */
+/** Реальная сессия Max: есть initData (window.WebApp ИЛИ hash #WebAppData) или user. */
 function maxHasSession(): boolean {
-  const wa = getMaxWebApp();
-  return !!(wa && (wa.initData || wa.initDataUnsafe?.user));
+  return !!getMaxInitData() || getMaxUserId() != null;
 }
 
 /**

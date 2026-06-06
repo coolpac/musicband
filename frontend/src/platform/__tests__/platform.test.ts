@@ -17,6 +17,12 @@ function setMax(value: unknown): void {
 function clearGlobals(): void {
   delete window.Telegram;
   delete window.WebApp;
+  try {
+    window.location.hash = '';
+    sessionStorage.clear();
+  } catch {
+    /* ignore */
+  }
 }
 
 async function importPlatform() {
@@ -91,6 +97,17 @@ describe('getPlatform detection', () => {
     setMax(fakeMaxWebApp);
     const { getPlatform } = await importPlatform();
     expect(getPlatform()).toBe('max');
+  });
+
+  // Регрессия (реальный Max): window.WebApp НЕ создаётся, а initData приходит в hash
+  // как #WebAppData=<query>. Должны определить 'max' и достать initData из hash.
+  it('returns "max" from #WebAppData hash when window.WebApp is absent', async () => {
+    const raw = `user=${encodeURIComponent(JSON.stringify({ id: 555, first_name: 'Макс' }))}&auth_date=1&hash=abc`;
+    window.location.hash = `#WebAppData=${encodeURIComponent(raw)}`;
+    const { getPlatform, getInitData, getUserId } = await importPlatform();
+    expect(getPlatform()).toBe('max');
+    expect(getInitData()).toBe(raw);
+    expect(getUserId()).toBe(555);
   });
 });
 

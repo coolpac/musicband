@@ -13,11 +13,65 @@ export function getMaxWebApp(): MaxWebApp | null {
   return window.WebApp ?? null;
 }
 
-/** Внутри Max, если глобал WebApp присутствует и похож на Max SDK (есть initData/initDataUnsafe). */
+/**
+ * Сырые launch-данные Max. ВАЖНО (проверено бэконом из реального Max): `window.WebApp`
+ * в Max НЕ создаётся, а initData приходит в `location.hash` как `#WebAppData=<query>`
+ * (user/query_id/auth_date/hash/chat/ip). Читаем: SDK → hash → sessionStorage
+ * (hash теряется при SPA-навигации, поэтому index.html сохраняет WebAppData сразу).
+ */
+function readMaxInitDataRaw(): string | null {
+  const fromSdk = getMaxWebApp()?.initData;
+  if (typeof fromSdk === 'string' && fromSdk.trim()) return fromSdk.trim();
+  if (typeof window === 'undefined') return null;
+  try {
+    const h = window.location.hash.slice(1);
+    if (h) {
+      const wd = new URLSearchParams(h).get('WebAppData');
+      if (wd) {
+        try {
+          sessionStorage.setItem('max_webapp_init_data', wd);
+        } catch {
+          /* ignore */
+        }
+        return wd;
+      }
+    }
+    const stored = sessionStorage.getItem('max_webapp_init_data');
+    if (stored) return stored;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+/** user/start_param: из SDK initDataUnsafe (если есть) либо парсим из сырого WebAppData. */
+function readMaxUnsafe(): {
+  user?: { id?: number; first_name?: string; last_name?: string; username?: string };
+  start_param?: string;
+} {
+  const unsafe = getMaxWebApp()?.initDataUnsafe;
+  if (unsafe && Object.keys(unsafe).length > 0) {
+    return unsafe as ReturnType<typeof readMaxUnsafe>;
+  }
+  const raw = readMaxInitDataRaw();
+  if (!raw) return {};
+  try {
+    const p = new URLSearchParams(raw);
+    const userStr = p.get('user');
+    return {
+      user: userStr ? JSON.parse(userStr) : undefined,
+      start_param: p.get('start_param') ?? undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/** Внутри Max, если есть launch-данные (hash/SDK) или присутствует глобал WebApp. */
 export function isInsideMax(): boolean {
+  if (readMaxInitDataRaw()) return true;
   const wa = getMaxWebApp();
-  if (!wa) return false;
-  return 'initData' in wa || 'initDataUnsafe' in wa;
+  return !!wa && ('initData' in wa || 'initDataUnsafe' in wa);
 }
 
 /** Инициализация при запуске в Max: ready/expand, если такие методы есть. */
@@ -39,24 +93,22 @@ export function initMaxWebApp(): void {
 
 /** initData (URL-encoded строка для серверной валидации на /api/auth/max). */
 export function getMaxInitData(): string | null {
-  const value = getMaxWebApp()?.initData?.trim();
-  return value ? value : null;
+  return readMaxInitDataRaw();
 }
 
-/** start_param из deep link (initDataUnsafe.start_param). */
+/** start_param из deep link. */
 export function getMaxStartParam(): string | null {
-  return (getMaxWebApp()?.initDataUnsafe?.start_param as string | undefined) ?? null;
+  return readMaxUnsafe().start_param ?? null;
 }
 
-/** Max user ID из initDataUnsafe. */
+/** Max user ID. */
 export function getMaxUserId(): number | null {
-  const user = getMaxWebApp()?.initDataUnsafe?.user;
-  return user?.id ?? null;
+  return readMaxUnsafe().user?.id ?? null;
 }
 
-/** Данные пользователя из initDataUnsafe (только для префилла UI; на бэке проверять initData). */
+/** Данные пользователя (только для префилла UI; на бэке проверять initData). */
 export function getMaxUser(): { firstName: string; lastName?: string; username?: string; fullName: string } | null {
-  const user = getMaxWebApp()?.initDataUnsafe?.user;
+  const user = readMaxUnsafe().user;
   if (!user?.first_name) return null;
   const firstName = String(user.first_name);
   const lastName = user.last_name ? String(user.last_name) : undefined;
