@@ -18,7 +18,7 @@ import type {
   BroadcastButton,
   VotingQrNotice,
 } from '../types';
-import { MaxClient, type MaxButton } from './maxClient';
+import { MaxClient, type MaxButton, type MessageAttachment } from './maxClient';
 import { MaxUserBot } from './MaxUserBot';
 import { MaxAdminBot } from './MaxAdminBot';
 import { classifyMaxError } from './maxErrors';
@@ -79,9 +79,9 @@ const ADMIN_COMMANDS = [
  * Платформенный throttling рассылок (broadcast) живёт здесь, как и в TelegramBots.
  * Аудиторию/сегменты по-прежнему разрешает BotManager и передаёт готовый список id.
  *
- * DEFERRED (Phase 4 scope): payload.media в broadcast не отправляется (медиа-шаг
- * мастера для Max отложен, см. docstring MaxAdminBot). Если media присутствует —
- * логируем и продолжаем (текст + кнопки), без ошибки.
+ * Медиа: photo/video доставляются на Max (uploadImage/uploadVideo по URL, который
+ * BotManager разрешает из Telegram file_id и кладёт в payload.mediaUrl). Документы и
+ * случаи недоступного URL — фолбэк на текст + кнопки, без ошибки.
  */
 export class MaxBots implements PlatformBots {
   readonly platform: Platform = 'max';
@@ -190,17 +190,36 @@ export class MaxBots implements PlatformBots {
 
   /**
    * Рассылка по уже разрешённому списку получателей с throttling (~25 msg/сек),
-   * как в TelegramBots.broadcast. Отправляет ТЕКСТ + КНОПКИ; payload.media
-   * пропускается (медиа-шаг для Max отложен — лог + continue, без ошибки).
+   * как в TelegramBots.broadcast. Отправляет ТЕКСТ + КНОПКИ, а при наличии
+   * payload.mediaUrl (photo/video) — ещё и медиа (грузится в Max один раз и
+   * переиспользуется для всех получателей).
    */
   async broadcast(platformIds: string[], payload: BroadcastPayload): Promise<BroadcastProgress> {
-    if (payload.media) {
-      logger.warn('Max: broadcast media skipped (media not supported on Max, sending text only)', {
-        mediaType: payload.media.type,
-      });
-    }
-
     const buttonRows = this.buildBroadcastButtonRows(payload.buttons);
+
+    // Медиа: photo/video Max умеет (uploadImage/uploadVideo по URL). Грузим ОДИН раз и
+    // переиспользуем вложение для всех получателей. Документы Max-клиент не загружает —
+    // как и при недоступном URL, откатываемся на текст-онли.
+    let mediaAttachment: MessageAttachment | undefined;
+    if (payload.media) {
+      const kind: 'image' | 'video' | null =
+        payload.media.type === 'photo' ? 'image' : payload.media.type === 'video' ? 'video' : null;
+      if (kind && payload.mediaUrl) {
+        try {
+          mediaAttachment = await this.userClient.uploadMediaAttachment(kind, payload.mediaUrl);
+        } catch (error) {
+          logger.error('Max: broadcast media upload failed, sending text only', {
+            mediaType: payload.media.type,
+            error,
+          });
+        }
+      } else {
+        logger.warn('Max: broadcast media skipped (unsupported type or unresolved URL), text only', {
+          mediaType: payload.media.type,
+          hasUrl: !!payload.mediaUrl,
+        });
+      }
+    }
 
     let sent = 0;
     let failed = 0;
@@ -212,7 +231,14 @@ export class MaxBots implements PlatformBots {
 
     for (const platformId of platformIds) {
       try {
-        if (buttonRows.length) {
+        if (mediaAttachment) {
+          await this.userClient.sendMessageWithAttachments(
+            Number(platformId),
+            payload.text,
+            [mediaAttachment],
+            buttonRows.length ? buttonRows : undefined
+          );
+        } else if (buttonRows.length) {
           await this.userClient.sendMessageWithKeyboard(
             Number(platformId),
             payload.text,

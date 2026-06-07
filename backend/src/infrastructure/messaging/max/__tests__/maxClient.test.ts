@@ -65,6 +65,46 @@ describe('MaxClient', () => {
     ]);
   });
 
+  it('uploadMediaAttachment("image", url) uploads via uploadImage and returns the attachment', async () => {
+    const bot = makeFakeBot();
+    const client = new MaxClient(bot as never);
+
+    const att = await client.uploadMediaAttachment('image', 'https://x/p.jpg');
+
+    expect(bot.api.uploadImage).toHaveBeenCalledWith({ source: 'https://x/p.jpg' });
+    expect(bot.api.uploadVideo).not.toHaveBeenCalled();
+    expect(att).toMatchObject({ type: 'image' });
+  });
+
+  it('uploadMediaAttachment("video", url) uploads via uploadVideo', async () => {
+    const bot = makeFakeBot();
+    const client = new MaxClient(bot as never);
+
+    await client.uploadMediaAttachment('video', 'https://x/clip.mp4');
+
+    expect(bot.api.uploadVideo).toHaveBeenCalledWith({ source: 'https://x/clip.mp4' });
+    expect(bot.api.uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('sendMessageWithAttachments sends pre-uploaded media + appends a keyboard', async () => {
+    const bot = makeFakeBot();
+    const client = new MaxClient(bot as never);
+    const media = { type: 'image', payload: { token: 'img' } } as never;
+
+    await client.sendMessageWithAttachments(123, 'cap', [media], [
+      [{ kind: 'link', text: 'Open', url: 'https://app/x' }],
+    ]);
+
+    expect(bot.api.uploadImage).not.toHaveBeenCalled(); // не грузим повторно
+    const [userId, text, extra] = bot.api.sendMessageToUser.mock.calls[0];
+    expect(userId).toBe(123);
+    expect(text).toBe('cap');
+    // media-вложение + клавиатура
+    expect(extra.attachments).toHaveLength(2);
+    expect(extra.attachments[0]).toMatchObject({ type: 'image' });
+    expect(extra.attachments[1].type).toBe('inline_keyboard');
+  });
+
   it('uploadAndSendImage uploads a buffer then attaches it with the caption', async () => {
     const bot = makeFakeBot();
     const client = new MaxClient(bot as never);

@@ -270,6 +270,24 @@ export class BotManager {
 
     const aggregate = { sent: 0, failed: 0, total: 0 };
 
+    // Медиа загружается в Telegram admin-бота и хранится как Telegram file_id. Чтобы
+    // доставить его на ВСЕ платформы, один раз резолвим file_id в публичный URL через
+    // Telegram-адаптер: Telegram отправит по URL, Max скачает по URL и загрузит к себе.
+    let mediaUrl: string | undefined;
+    if (payload.media) {
+      // Telegram-адаптер умеет резолвить file_id → URL (getFileLink). Делаем это один
+      // раз: Telegram отправит по URL, а Max по нему скачает и загрузит к себе.
+      const tg = this.getPlatform('telegram');
+      if (tg?.resolveMediaUrl) {
+        mediaUrl = await tg.resolveMediaUrl(payload.media.fileId);
+      }
+      if (!mediaUrl) {
+        logger.warn('Broadcast: media URL not resolved; Max will fall back to text-only', {
+          mediaType: payload.media.type,
+        });
+      }
+    }
+
     for (const [platform, bots] of targets) {
       // Изоляция по платформам: сбой одной платформы (запрос аудитории или
       // отправка) не должен прерывать рассылку в остальные — иначе admin-бот
@@ -288,6 +306,7 @@ export class BotManager {
           text: payload.text,
           buttons: payload.buttons,
           media: payload.media,
+          mediaUrl,
           onProgress: payload.onProgress
             ? async (progress) => {
                 await payload.onProgress!({

@@ -20,6 +20,8 @@ function makeClient() {
     bot: { on: jest.fn(), command: jest.fn(), action: jest.fn(), catch: jest.fn() },
     sendMessage: jest.fn().mockResolvedValue(undefined),
     sendMessageWithKeyboard: jest.fn().mockResolvedValue(undefined),
+    sendMessageWithAttachments: jest.fn().mockResolvedValue(undefined),
+    uploadMediaAttachment: jest.fn().mockResolvedValue({ type: 'image', payload: { token: 'max-att' } }),
     answerCallback: jest.fn().mockResolvedValue(undefined),
     setMyCommands: jest.fn().mockResolvedValue(undefined),
     getMe: jest.fn().mockResolvedValue({ user_id: 1, name: 'bot' }),
@@ -187,17 +189,67 @@ describe('MaxBots', () => {
       expect(userClient.sendMessageWithKeyboard).not.toHaveBeenCalled();
     });
 
-    it('skips payload.media gracefully (text still sent, no throw)', async () => {
+    it('falls back to text when media has no resolved URL (no upload attempted)', async () => {
       const { bots, userClient } = makeBots();
       const result = await bots.broadcast(['1'], {
         text: 'With media',
         buttons: [],
-        media: { type: 'photo', fileId: 'tg-file-id' },
+        media: { type: 'photo', fileId: 'tg-file-id' }, // no mediaUrl
       });
 
-      // media skipped, but message still sent as text
       expect(result).toEqual({ sent: 1, failed: 0, total: 1 });
+      expect(userClient.uploadMediaAttachment).not.toHaveBeenCalled();
       expect(userClient.sendMessage).toHaveBeenCalledWith(1, 'With media');
+    });
+
+    it('uploads photo ONCE and sends it (with caption) to every recipient', async () => {
+      const { bots, userClient } = makeBots();
+      const result = await bots.broadcast(['1', '2', '3'], {
+        text: 'Poster!',
+        buttons: [{ text: 'Open', url: 'https://example.com', kind: 'url' }],
+        media: { type: 'photo', fileId: 'tg-file-id' },
+        mediaUrl: 'https://api.telegram.org/file/bot/photo.jpg',
+      });
+
+      expect(result).toEqual({ sent: 3, failed: 0, total: 3 });
+      // загрузили один раз, переиспользовали для всех
+      expect(userClient.uploadMediaAttachment).toHaveBeenCalledTimes(1);
+      expect(userClient.uploadMediaAttachment).toHaveBeenCalledWith(
+        'image',
+        'https://api.telegram.org/file/bot/photo.jpg'
+      );
+      expect(userClient.sendMessageWithAttachments).toHaveBeenCalledTimes(3);
+      const [userId, text, attachments, rows] =
+        userClient.sendMessageWithAttachments.mock.calls[0];
+      expect(userId).toBe(1);
+      expect(text).toBe('Poster!');
+      expect(attachments).toHaveLength(1);
+      expect(rows.flat()[0]).toMatchObject({ kind: 'link', url: 'https://example.com' });
+    });
+
+    it('maps video media to the "video" upload kind', async () => {
+      const { bots, userClient } = makeBots();
+      await bots.broadcast(['1'], {
+        text: 'clip',
+        buttons: [],
+        media: { type: 'video', fileId: 'tg-vid' },
+        mediaUrl: 'https://api.telegram.org/file/bot/clip.mp4',
+      });
+      expect(userClient.uploadMediaAttachment).toHaveBeenCalledWith('video', expect.any(String));
+    });
+
+    it('falls back to text when media upload fails (does not abort broadcast)', async () => {
+      const { bots, userClient } = makeBots();
+      userClient.uploadMediaAttachment.mockRejectedValueOnce(new Error('upload boom'));
+      const result = await bots.broadcast(['1', '2'], {
+        text: 'still send',
+        buttons: [],
+        media: { type: 'photo', fileId: 'f' },
+        mediaUrl: 'https://example.com/x.jpg',
+      });
+      expect(result).toEqual({ sent: 2, failed: 0, total: 2 });
+      expect(userClient.sendMessageWithAttachments).not.toHaveBeenCalled();
+      expect(userClient.sendMessage).toHaveBeenCalledTimes(2);
     });
 
     it('reports progress and counts unreachable recipients as failed', async () => {

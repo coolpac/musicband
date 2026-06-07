@@ -104,6 +104,13 @@ export interface BroadcastPayload {
   text: string;
   buttons: BroadcastButton[];
   media?: BroadcastMedia;
+  /**
+   * Готовый HTTP(S)-URL медиа, разрешённый из media.fileId один раз в BotManager
+   * (через Telegram admin-бота getFileLink). Нужен для кросс-платформенной доставки:
+   * Telegram шлёт по этому URL (admin-овый file_id user-бот не примет), а Max
+   * скачивает по URL и загружает к себе (uploadImage/uploadVideo).
+   */
+  mediaUrl?: string;
   onProgress?: (progress: BroadcastProgress) => Promise<void>;
 }
 
@@ -182,6 +189,13 @@ export interface PlatformBots {
    * Рассылка по уже разрешённому списку получателей с платформенным throttling.
    */
   broadcast(platformIds: string[], payload: BroadcastPayload): Promise<BroadcastProgress>;
+  /**
+   * Разрешить медиа-идентификатор платформы в публичный HTTP(S)-URL (опционально).
+   * Реализует Telegram (через admin-бота getFileLink): медиа рассылки хранится как
+   * Telegram file_id, и BotManager один раз резолвит его в URL, чтобы доставить медиа
+   * и в Telegram, и в Max. Платформы без такой возможности метод не реализуют.
+   */
+  resolveMediaUrl?(fileId: string): Promise<string | undefined>;
   sendCsvToAdmin(platformId: string, csv: Buffer, filename: string): Promise<void>;
   /**
    * Рассылка QR-кода сессии голосования админам этой платформы. deepLink/QR уже

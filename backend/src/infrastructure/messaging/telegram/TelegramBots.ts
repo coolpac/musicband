@@ -107,14 +107,13 @@ export class TelegramBots implements PlatformBots {
     // переиспользуем его для остальных (быстро, без повторной загрузки).
     let mediaSource: string | undefined;
     if (payload.media) {
-      try {
-        mediaSource = await this.adminBot.getBot().getFileLink(payload.media.fileId);
-      } catch (error) {
-        logger.warn('Broadcast: failed to resolve media file link via admin bot', {
-          error,
-          fileId: payload.media.fileId,
-        });
-        mediaSource = payload.media.fileId; // не лучше прежнего, но и не хуже
+      // BotManager обычно резолвит URL заранее (один раз на все платформы) и кладёт
+      // в payload.mediaUrl. Если его нет (прямой вызов адаптера) — резолвим сами.
+      if (payload.mediaUrl) {
+        mediaSource = payload.mediaUrl;
+      } else {
+        mediaSource = await this.resolveMediaUrl(payload.media.fileId);
+        if (!mediaSource) mediaSource = payload.media.fileId; // не лучше прежнего, но и не хуже
       }
     }
 
@@ -167,6 +166,20 @@ export class TelegramBots implements PlatformBots {
     }
 
     return { sent, failed, total };
+  }
+
+  /**
+   * Разрешить Telegram file_id в публично скачиваемый HTTP(S)-URL через admin-бота.
+   * Используется BotManager один раз на рассылку, чтобы и Telegram (по URL), и Max
+   * (скачать+загрузить) могли доставить одно и то же медиа. Возвращает undefined при сбое.
+   */
+  async resolveMediaUrl(fileId: string): Promise<string | undefined> {
+    try {
+      return await this.adminBot.getBot().getFileLink(fileId);
+    } catch (error) {
+      logger.warn('Broadcast: failed to resolve media file link via admin bot', { error, fileId });
+      return undefined;
+    }
   }
 
   /** user-бот-овый file_id из ответа sendPhoto/Video/Document — для переиспользования. */

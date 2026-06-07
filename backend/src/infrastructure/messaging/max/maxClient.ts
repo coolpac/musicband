@@ -5,7 +5,7 @@ import { logger } from '../../../shared/utils/logger';
 // (dist/core/... или subpath ./types) хрупок и зависит от moduleResolution.
 // Поэтому извлекаем их из публично экспортированного Bot через Parameters<>.
 type SendMessageExtra = NonNullable<Parameters<Bot['api']['sendMessageToUser']>[2]>;
-type MessageAttachment = NonNullable<SendMessageExtra['attachments']>[number];
+export type MessageAttachment = NonNullable<SendMessageExtra['attachments']>[number];
 type AnswerOnCallbackExtra = NonNullable<Parameters<Bot['api']['answerOnCallback']>[1]>;
 type BotCommand = Parameters<Bot['api']['setMyCommands']>[0][number];
 type UpdateType = NonNullable<Parameters<Bot['start']>[0]>['allowedUpdates'][number];
@@ -133,6 +133,53 @@ export class MaxClient {
       );
     }
     await this.bot.api.sendMessageToUser(userId, caption, { ...opts, attachments });
+  }
+
+  /**
+   * Загрузить изображение/видео в Max ОДИН раз и вернуть вложение для переиспользования
+   * (рассылка отправляет одно и то же медиа многим получателям — грузим единожды).
+   * source — Buffer, путь или HTTP(S)-URL (Max скачает сам).
+   */
+  async uploadMediaAttachment(
+    kind: 'image' | 'video',
+    source: Buffer | string
+  ): Promise<MessageAttachment> {
+    const attachment =
+      kind === 'video'
+        ? await this.bot.api.uploadVideo({ source: source as string })
+        : await this.bot.api.uploadImage({ source });
+    // uploadImage возвращает ImageAttachment без литерального `type`, поэтому SDK-тип
+    // массива attachments его прямо не принимает; в рантайме это валидное вложение
+    // (SDK сериализует через toJson при отправке) — приводим к типу элемента массива.
+    return attachment as unknown as MessageAttachment;
+  }
+
+  /**
+   * Отправить сообщение с уже загруженными вложениями и (опционально) inline-клавиатурой.
+   * Не грузит медиа заново — принимает готовые attachments (см. uploadMediaAttachment).
+   */
+  async sendMessageWithAttachments(
+    userId: number,
+    text: string,
+    attachments: MessageAttachment[],
+    buttonRows?: MaxButton[][],
+    opts?: SendMessageExtra
+  ): Promise<void> {
+    const all: MessageAttachment[] = [...attachments, ...(opts?.attachments ?? [])];
+    if (buttonRows?.length) {
+      all.push(
+        Keyboard.inlineKeyboard(
+          buttonRows.map((row) =>
+            row.map((b) =>
+              b.kind === 'callback'
+                ? Keyboard.button.callback(b.text, b.payload)
+                : Keyboard.button.link(b.text, b.url)
+            )
+          )
+        )
+      );
+    }
+    await this.bot.api.sendMessageToUser(userId, text, { ...opts, attachments: all });
   }
 
   /** Ответ на callback (закрывает «часики» на кнопке). */

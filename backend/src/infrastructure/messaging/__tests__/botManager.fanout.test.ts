@@ -37,6 +37,7 @@ function makeFakeBots(platform: Platform): jest.Mocked<PlatformBots> {
     notifyNewBooking: jest.fn().mockResolvedValue(undefined),
     notifyNewUser: jest.fn().mockResolvedValue(undefined),
     broadcast: jest.fn().mockResolvedValue({ sent: 0, failed: 0, total: 0 }),
+    resolveMediaUrl: jest.fn().mockResolvedValue('https://resolved/media.jpg'),
     sendCsvToAdmin: jest.fn().mockResolvedValue(undefined),
     sendVotingQrToAdmins: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<PlatformBots>;
@@ -153,6 +154,31 @@ describe('BotManager Phase 5 fan-out', () => {
 
       expect(telegramBots.broadcast).toHaveBeenCalled();
       expect(maxBots.broadcast).toHaveBeenCalled();
+    });
+
+    it('resolves media URL ONCE (via telegram) and passes mediaUrl to both adapters', async () => {
+      userFindMany.mockResolvedValue([{ platformId: 1n }]);
+
+      await manager.broadcastToUsers({
+        text: 'poster',
+        buttons: [],
+        segment: 'all',
+        platform: 'both',
+        media: { type: 'photo', fileId: 'tg-file-id' },
+      });
+
+      // Резолвим один раз, именно через telegram-адаптер, по исходному file_id.
+      expect(telegramBots.resolveMediaUrl).toHaveBeenCalledTimes(1);
+      expect(telegramBots.resolveMediaUrl).toHaveBeenCalledWith('tg-file-id');
+      expect(maxBots.resolveMediaUrl).not.toHaveBeenCalled();
+
+      // Разрешённый URL уходит в payload обоих адаптеров.
+      for (const adapter of [telegramBots, maxBots]) {
+        expect(adapter.broadcast).toHaveBeenCalledWith(
+          expect.any(Array),
+          expect.objectContaining({ mediaUrl: 'https://resolved/media.jpg' })
+        );
+      }
     });
   });
 

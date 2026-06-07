@@ -210,6 +210,30 @@ describe('TelegramBots adapter', () => {
       expect(rawBot.sendMessage).not.toHaveBeenCalled();
     });
 
+    it('uses a pre-resolved payload.mediaUrl without re-calling getFileLink', async () => {
+      const userBot = makeUserBot();
+      const rawBot = makeRawBot();
+      (userBot.getBot as jest.Mock).mockReturnValue(rawBot);
+      const adminBot = makeAdminBot();
+      const adapter = new TelegramBots(userBot, adminBot);
+
+      await adapter.broadcast(['1'], {
+        text: 'caption',
+        buttons: [],
+        media: { type: 'photo', fileId: 'admin-file-123' },
+        mediaUrl: 'https://resolved/once.jpg',
+      });
+
+      // BotManager уже разрешил URL — адаптер не дёргает getFileLink повторно.
+      expect(
+        (adminBot.getBot() as unknown as { getFileLink: jest.Mock }).getFileLink
+      ).not.toHaveBeenCalled();
+      expect(rawBot.sendPhoto).toHaveBeenCalledWith('1', 'https://resolved/once.jpg', {
+        caption: 'caption',
+        reply_markup: undefined,
+      });
+    });
+
     it('reuses the user-bot file_id from the first send for subsequent recipients', async () => {
       const userBot = makeUserBot();
       const rawBot = makeRawBot();
