@@ -134,13 +134,33 @@ describe('MaxClient', () => {
     expect(extra.attachments[1].type).toBe('inline_keyboard');
   });
 
-  it('answerCallback delegates to bot.api.answerOnCallback', async () => {
+  // Max API требует `message` или `notification` в ответе на callback (Telegram
+  // позволяет пустой ack, Max — нет: 400 proto.payload). Голый answerCallback должен
+  // подставлять дефолтную notification, иначе ВСЕ кнопки молча умирают.
+  it('answerCallback without opts sends a default notification (Max requires it)', async () => {
     const bot = makeFakeBot();
     const client = new MaxClient(bot as never);
 
     await client.answerCallback('cb-1');
 
-    expect(bot.api.answerOnCallback).toHaveBeenCalledWith('cb-1', undefined);
+    expect(bot.api.answerOnCallback).toHaveBeenCalledWith('cb-1', { notification: '✓' });
+  });
+
+  it('answerCallback passes explicit opts through unchanged', async () => {
+    const bot = makeFakeBot();
+    const client = new MaxClient(bot as never);
+
+    await client.answerCallback('cb-2', { notification: 'Готово' });
+
+    expect(bot.api.answerOnCallback).toHaveBeenCalledWith('cb-2', { notification: 'Готово' });
+  });
+
+  it('answerCallback does not throw when the API rejects the ack', async () => {
+    const bot = makeFakeBot();
+    bot.api.answerOnCallback.mockRejectedValueOnce(new Error('400 proto.payload'));
+    const client = new MaxClient(bot as never);
+
+    await expect(client.answerCallback('cb-3')).resolves.toBeUndefined();
   });
 
   it('setMyCommands delegates to bot.api.setMyCommands', async () => {

@@ -182,9 +182,18 @@ export class MaxClient {
     await this.bot.api.sendMessageToUser(userId, text, { ...opts, attachments: all });
   }
 
-  /** Ответ на callback (закрывает «часики» на кнопке). */
+  /**
+   * Ответ на callback (закрывает «часики» на кнопке).
+   * ВАЖНО: Max API требует `message` ИЛИ `notification` в ответе (Telegram позволяет
+   * пустой ack, Max отвечает 400 proto.payload) — поэтому без opts шлём дефолтную
+   * notification. Сбой ack-а не пробрасываем: он не должен убивать обработчик кнопки.
+   */
   async answerCallback(callbackId: string, opts?: AnswerOnCallbackExtra): Promise<void> {
-    await this.bot.api.answerOnCallback(callbackId, opts);
+    try {
+      await this.bot.api.answerOnCallback(callbackId, opts ?? { notification: '✓' });
+    } catch (error) {
+      logger.warn('Max: answerOnCallback failed (continuing)', { callbackId, error });
+    }
   }
 
   /** Регистрация списка команд бота (меню). */
