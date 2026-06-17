@@ -105,12 +105,16 @@ export interface BroadcastPayload {
   buttons: BroadcastButton[];
   media?: BroadcastMedia;
   /**
-   * Готовый HTTP(S)-URL медиа, разрешённый из media.fileId один раз в BotManager
-   * (через Telegram admin-бота getFileLink). Нужен для кросс-платформенной доставки:
-   * Telegram шлёт по этому URL (admin-овый file_id user-бот не примет), а Max
-   * скачивает по URL и загружает к себе (uploadImage/uploadVideo).
+   * Скачанные БАЙТЫ медиа (разрешаются один раз в BotManager из media.fileId).
+   * Передаём именно байты, а не URL/file_id, потому что:
+   *  - admin-овый Telegram file_id не примет user-бот ("wrong file identifier");
+   *  - URL api.telegram.org/file/... Telegram при sendPhoto-по-URL отвергает
+   *    ("wrong type of the web page content"), а Max-SDK трактует строку как путь в
+   *    файловой системе (fs.stat → ENOENT). Буфер же грузят и Telegram, и Max.
    */
-  mediaUrl?: string;
+  mediaBuffer?: Buffer;
+  /** Имя файла для буфера (для подсказки MIME/extension при отправке). */
+  mediaFilename?: string;
   onProgress?: (progress: BroadcastProgress) => Promise<void>;
 }
 
@@ -190,12 +194,12 @@ export interface PlatformBots {
    */
   broadcast(platformIds: string[], payload: BroadcastPayload): Promise<BroadcastProgress>;
   /**
-   * Разрешить медиа-идентификатор платформы в публичный HTTP(S)-URL (опционально).
-   * Реализует Telegram (через admin-бота getFileLink): медиа рассылки хранится как
-   * Telegram file_id, и BotManager один раз резолвит его в URL, чтобы доставить медиа
-   * и в Telegram, и в Max. Платформы без такой возможности метод не реализуют.
+   * Скачать байты медиа по идентификатору платформы (опционально). Реализует Telegram
+   * (через admin-бота getFileLink + загрузку): медиа рассылки хранится как Telegram
+   * file_id, и BotManager один раз достаёт байты, чтобы доставить их и в Telegram, и в
+   * Max (оба грузят буфер). Платформы без такой возможности метод не реализуют.
    */
-  resolveMediaUrl?(fileId: string): Promise<string | undefined>;
+  resolveMediaBuffer?(fileId: string): Promise<{ buffer: Buffer; filename: string } | undefined>;
   sendCsvToAdmin(platformId: string, csv: Buffer, filename: string): Promise<void>;
   /**
    * Рассылка QR-кода сессии голосования админам этой платформы. deepLink/QR уже

@@ -37,7 +37,9 @@ function makeFakeBots(platform: Platform): jest.Mocked<PlatformBots> {
     notifyNewBooking: jest.fn().mockResolvedValue(undefined),
     notifyNewUser: jest.fn().mockResolvedValue(undefined),
     broadcast: jest.fn().mockResolvedValue({ sent: 0, failed: 0, total: 0 }),
-    resolveMediaUrl: jest.fn().mockResolvedValue('https://resolved/media.jpg'),
+    resolveMediaBuffer: jest
+      .fn()
+      .mockResolvedValue({ buffer: Buffer.from('img-bytes'), filename: 'file_51.jpg' }),
     sendCsvToAdmin: jest.fn().mockResolvedValue(undefined),
     sendVotingQrToAdmins: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<PlatformBots>;
@@ -156,7 +158,7 @@ describe('BotManager Phase 5 fan-out', () => {
       expect(maxBots.broadcast).toHaveBeenCalled();
     });
 
-    it('resolves media URL ONCE (via telegram) and passes mediaUrl to both adapters', async () => {
+    it('downloads media bytes ONCE (via telegram) and passes the buffer to both adapters', async () => {
       userFindMany.mockResolvedValue([{ platformId: 1n }]);
 
       await manager.broadcastToUsers({
@@ -167,16 +169,19 @@ describe('BotManager Phase 5 fan-out', () => {
         media: { type: 'photo', fileId: 'tg-file-id' },
       });
 
-      // Резолвим один раз, именно через telegram-адаптер, по исходному file_id.
-      expect(telegramBots.resolveMediaUrl).toHaveBeenCalledTimes(1);
-      expect(telegramBots.resolveMediaUrl).toHaveBeenCalledWith('tg-file-id');
-      expect(maxBots.resolveMediaUrl).not.toHaveBeenCalled();
+      // Скачиваем один раз, именно через telegram-адаптер, по исходному file_id.
+      expect(telegramBots.resolveMediaBuffer).toHaveBeenCalledTimes(1);
+      expect(telegramBots.resolveMediaBuffer).toHaveBeenCalledWith('tg-file-id');
+      expect(maxBots.resolveMediaBuffer).not.toHaveBeenCalled();
 
-      // Разрешённый URL уходит в payload обоих адаптеров.
+      // Скачанный буфер уходит в payload обоих адаптеров.
       for (const adapter of [telegramBots, maxBots]) {
         expect(adapter.broadcast).toHaveBeenCalledWith(
           expect.any(Array),
-          expect.objectContaining({ mediaUrl: 'https://resolved/media.jpg' })
+          expect.objectContaining({
+            mediaBuffer: Buffer.from('img-bytes'),
+            mediaFilename: 'file_51.jpg',
+          })
         );
       }
     });

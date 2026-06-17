@@ -152,6 +152,18 @@ describe('TelegramBots adapter', () => {
         sendDocument: jest.Mock;
       };
 
+    // Адаптер скачивает байты медиа (getFileLink → fetch). Мокаем глобальный fetch,
+    // чтобы вернуть валидный буфер без сетевого запроса.
+    let fetchSpy: jest.SpyInstance;
+    beforeEach(() => {
+      fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        headers: { get: () => null }, // адаптер читает content-length
+        arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
+      } as unknown as Response);
+    });
+    afterEach(() => fetchSpy.mockRestore());
+
     it('sends text to every recipient, chunks buttons 2-per-row, and reports progress', async () => {
       const userBot = makeUserBot();
       const rawBot = makeRawBot();
@@ -185,7 +197,7 @@ describe('TelegramBots adapter', () => {
       expect(onProgress).toHaveBeenCalledWith({ sent: 3, failed: 0, total: 3 });
     });
 
-    it('resolves admin media file_id to a URL (user bot cannot use admin file_id)', async () => {
+    it('downloads admin media bytes and sends a Buffer (user bot cannot use admin file_id/URL)', async () => {
       const userBot = makeUserBot();
       const rawBot = makeRawBot();
       (userBot.getBot as jest.Mock).mockReturnValue(rawBot);
@@ -198,40 +210,46 @@ describe('TelegramBots adapter', () => {
         media: { type: 'photo', fileId: 'admin-file-123' },
       });
 
-      // admin-овый file_id резолвится в URL через admin-бота…
+      // file_id → URL через admin-бота, затем скачиваем байты этого URL.
       expect((adminBot.getBot() as unknown as { getFileLink: jest.Mock }).getFileLink).toHaveBeenCalledWith(
         'admin-file-123'
       );
-      // …и user-бот шлёт уже URL, а не admin file_id.
-      expect(rawBot.sendPhoto).toHaveBeenCalledWith('1', 'https://api.telegram.org/file/botADMIN/x.jpg', {
-        caption: 'caption',
-        reply_markup: undefined,
-      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        'https://api.telegram.org/file/botADMIN/x.jpg',
+        expect.objectContaining({ signal: expect.anything() })
+      );
+      // user-бот шлёт БУФЕР (не URL/файл-id) + fileOptions с именем из URL.
+      const [chatId, photo, , fopts] = (rawBot.sendPhoto as jest.Mock).mock.calls[0];
+      expect(chatId).toBe('1');
+      expect(Buffer.isBuffer(photo)).toBe(true);
+      expect(fopts).toEqual({ filename: 'x.jpg', contentType: 'image/jpeg' });
       expect(rawBot.sendMessage).not.toHaveBeenCalled();
     });
 
-    it('uses a pre-resolved payload.mediaUrl without re-calling getFileLink', async () => {
+    it('uses a pre-resolved payload.mediaBuffer without re-downloading', async () => {
       const userBot = makeUserBot();
       const rawBot = makeRawBot();
       (userBot.getBot as jest.Mock).mockReturnValue(rawBot);
       const adminBot = makeAdminBot();
       const adapter = new TelegramBots(userBot, adminBot);
+      const buf = Buffer.from('poster-bytes');
 
       await adapter.broadcast(['1'], {
         text: 'caption',
         buttons: [],
         media: { type: 'photo', fileId: 'admin-file-123' },
-        mediaUrl: 'https://resolved/once.jpg',
+        mediaBuffer: buf,
+        mediaFilename: 'poster.jpg',
       });
 
-      // BotManager уже разрешил URL — адаптер не дёргает getFileLink повторно.
+      // BotManager уже скачал байты — адаптер не дёргает ни getFileLink, ни fetch.
       expect(
         (adminBot.getBot() as unknown as { getFileLink: jest.Mock }).getFileLink
       ).not.toHaveBeenCalled();
-      expect(rawBot.sendPhoto).toHaveBeenCalledWith('1', 'https://resolved/once.jpg', {
-        caption: 'caption',
-        reply_markup: undefined,
-      });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      const [, photo, , fopts] = (rawBot.sendPhoto as jest.Mock).mock.calls[0];
+      expect(photo).toBe(buf);
+      expect(fopts).toEqual({ filename: 'poster.jpg', contentType: 'image/jpeg' });
     });
 
     it('reuses the user-bot file_id from the first send for subsequent recipients', async () => {
@@ -248,12 +266,71 @@ describe('TelegramBots adapter', () => {
         media: { type: 'photo', fileId: 'admin-file-123' },
       });
 
-      // первому — по URL, остальным — переиспользуем user-бот-овый file_id.
-      expect((rawBot.sendPhoto as jest.Mock).mock.calls[0][1]).toBe(
-        'https://api.telegram.org/file/botADMIN/x.jpg'
-      );
+      // первому — БУФЕР (байты), остальным — переиспользуем user-бот-овый file_id.
+      expect(Buffer.isBuffer((rawBot.sendPhoto as jest.Mock).mock.calls[0][1])).toBe(true);
       expect((rawBot.sendPhoto as jest.Mock).mock.calls[1][1]).toBe('user-fid');
       expect((rawBot.sendPhoto as jest.Mock).mock.calls[2][1]).toBe('user-fid');
+    });
+
+    it('reuses the user-bot file_id for VIDEO too', async () => {
+      const userBot = makeUserBot();
+      const rawBot = makeRawBot();
+      (rawBot.sendVideo as jest.Mock).mockResolvedValue({ video: { file_id: 'user-vid' } });
+      (userBot.getBot as jest.Mock).mockReturnValue(rawBot);
+      const adapter = new TelegramBots(userBot, makeAdminBot());
+
+      await adapter.broadcast(['1', '2'], {
+        text: 'clip',
+        buttons: [],
+        media: { type: 'video', fileId: 'admin-vid' },
+      });
+
+      expect(Buffer.isBuffer((rawBot.sendVideo as jest.Mock).mock.calls[0][1])).toBe(true);
+      expect((rawBot.sendVideo as jest.Mock).mock.calls[1][1]).toBe('user-vid');
+    });
+
+    it('falls back to text for ALL recipients if the first media (buffer) send fails', async () => {
+      const userBot = makeUserBot();
+      const rawBot = makeRawBot();
+      // Битый буфер: первая sendPhoto падает (как "Unsupported Buffer file-type"/400).
+      (rawBot.sendPhoto as jest.Mock).mockRejectedValue(new Error('Unsupported Buffer file-type'));
+      (userBot.getBot as jest.Mock).mockReturnValue(rawBot);
+      const adapter = new TelegramBots(userBot, makeAdminBot());
+
+      const result = await adapter.broadcast(['1', '2', '3'], {
+        text: 'caption',
+        buttons: [],
+        media: { type: 'photo', fileId: 'admin-file-123' },
+      });
+
+      // Медиа не доставилось, но ВСЕ получили текст — рассылка не «0 из N».
+      expect(result).toEqual({ sent: 3, failed: 0, total: 3 });
+      // sendPhoto пробуется только один раз (первый получатель), дальше — текст.
+      expect((rawBot.sendPhoto as jest.Mock)).toHaveBeenCalledTimes(1);
+      expect((rawBot.sendMessage as jest.Mock)).toHaveBeenCalledTimes(3);
+    });
+
+    it('resolveMediaBuffer returns undefined on non-OK download (no retry on 404)', async () => {
+      const adapter = new TelegramBots(makeUserBot(), makeAdminBot());
+      fetchSpy.mockResolvedValue({ ok: false, status: 404 } as unknown as Response);
+
+      const out = await adapter.resolveMediaBuffer('admin-file-123');
+
+      expect(out).toBeUndefined();
+      expect(fetchSpy).toHaveBeenCalledTimes(1); // 404 — постоянная ошибка, без ретраев
+    });
+
+    it('resolveMediaBuffer skips oversized media (content-length over limit)', async () => {
+      const adapter = new TelegramBots(makeUserBot(), makeAdminBot());
+      fetchSpy.mockResolvedValue({
+        ok: true,
+        headers: { get: () => String(60 * 1024 * 1024) },
+        arrayBuffer: async () => new Uint8Array([1]).buffer,
+      } as unknown as Response);
+
+      const out = await adapter.resolveMediaBuffer('admin-file-123');
+
+      expect(out).toBeUndefined();
     });
 
     it('counts a 403 (user blocked bot) as failed without throwing', async () => {

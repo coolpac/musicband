@@ -189,12 +189,12 @@ describe('MaxBots', () => {
       expect(userClient.sendMessageWithKeyboard).not.toHaveBeenCalled();
     });
 
-    it('falls back to text when media has no resolved URL (no upload attempted)', async () => {
+    it('falls back to text when media has no resolved bytes (no upload attempted)', async () => {
       const { bots, userClient } = makeBots();
       const result = await bots.broadcast(['1'], {
         text: 'With media',
         buttons: [],
-        media: { type: 'photo', fileId: 'tg-file-id' }, // no mediaUrl
+        media: { type: 'photo', fileId: 'tg-file-id' }, // no mediaBuffer
       });
 
       expect(result).toEqual({ sent: 1, failed: 0, total: 1 });
@@ -204,20 +204,19 @@ describe('MaxBots', () => {
 
     it('uploads photo ONCE and sends it (with caption) to every recipient', async () => {
       const { bots, userClient } = makeBots();
+      const photoBytes = Buffer.from('photo-bytes');
       const result = await bots.broadcast(['1', '2', '3'], {
         text: 'Poster!',
         buttons: [{ text: 'Open', url: 'https://example.com', kind: 'url' }],
         media: { type: 'photo', fileId: 'tg-file-id' },
-        mediaUrl: 'https://api.telegram.org/file/bot/photo.jpg',
+        mediaBuffer: photoBytes,
+        mediaFilename: 'photo.jpg',
       });
 
       expect(result).toEqual({ sent: 3, failed: 0, total: 3 });
       // загрузили один раз, переиспользовали для всех
       expect(userClient.uploadMediaAttachment).toHaveBeenCalledTimes(1);
-      expect(userClient.uploadMediaAttachment).toHaveBeenCalledWith(
-        'image',
-        'https://api.telegram.org/file/bot/photo.jpg'
-      );
+      expect(userClient.uploadMediaAttachment).toHaveBeenCalledWith('image', photoBytes);
       expect(userClient.sendMessageWithAttachments).toHaveBeenCalledTimes(3);
       const [userId, text, attachments, rows] =
         userClient.sendMessageWithAttachments.mock.calls[0];
@@ -233,9 +232,10 @@ describe('MaxBots', () => {
         text: 'clip',
         buttons: [],
         media: { type: 'video', fileId: 'tg-vid' },
-        mediaUrl: 'https://api.telegram.org/file/bot/clip.mp4',
+        mediaBuffer: Buffer.from('clip-bytes'),
+        mediaFilename: 'clip.mp4',
       });
-      expect(userClient.uploadMediaAttachment).toHaveBeenCalledWith('video', expect.any(String));
+      expect(userClient.uploadMediaAttachment).toHaveBeenCalledWith('video', expect.any(Buffer));
     });
 
     it('falls back to text when media upload fails (does not abort broadcast)', async () => {
@@ -245,7 +245,8 @@ describe('MaxBots', () => {
         text: 'still send',
         buttons: [],
         media: { type: 'photo', fileId: 'f' },
-        mediaUrl: 'https://example.com/x.jpg',
+        mediaBuffer: Buffer.from('x'),
+        mediaFilename: 'x.jpg',
       });
       expect(result).toEqual({ sent: 2, failed: 0, total: 2 });
       expect(userClient.sendMessageWithAttachments).not.toHaveBeenCalled();

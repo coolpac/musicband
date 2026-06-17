@@ -138,15 +138,16 @@ export class MaxClient {
   /**
    * Загрузить изображение/видео в Max ОДИН раз и вернуть вложение для переиспользования
    * (рассылка отправляет одно и то же медиа многим получателям — грузим единожды).
-   * source — Buffer, путь или HTTP(S)-URL (Max скачает сам).
+   * source — именно БАЙТЫ (Buffer). Строку Max-SDK трактует как путь в ФС (fs.stat),
+   * поэтому URL/file_id сюда передавать нельзя — только буфер.
    */
   async uploadMediaAttachment(
     kind: 'image' | 'video',
-    source: Buffer | string
+    source: Buffer
   ): Promise<MessageAttachment> {
     const attachment =
       kind === 'video'
-        ? await this.bot.api.uploadVideo({ source: source as string })
+        ? await this.bot.api.uploadVideo({ source })
         : await this.bot.api.uploadImage({ source });
     // uploadImage возвращает ImageAttachment без литерального `type`, поэтому SDK-тип
     // массива attachments его прямо не принимает; в рантайме это валидное вложение

@@ -271,18 +271,22 @@ export class BotManager {
     const aggregate = { sent: 0, failed: 0, total: 0 };
 
     // Медиа загружается в Telegram admin-бота и хранится как Telegram file_id. Чтобы
-    // доставить его на ВСЕ платформы, один раз резолвим file_id в публичный URL через
-    // Telegram-адаптер: Telegram отправит по URL, Max скачает по URL и загрузит к себе.
-    let mediaUrl: string | undefined;
+    // доставить его на ВСЕ платформы, один раз СКАЧИВАЕМ байты через Telegram-адаптер
+    // и дальше грузим этот буфер и в Telegram (user-бот), и в Max. URL/file_id напрямую
+    // не годятся: TG отвергает sendPhoto-по-URL, Max-SDK трактует строку как путь в ФС.
+    let mediaBuffer: Buffer | undefined;
+    let mediaFilename: string | undefined;
     if (payload.media) {
-      // Telegram-адаптер умеет резолвить file_id → URL (getFileLink). Делаем это один
-      // раз: Telegram отправит по URL, а Max по нему скачает и загрузит к себе.
       const tg = this.getPlatform('telegram');
-      if (tg?.resolveMediaUrl) {
-        mediaUrl = await tg.resolveMediaUrl(payload.media.fileId);
+      if (tg?.resolveMediaBuffer) {
+        const resolved = await tg.resolveMediaBuffer(payload.media.fileId);
+        if (resolved) {
+          mediaBuffer = resolved.buffer;
+          mediaFilename = resolved.filename;
+        }
       }
-      if (!mediaUrl) {
-        logger.warn('Broadcast: media URL not resolved; Max will fall back to text-only', {
+      if (!mediaBuffer) {
+        logger.warn('Broadcast: media bytes not resolved; sending text-only on all platforms', {
           mediaType: payload.media.type,
         });
       }
@@ -306,7 +310,8 @@ export class BotManager {
           text: payload.text,
           buttons: payload.buttons,
           media: payload.media,
-          mediaUrl,
+          mediaBuffer,
+          mediaFilename,
           onProgress: payload.onProgress
             ? async (progress) => {
                 await payload.onProgress!({

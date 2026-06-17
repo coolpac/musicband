@@ -101,39 +101,76 @@ export class TelegramBots implements PlatformBots {
     const bot = this.userBot.getBot();
 
     // Медиа в мастере загружается в ADMIN-бота, а рассылка идёт через USER-бота.
-    // file_id в Telegram привязан к боту — user-бот не примет admin-овый file_id
-    // ("400 wrong file identifier"). Резолвим файл через admin-бота в URL, шлём по
-    // URL первому получателю, а из ответа берём УЖЕ user-бот-овый file_id и
-    // переиспользуем его для остальных (быстро, без повторной загрузки).
-    let mediaSource: string | undefined;
+    // Передавать user-боту чужой идентификатор/ссылку нельзя: admin-овый file_id он не
+    // примет ("wrong file identifier"), а api.telegram.org/file/...-URL Telegram при
+    // sendPhoto отвергает ("wrong type of the web page content"). Поэтому первому
+    // получателю шлём БАЙТЫ (Buffer), из ответа берём УЖЕ user-бот-овый file_id и
+    // переиспользуем его (строкой) для остальных — без повторной загрузки.
+    let mediaSource: Buffer | string | undefined;
+    let mediaFilename: string | undefined;
     if (payload.media) {
-      // BotManager обычно резолвит URL заранее (один раз на все платформы) и кладёт
-      // в payload.mediaUrl. Если его нет (прямой вызов адаптера) — резолвим сами.
-      if (payload.mediaUrl) {
-        mediaSource = payload.mediaUrl;
+      // BotManager обычно скачивает байты заранее (один раз на все платформы) и кладёт
+      // в payload.mediaBuffer. Если их нет (прямой вызов адаптера) — скачиваем сами.
+      if (payload.mediaBuffer) {
+        mediaSource = payload.mediaBuffer;
+        mediaFilename = payload.mediaFilename;
       } else {
-        mediaSource = await this.resolveMediaUrl(payload.media.fileId);
-        if (!mediaSource) mediaSource = payload.media.fileId; // не лучше прежнего, но и не хуже
+        const resolved = await this.resolveMediaBuffer(payload.media.fileId);
+        if (resolved) {
+          mediaSource = resolved.buffer;
+          mediaFilename = resolved.filename;
+        }
       }
     }
+    // contentType из расширения: явно заданный тип отключает авто-детект в
+    // node-telegram-bot-api (иначе для нераспознанного буфера он кидает
+    // "Unsupported Buffer file-type"). filename без contentType — авто-детект.
+    const fileOptions: { filename?: string; contentType?: string } | undefined = mediaFilename
+      ? { filename: mediaFilename, contentType: TelegramBots.contentTypeForFilename(mediaFilename) }
+      : undefined;
 
+    // Если отправка БАЙТОВ первому получателю не прошла — медиа недоставляемо
+    // (битый буфер/неподдерживаемый тип). Отключаем медиа и дошлём всем текст,
+    // чтобы рассылка не падала целиком на каждом получателе (как было в проде: 48/48).
+    let mediaDisabled = false;
     for (const platformId of platformIds) {
       try {
-        if (payload.media && mediaSource) {
+        let delivered = false;
+        if (payload.media && mediaSource && !mediaDisabled) {
           const caption = payload.text;
           const opts = { caption, reply_markup: replyMarkup };
-          let result: import('node-telegram-bot-api').Message;
-          if (payload.media.type === 'photo') {
-            result = await bot.sendPhoto(platformId, mediaSource, opts);
-          } else if (payload.media.type === 'video') {
-            result = await bot.sendVideo(platformId, mediaSource, opts);
-          } else {
-            result = await bot.sendDocument(platformId, mediaSource, opts);
+          const isBuffer = Buffer.isBuffer(mediaSource);
+          // fileOptions нужен только при отправке буфера; для file_id (строка) — нет.
+          const fopts = isBuffer ? fileOptions : undefined;
+          try {
+            let result: import('node-telegram-bot-api').Message;
+            if (payload.media.type === 'photo') {
+              result = await bot.sendPhoto(platformId, mediaSource, opts, fopts);
+            } else if (payload.media.type === 'video') {
+              result = await bot.sendVideo(platformId, mediaSource, opts, fopts);
+            } else {
+              result = await bot.sendDocument(platformId, mediaSource, opts, fopts);
+            }
+            // Переиспользуем user-бот-овый file_id для следующих получателей.
+            const reusable = TelegramBots.extractFileId(payload.media.type, result);
+            if (reusable) mediaSource = reusable;
+            delivered = true;
+          } catch (mediaError) {
+            if (isBuffer) {
+              // Упала первая отправка байтов → медиа битое/неподдерживаемое: глушим
+              // медиа для всех, текущему получателю ниже уйдёт текст.
+              logger.error('Broadcast: media undeliverable, falling back to text for all', {
+                error: mediaError,
+                mediaType: payload.media.type,
+              });
+              mediaDisabled = true;
+            } else {
+              // file_id уже работал раньше — это пер-юзерная ошибка (403 и т.п.).
+              throw mediaError;
+            }
           }
-          // Переиспользуем user-бот-овый file_id для следующих получателей.
-          const reusable = TelegramBots.extractFileId(payload.media.type, result);
-          if (reusable) mediaSource = reusable;
-        } else {
+        }
+        if (!delivered) {
           await bot.sendMessage(
             platformId,
             payload.text,
@@ -169,16 +206,111 @@ export class TelegramBots implements PlatformBots {
   }
 
   /**
-   * Разрешить Telegram file_id в публично скачиваемый HTTP(S)-URL через admin-бота.
-   * Используется BotManager один раз на рассылку, чтобы и Telegram (по URL), и Max
-   * (скачать+загрузить) могли доставить одно и то же медиа. Возвращает undefined при сбое.
+   * Скачать байты медиа по Telegram file_id через admin-бота (getFileLink → fetch).
+   * Используется BotManager один раз на рассылку: байты затем грузятся и в Telegram
+   * (user-бот), и в Max. Возвращаем буфер + имя файла; undefined при любом сбое.
+   *
+   * Почему байты, а не URL: Telegram при sendPhoto-по-URL отвергает собственные
+   * api.telegram.org/file/...-ссылки ("wrong type of the web page content"), а
+   * Max-SDK трактует строковый source как путь в ФС (fs.stat → ENOENT). Буфер берут оба.
    */
-  async resolveMediaUrl(fileId: string): Promise<string | undefined> {
+  /** Лимит на медиа рассылки: Telegram-боты всё равно не отправляют файлы >50 МБ. */
+  private static readonly MEDIA_MAX_BYTES = 50 * 1024 * 1024;
+  /** Таймаут на скачивание медиа (зависший CDN не должен вешать всю рассылку). */
+  private static readonly MEDIA_FETCH_TIMEOUT_MS = 30_000;
+  /** Сколько всего попыток скачать (на транзиентные 429/5xx/сетевые сбои). */
+  private static readonly MEDIA_FETCH_ATTEMPTS = 3;
+
+  async resolveMediaBuffer(
+    fileId: string
+  ): Promise<{ buffer: Buffer; filename: string } | undefined> {
+    let url: string;
     try {
-      return await this.adminBot.getBot().getFileLink(fileId);
+      url = await this.adminBot.getBot().getFileLink(fileId);
     } catch (error) {
       logger.warn('Broadcast: failed to resolve media file link via admin bot', { error, fileId });
       return undefined;
+    }
+
+    for (let attempt = 1; attempt <= TelegramBots.MEDIA_FETCH_ATTEMPTS; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), TelegramBots.MEDIA_FETCH_TIMEOUT_MS);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) {
+          const transient = res.status === 429 || res.status >= 500;
+          logger.warn('Broadcast: media download returned non-OK', {
+            fileId,
+            status: res.status,
+            attempt,
+            willRetry: transient && attempt < TelegramBots.MEDIA_FETCH_ATTEMPTS,
+          });
+          if (transient && attempt < TelegramBots.MEDIA_FETCH_ATTEMPTS) continue;
+          return undefined;
+        }
+        // Защита по размеру: не тянем гигантский файл в память.
+        const declared = Number(res.headers.get('content-length') ?? '0');
+        if (declared > TelegramBots.MEDIA_MAX_BYTES) {
+          logger.warn('Broadcast: media too large, sending text only', { fileId, bytes: declared });
+          return undefined;
+        }
+        const buffer = Buffer.from(await res.arrayBuffer());
+        if (buffer.length === 0) {
+          logger.warn('Broadcast: media download empty, sending text only', { fileId });
+          return undefined;
+        }
+        if (buffer.length > TelegramBots.MEDIA_MAX_BYTES) {
+          logger.warn('Broadcast: media exceeds size limit after download, text only', {
+            fileId,
+            bytes: buffer.length,
+          });
+          return undefined;
+        }
+        let filename = 'broadcast';
+        try {
+          const base = new URL(url).pathname.split('/').pop();
+          if (base) filename = base;
+        } catch {
+          /* keep default */
+        }
+        return { buffer, filename };
+      } catch (error) {
+        const aborted = error instanceof Error && error.name === 'AbortError';
+        logger.warn('Broadcast: media download failed', { fileId, attempt, aborted, error });
+        if (attempt >= TelegramBots.MEDIA_FETCH_ATTEMPTS) return undefined;
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * MIME по расширению имени файла (имя берётся из Telegram file_path, расширение
+   * корректное). Явный contentType отключает авто-детект в node-telegram-bot-api,
+   * который для нераспознанного буфера кидает "Unsupported Buffer file-type".
+   * Неизвестное расширение → undefined (пусть библиотека пытается определить сама).
+   */
+  private static contentTypeForFilename(filename: string): string | undefined {
+    const ext = filename.toLowerCase().split('.').pop();
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'gif':
+        return 'image/gif';
+      case 'mp4':
+        return 'video/mp4';
+      case 'mov':
+        return 'video/quicktime';
+      case 'pdf':
+        return 'application/pdf';
+      default:
+        return undefined;
     }
   }
 

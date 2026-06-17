@@ -65,24 +65,28 @@ describe('MaxClient', () => {
     ]);
   });
 
-  it('uploadMediaAttachment("image", url) uploads via uploadImage and returns the attachment', async () => {
+  it('uploadMediaAttachment("image", buffer) uploads via uploadImage and returns the attachment', async () => {
     const bot = makeFakeBot();
     const client = new MaxClient(bot as never);
+    const bytes = Buffer.from('img-bytes');
 
-    const att = await client.uploadMediaAttachment('image', 'https://x/p.jpg');
+    const att = await client.uploadMediaAttachment('image', bytes);
 
-    expect(bot.api.uploadImage).toHaveBeenCalledWith({ source: 'https://x/p.jpg' });
+    expect(bot.api.uploadImage).toHaveBeenCalledWith({ source: bytes });
     expect(bot.api.uploadVideo).not.toHaveBeenCalled();
     expect(att).toMatchObject({ type: 'image' });
   });
 
-  it('uploadMediaAttachment("video", url) uploads via uploadVideo', async () => {
+  it('uploadMediaAttachment("video", buffer) uploads via uploadVideo (Buffer, not string)', async () => {
     const bot = makeFakeBot();
     const client = new MaxClient(bot as never);
+    const bytes = Buffer.from('clip-bytes');
 
-    await client.uploadMediaAttachment('video', 'https://x/clip.mp4');
+    await client.uploadMediaAttachment('video', bytes);
 
-    expect(bot.api.uploadVideo).toHaveBeenCalledWith({ source: 'https://x/clip.mp4' });
+    // Передаём именно Buffer (не строку): строку Max-SDK трактует как путь в ФС.
+    expect(bot.api.uploadVideo).toHaveBeenCalledWith({ source: bytes });
+    expect(Buffer.isBuffer(bot.api.uploadVideo.mock.calls[0][0].source)).toBe(true);
     expect(bot.api.uploadImage).not.toHaveBeenCalled();
   });
 

@@ -79,9 +79,9 @@ const ADMIN_COMMANDS = [
  * Платформенный throttling рассылок (broadcast) живёт здесь, как и в TelegramBots.
  * Аудиторию/сегменты по-прежнему разрешает BotManager и передаёт готовый список id.
  *
- * Медиа: photo/video доставляются на Max (uploadImage/uploadVideo по URL, который
- * BotManager разрешает из Telegram file_id и кладёт в payload.mediaUrl). Документы и
- * случаи недоступного URL — фолбэк на текст + кнопки, без ошибки.
+ * Медиа: photo/video доставляются на Max (uploadImage/uploadVideo по БАЙТАМ, которые
+ * BotManager скачивает из Telegram file_id и кладёт в payload.mediaBuffer). Документы и
+ * случаи отсутствия байтов — фолбэк на текст + кнопки, без ошибки.
  */
 export class MaxBots implements PlatformBots {
   readonly platform: Platform = 'max';
@@ -197,27 +197,33 @@ export class MaxBots implements PlatformBots {
   async broadcast(platformIds: string[], payload: BroadcastPayload): Promise<BroadcastProgress> {
     const buttonRows = this.buildBroadcastButtonRows(payload.buttons);
 
-    // Медиа: photo/video Max умеет (uploadImage/uploadVideo по URL). Грузим ОДИН раз и
-    // переиспользуем вложение для всех получателей. Документы Max-клиент не загружает —
-    // как и при недоступном URL, откатываемся на текст-онли.
+    // Медиа: photo/video Max умеет (uploadImage/uploadVideo по байтам). Грузим ОДИН раз
+    // и переиспользуем вложение для всех получателей. Документы Max-клиент не грузит —
+    // как и при отсутствии байтов, откатываемся на текст+кнопки.
     let mediaAttachment: MessageAttachment | undefined;
     if (payload.media) {
       const kind: 'image' | 'video' | null =
         payload.media.type === 'photo' ? 'image' : payload.media.type === 'video' ? 'video' : null;
-      if (kind && payload.mediaUrl) {
+      if (kind === null) {
+        // Документ намеренно не поддержан на Max (нет аплоада документов в клиенте).
+        logger.warn('Max: broadcast document not supported, sending text only', {
+          mediaType: payload.media.type,
+        });
+      } else if (!payload.mediaBuffer) {
+        logger.warn('Max: broadcast media has no bytes, sending text only', {
+          mediaType: payload.media.type,
+        });
+      } else {
         try {
-          mediaAttachment = await this.userClient.uploadMediaAttachment(kind, payload.mediaUrl);
+          // Грузим именно БАЙТЫ (Buffer): Max-SDK трактует строковый source как путь в
+          // ФС, поэтому URL/file_id сюда передавать нельзя — только буфер.
+          mediaAttachment = await this.userClient.uploadMediaAttachment(kind, payload.mediaBuffer);
         } catch (error) {
           logger.error('Max: broadcast media upload failed, sending text only', {
             mediaType: payload.media.type,
             error,
           });
         }
-      } else {
-        logger.warn('Max: broadcast media skipped (unsupported type or unresolved URL), text only', {
-          mediaType: payload.media.type,
-          hasUrl: !!payload.mediaUrl,
-        });
       }
     }
 
