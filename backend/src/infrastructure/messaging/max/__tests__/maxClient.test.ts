@@ -12,8 +12,17 @@ function makeFakeBot() {
       answerOnCallback: jest.fn().mockResolvedValue({ success: true }),
       setMyCommands: jest.fn().mockResolvedValue({}),
       getMyInfo: jest.fn().mockResolvedValue({ user_id: 1, name: 'bot' }),
-      uploadVideo: jest.fn().mockResolvedValue({ type: 'video', payload: { token: 't' } }),
-      uploadImage: jest.fn().mockResolvedValue({ type: 'image', payload: { token: 'img' } }),
+      // Реальный SDK возвращает ИНСТАНСЫ Image/VideoAttachment: «сырые» поля + метод
+      // toJson() (НЕ toJSON). Зеркалим это, чтобы тест ловил регресс, если код положит
+      // инстанс в attachments без toJson() (Max -> 400 "Can't deserialize body").
+      uploadVideo: jest.fn().mockResolvedValue({
+        token: 't',
+        toJson: () => ({ type: 'video', payload: { token: 't' } }),
+      }),
+      uploadImage: jest.fn().mockResolvedValue({
+        photos: { k: { token: 'img' } },
+        toJson: () => ({ type: 'image', payload: { photos: { k: { token: 'img' } } } }),
+      }),
     },
     start: jest.fn(),
     stop: jest.fn(),
@@ -74,7 +83,9 @@ describe('MaxClient', () => {
 
     expect(bot.api.uploadImage).toHaveBeenCalledWith({ source: bytes });
     expect(bot.api.uploadVideo).not.toHaveBeenCalled();
-    expect(att).toMatchObject({ type: 'image' });
+    // Возвращаем именно ПЛОСКИЙ результат toJson() {type,payload}, а не инстанс —
+    // иначе Max не десериализует тело.
+    expect(att).toEqual({ type: 'image', payload: { photos: { k: { token: 'img' } } } });
   });
 
   it('uploadMediaAttachment("video", buffer) uploads via uploadVideo (Buffer, not string)', async () => {
@@ -121,7 +132,7 @@ describe('MaxClient', () => {
     const [userId, text, extra] = bot.api.sendMessageToUser.mock.calls[0];
     expect(userId).toBe(123);
     expect(text).toBe('caption text');
-    expect(extra.attachments[0]).toEqual({ type: 'image', payload: { token: 'img' } });
+    expect(extra.attachments[0]).toEqual({ type: 'image', payload: { photos: { k: { token: 'img' } } } });
   });
 
   it('uploadAndSendImage appends an inline keyboard when button rows are given', async () => {
@@ -134,7 +145,7 @@ describe('MaxClient', () => {
 
     const [, , extra] = bot.api.sendMessageToUser.mock.calls[0];
     expect(extra.attachments).toHaveLength(2);
-    expect(extra.attachments[0]).toEqual({ type: 'image', payload: { token: 'img' } });
+    expect(extra.attachments[0]).toEqual({ type: 'image', payload: { photos: { k: { token: 'img' } } } });
     expect(extra.attachments[1].type).toBe('inline_keyboard');
   });
 

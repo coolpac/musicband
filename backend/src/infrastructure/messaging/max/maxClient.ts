@@ -83,8 +83,11 @@ export class MaxClient {
     buttonRows?: MaxButton[][],
     opts?: SendMessageExtra
   ): Promise<void> {
-    const video = await this.bot.api.uploadVideo({ source });
-    const attachments = [video, ...(opts?.attachments ?? [])];
+    // .toJson() обязателен: uploadVideo возвращает ИНСТАНС VideoAttachment с методом
+    // toJson() (НЕ toJSON), который JSON.stringify при отправке не вызывает — без этого
+    // тело уходит без обёртки payload и Max отвечает 400 "Can't deserialize body".
+    const video = (await this.bot.api.uploadVideo({ source })).toJson() as unknown as MessageAttachment;
+    const attachments: MessageAttachment[] = [video, ...(opts?.attachments ?? [])];
     if (buttonRows?.length) {
       attachments.push(
         Keyboard.inlineKeyboard(
@@ -113,11 +116,11 @@ export class MaxClient {
     buttonRows?: MaxButton[][],
     opts?: SendMessageExtra
   ): Promise<void> {
-    // uploadImage возвращает ImageAttachment без литерального поля `type` (в отличие
-    // от VideoAttachment), поэтому SDK-тип SendMessageExtra['attachments'] его прямо не
-    // принимает. SDK сериализует вложение через toJson() во время отправки, так что в
-    // рантайме это корректное вложение — приводим к типу элемента массива attachments.
-    const image = (await this.bot.api.uploadImage({ source })) as unknown as MessageAttachment;
+    // .toJson() обязателен: uploadImage возвращает ИНСТАНС ImageAttachment с методом
+    // toJson() (НЕ toJSON) и payload-геттером, поэтому JSON.stringify сериализует его как
+    // {photos:{...}} без обёртки payload → Max отвечает 400 "Can't deserialize body".
+    // Берём готовый плоский объект {type,payload} (как Keyboard.inlineKeyboard).
+    const image = (await this.bot.api.uploadImage({ source })).toJson() as unknown as MessageAttachment;
     const attachments: MessageAttachment[] = [image, ...(opts?.attachments ?? [])];
     if (buttonRows?.length) {
       attachments.push(
@@ -145,14 +148,14 @@ export class MaxClient {
     kind: 'image' | 'video',
     source: Buffer
   ): Promise<MessageAttachment> {
-    const attachment =
+    const uploaded =
       kind === 'video'
         ? await this.bot.api.uploadVideo({ source })
         : await this.bot.api.uploadImage({ source });
-    // uploadImage возвращает ImageAttachment без литерального `type`, поэтому SDK-тип
-    // массива attachments его прямо не принимает; в рантайме это валидное вложение
-    // (SDK сериализует через toJson при отправке) — приводим к типу элемента массива.
-    return attachment as unknown as MessageAttachment;
+    // .toJson() обязателен: uploaded — ИНСТАНС (Image/VideoAttachment) с методом toJson()
+    // (НЕ toJSON), который JSON.stringify при отправке не вызывает. Без него тело
+    // сериализуется без обёртки payload → Max отвечает 400 "Can't deserialize body".
+    return uploaded.toJson() as unknown as MessageAttachment;
   }
 
   /**
