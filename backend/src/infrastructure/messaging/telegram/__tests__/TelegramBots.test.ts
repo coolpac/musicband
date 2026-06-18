@@ -310,6 +310,34 @@ describe('TelegramBots adapter', () => {
       expect((rawBot.sendMessage as jest.Mock)).toHaveBeenCalledTimes(3);
     });
 
+    // Регрессия (реальный прод-баг): «chat not found» у ПЕРВОГО получателя не должен
+    // лишать картинки всех остальных — это пер-юзерная ошибка, а не проблема медиа.
+    it('does NOT disable media when an early recipient errors with chat-not-found/blocked', async () => {
+      const userBot = makeUserBot();
+      const rawBot = makeRawBot();
+      (rawBot.sendPhoto as jest.Mock)
+        .mockRejectedValueOnce({
+          response: { error_code: 400, description: 'Bad Request: chat not found' },
+        })
+        .mockResolvedValueOnce({ photo: [{ file_id: 'user-fid' }] }) // 2-й — буфер ок, даёт file_id
+        .mockResolvedValue({ photo: [{ file_id: 'user-fid' }] }); // 3-й — переиспользование
+      (userBot.getBot as jest.Mock).mockReturnValue(rawBot);
+      const adapter = new TelegramBots(userBot, makeAdminBot());
+
+      const result = await adapter.broadcast(['1', '2', '3'], {
+        text: 'caption',
+        buttons: [],
+        media: { type: 'photo', fileId: 'admin-file-123' },
+      });
+
+      // 1-й — сбой получателя; 2-й и 3-й получили ФОТО (а не текст).
+      expect(result).toEqual({ sent: 2, failed: 1, total: 3 });
+      expect((rawBot.sendPhoto as jest.Mock)).toHaveBeenCalledTimes(3); // медиа НЕ отключилось
+      expect((rawBot.sendMessage as jest.Mock)).not.toHaveBeenCalled(); // текст-фолбэка нет
+      expect(Buffer.isBuffer((rawBot.sendPhoto as jest.Mock).mock.calls[1][1])).toBe(true);
+      expect((rawBot.sendPhoto as jest.Mock).mock.calls[2][1]).toBe('user-fid');
+    });
+
     it('resolveMediaBuffer returns undefined on non-OK download (no retry on 404)', async () => {
       const adapter = new TelegramBots(makeUserBot(), makeAdminBot());
       fetchSpy.mockResolvedValue({ ok: false, status: 404 } as unknown as Response);

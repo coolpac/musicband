@@ -129,9 +129,11 @@ export class TelegramBots implements PlatformBots {
       ? { filename: mediaFilename, contentType: TelegramBots.contentTypeForFilename(mediaFilename) }
       : undefined;
 
-    // Если отправка БАЙТОВ первому получателю не прошла — медиа недоставляемо
-    // (битый буфер/неподдерживаемый тип). Отключаем медиа и дошлём всем текст,
-    // чтобы рассылка не падала целиком на каждом получателе (как было в проде: 48/48).
+    // Если отправка БАЙТОВ падает по причине, связанной с САМИМ медиа (битый буфер/
+    // неподдерживаемый тип), отключаем медиа и дошлём всем текст, чтобы рассылка не
+    // падала целиком. ВАЖНО: пер-юзерные ошибки (заблокировал/нет чата/деактивирован)
+    // НЕ должны глушить медиа — иначе один мёртвый чат среди первых получателей лишает
+    // картинки всех остальных (реальный баг: "chat not found" у первого → текст всем).
     let mediaDisabled = false;
     for (const platformId of platformIds) {
       try {
@@ -156,18 +158,19 @@ export class TelegramBots implements PlatformBots {
             if (reusable) mediaSource = reusable;
             delivered = true;
           } catch (mediaError) {
-            if (isBuffer) {
-              // Упала первая отправка байтов → медиа битое/неподдерживаемое: глушим
-              // медиа для всех, текущему получателю ниже уйдёт текст.
-              logger.error('Broadcast: media undeliverable, falling back to text for all', {
-                error: mediaError,
-                mediaType: payload.media.type,
-              });
-              mediaDisabled = true;
-            } else {
-              // file_id уже работал раньше — это пер-юзерная ошибка (403 и т.п.).
+            // Пер-юзерная ошибка (заблокировал/нет чата/деактивирован) ИЛИ отправка по
+            // готовому file_id — медиа НЕ виновато: считаем сбоем получателя и продолжаем
+            // пробовать медиа для следующих (первый достижимый даст file_id для остальных).
+            if (!isBuffer || TelegramBots.isRecipientError(mediaError)) {
               throw mediaError;
             }
+            // Иначе — проблема в самом медиа (битый буфер/неподдерживаемый тип): глушим
+            // медиа и шлём всем текст; текущему получателю текст уйдёт ниже.
+            logger.error('Broadcast: media undeliverable, falling back to text for all', {
+              error: mediaError,
+              mediaType: payload.media.type,
+            });
+            mediaDisabled = true;
           }
         }
         if (!delivered) {
@@ -312,6 +315,32 @@ export class TelegramBots implements PlatformBots {
       default:
         return undefined;
     }
+  }
+
+  /**
+   * Ошибка относится к КОНКРЕТНОМУ получателю (а не к медиа/контенту): бот заблокирован,
+   * чат не найден, пользователь деактивирован, неверный peer. Такие сбои не должны
+   * отключать медиа для всей рассылки — это проблема одного получателя.
+   */
+  private static isRecipientError(error: unknown): boolean {
+    const resp =
+      error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { error_code?: number; description?: string } }).response
+        : undefined;
+    const code = resp?.error_code;
+    if (code === 403) return true; // bot was blocked by the user
+    const desc = String(
+      resp?.description ?? (error instanceof Error ? error.message : '')
+    ).toLowerCase();
+    return (
+      desc.includes('chat not found') ||
+      desc.includes('user is deactivated') ||
+      desc.includes('bot was blocked') ||
+      desc.includes('peer_id_invalid') ||
+      desc.includes('chat_id is empty') ||
+      desc.includes("can't initiate conversation") ||
+      desc.includes('user not found')
+    );
   }
 
   /** user-бот-овый file_id из ответа sendPhoto/Video/Document — для переиспользования. */
