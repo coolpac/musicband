@@ -54,11 +54,11 @@ brew install ffmpeg  # macOS
 ## 🚀 Деплой на production
 
 ### Документация
-- 📘 [Полное руководство по деплою](docs/DEPLOYMENT_GUIDE.md) — сервер 77.91.65.252
+- 📘 [Полное руководство по деплою](docs/DEPLOYMENT_GUIDE.md) — сервер 185.69.121.178
 - 🔒 [SSL для vgulcover.ru (HTTPS)](docs/SSL_SETUP.md) — Let's Encrypt и проверка сайта
 - 🐳 [Docker оптимизации](docs/DOCKER_OPTIMIZATION.md) — архитектура и best practices
 
-### Первоначальная настройка сервера (vgulcover.ru / 77.91.65.252)
+### Первоначальная настройка сервера (vgulcover.ru / 185.69.121.178)
 
 **Один скрипт для полной настройки:**
 ```bash
@@ -66,7 +66,7 @@ brew install ffmpeg  # macOS
 chmod +x scripts/*.sh
 
 # Полная настройка сервера с нуля (Docker, firewall, клонирование, .env)
-REMOTE_HOST=77.91.65.252 ./scripts/server-provision.sh \
+REMOTE_HOST=185.69.121.178 ./scripts/server-provision.sh \
   https://github.com/username/musicians.git vgulcover.ru
 
 # Скрипт автоматически:
@@ -80,7 +80,7 @@ REMOTE_HOST=77.91.65.252 ./scripts/server-provision.sh \
 **После завершения скрипта:**
 ```bash
 # 1. SSH на сервер и добавить Telegram токены
-ssh root@77.91.65.252
+ssh root@185.69.121.178
 cd /opt/musicians
 nano .env  # Добавить TELEGRAM_ADMIN_BOT_TOKEN (получить у @BotFather)
 
@@ -91,7 +91,7 @@ nano .env  # Добавить TELEGRAM_ADMIN_BOT_TOKEN (получить у @Bot
 **Обновления:**
 ```bash
 # Полный деплой (backend + frontend + миграции)
-REMOTE_HOST=77.91.65.252 REMOTE_USER=root REMOTE_PATH=/opt/musicians \
+REMOTE_HOST=185.69.121.178 REMOTE_USER=root REMOTE_PATH=/opt/musicians \
   ./scripts/remote-deploy.sh
 
 # Только backend
@@ -105,7 +105,7 @@ REMOTE_HOST=77.91.65.252 REMOTE_USER=root REMOTE_PATH=/opt/musicians \
 ```
 
 **Переменные окружения:**
-- `REMOTE_HOST` - IP или домен сервера (по умолчанию: 77.91.65.252)
+- `REMOTE_HOST` - IP или домен сервера (по умолчанию: 185.69.121.178)
 - `REMOTE_USER` - пользователь SSH (по умолчанию: root)
 - `REMOTE_PORT` - порт SSH (по умолчанию: 22)
 - `REMOTE_PATH` - путь к проекту (по умолчанию: /opt/musicians)

@@ -10,7 +10,7 @@ set -euo pipefail
 #   ./scripts/remote-deploy.sh --rollback # rollback
 #
 # Config via env:
-#   REMOTE_HOST (default: 77.91.65.252)
+#   REMOTE_HOST (default: 185.69.121.178)
 #   REMOTE_USER (default: root)
 #   REMOTE_PORT (default: 22)
 #   REMOTE_PATH (default: /opt/musicians)
@@ -21,7 +21,7 @@ if ! command -v ssh >/dev/null 2>&1; then
   exit 1
 fi
 
-REMOTE_HOST="${REMOTE_HOST:-77.91.65.252}"
+REMOTE_HOST="${REMOTE_HOST:-185.69.121.178}"
 REMOTE_USER="${REMOTE_USER:-root}"
 REMOTE_PORT="${REMOTE_PORT:-22}"
 REMOTE_PATH="${REMOTE_PATH:-/opt/musicians}"
