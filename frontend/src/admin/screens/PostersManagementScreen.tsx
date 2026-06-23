@@ -11,6 +11,7 @@ import {
   createAdminPoster,
   updateAdminPoster,
   deleteAdminPoster,
+  toggleAdminPoster,
   uploadPosterImage,
   type AdminPoster,
 } from '../../services/adminPosterService';
@@ -149,6 +150,23 @@ export default function PostersManagementScreen() {
     }
   };
 
+  const handleToggle = async (id: string) => {
+    hapticImpact('light');
+    const poster = posters.find((p) => p.id === id);
+    if (!poster) return;
+    const next = !(poster.isActive ?? true);
+    // Оптимистично переключаем, при ошибке откатываем.
+    setPosters((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: next } : p)));
+    try {
+      await toggleAdminPoster(id);
+      toast.success(next ? 'Афиша показана на главной' : 'Афиша скрыта с главной');
+    } catch (error) {
+      console.error('Error toggling poster:', error);
+      toast.error('Не удалось изменить видимость');
+      setPosters((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: !next } : p)));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -230,8 +248,9 @@ export default function PostersManagementScreen() {
           <div className="posters-list">
             {posters.map((poster, index) => {
               const imgProps = getOptimizedImageProps(poster.imageUrl ?? undefined);
+              const isVisible = poster.isActive ?? true;
               return (
-              <div key={poster.id} className="poster-item">
+              <div key={poster.id} className={`poster-item${isVisible ? '' : ' poster-item--hidden'}`}>
                 {imgProps ? (
                   <div className="poster-item__image">
                     <OptimizedImage
@@ -250,6 +269,7 @@ export default function PostersManagementScreen() {
                   <h3 className="poster-item__title">
                     {poster.title}
                     <span className="poster-order-pill">#{poster.order ?? '-'}</span>
+                    {!isVisible && <span className="poster-hidden-badge">Скрыта</span>}
                   </h3>
                   {poster.description && (
                     <p className="poster-item__description">{poster.description}</p>
@@ -287,6 +307,13 @@ export default function PostersManagementScreen() {
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 11.5L2 5.5H12L7 11.5Z" fill="currentColor"/></svg>
                     </button>
                   </div>
+                  <button
+                    className="admin-btn admin-btn--secondary"
+                    onClick={() => handleToggle(poster.id)}
+                    aria-label={isVisible ? 'Скрыть афишу' : 'Показать афишу'}
+                  >
+                    {isVisible ? '🙈 Скрыть' : '👁 Показать'}
+                  </button>
                   <button
                     className="admin-btn admin-btn--secondary"
                     onClick={() => handleEdit(poster)}

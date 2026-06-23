@@ -6,7 +6,8 @@ export class PosterController {
 
   async getAllPosters(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const posters = await this.posterService.getAllPosters();
+      // Публично отдаём только видимые афиши (скрытые в админке сюда не попадают).
+      const posters = await this.posterService.getActivePosters();
       res.json({
         success: true,
         data: posters,

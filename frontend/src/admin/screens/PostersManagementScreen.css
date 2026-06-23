@@ -154,3 +154,22 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* Скрытая афиша: приглушаем превью, но кнопки/действия остаются активными. */
+.poster-item--hidden .poster-item__image,
+.poster-item--hidden .poster-item__placeholder,
+.poster-item--hidden .poster-item__content {
+  opacity: 0.45;
+}
+
+.poster-hidden-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--admin-text-secondary, #aaa);
+  vertical-align: middle;
+}

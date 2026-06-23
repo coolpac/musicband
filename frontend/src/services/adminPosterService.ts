@@ -9,6 +9,7 @@ export interface AdminPoster {
   imageUrl?: string | null;
   link?: string | null;
   order?: number;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -56,6 +57,11 @@ export async function updateAdminPoster(id: string, input: UpdatePosterInput): P
 
 export async function deleteAdminPoster(id: string): Promise<void> {
   await apiDelete(`${BASE}/${id}`);
+}
+
+/** Скрыть/показать афишу без удаления. Возвращает обновлённую афишу. */
+export async function toggleAdminPoster(id: string): Promise<AdminPoster> {
+  return apiPost<AdminPoster>(`${BASE}/${id}/toggle`, {});
 }
 
 /**

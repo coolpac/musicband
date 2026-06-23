@@ -47,6 +47,10 @@ router.put(
   validate(UpdatePosterSchema),
   asyncHandler(adminPosterController.updatePoster.bind(adminPosterController))
 );
+router.post(
+  '/:id/toggle',
+  asyncHandler(adminPosterController.toggleActive.bind(adminPosterController))
+);
 router.delete('/:id', asyncHandler(adminPosterController.deletePoster.bind(adminPosterController)));
 
 export default router;

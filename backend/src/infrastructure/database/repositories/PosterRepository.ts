@@ -3,6 +3,7 @@ import { prisma } from '../../../config/database';
 
 export interface IPosterRepository {
   findAll(): Promise<Poster[]>;
+  findActive(): Promise<Poster[]>;
   findById(id: string): Promise<Poster | null>;
   create(data: CreatePosterData): Promise<Poster>;
   update(id: string, data: UpdatePosterData): Promise<Poster>;
@@ -15,6 +16,7 @@ export interface CreatePosterData {
   imageUrl?: string;
   link?: string;
   order?: number;
+  isActive?: boolean;
 }
 
 export interface UpdatePosterData {
@@ -23,6 +25,7 @@ export interface UpdatePosterData {
   imageUrl?: string;
   link?: string;
   order?: number;
+  isActive?: boolean;
 }
 
 export class PrismaPosterRepository implements IPosterRepository {
@@ -30,6 +33,14 @@ export class PrismaPosterRepository implements IPosterRepository {
 
   async findAll(): Promise<Poster[]> {
     return this.client.poster.findMany({
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  /** Только видимые афиши — для публичной выдачи (главная). */
+  async findActive(): Promise<Poster[]> {
+    return this.client.poster.findMany({
+      where: { isActive: true },
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });
   }
@@ -48,6 +59,7 @@ export class PrismaPosterRepository implements IPosterRepository {
         imageUrl: data.imageUrl,
         link: data.link,
         order: data.order,
+        isActive: data.isActive,
       },
     });
   }
@@ -61,6 +73,7 @@ export class PrismaPosterRepository implements IPosterRepository {
         imageUrl: data.imageUrl,
         link: data.link,
         order: data.order,
+        isActive: data.isActive,
       },
     });
   }

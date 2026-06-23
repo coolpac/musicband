@@ -65,4 +65,25 @@ export class AdminPosterController {
       next(error);
     }
   }
+
+  /** POST /api/admin/posters/:id/toggle — скрыть/показать афишу без удаления. */
+  async toggleActive(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const poster = await this.posterService.togglePosterActive(id);
+
+      logger.info('Poster visibility toggled by admin', {
+        posterId: id,
+        isActive: poster.isActive,
+        adminId: req.user?.userId,
+      });
+
+      res.json({
+        success: true,
+        data: poster,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
