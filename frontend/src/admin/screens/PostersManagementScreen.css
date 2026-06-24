@@ -82,11 +82,16 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  /* Кнопок стало больше (добавилась «Скрыть») — позволяем переносить, чтобы
+     строка действий не вылезала за карточку. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .poster-item__actions .admin-btn {
   padding: 10px 16px;
   font-size: 14px;
+  white-space: nowrap;
 }
 
 /* Responsive */
@@ -107,7 +112,9 @@
   }
 
   .poster-item__actions .admin-btn {
-    flex: 1;
+    /* min-width, чтобы текст не сжимался — кнопки переносятся на след. строку. */
+    flex: 1 1 auto;
+    min-width: 110px;
   }
 }
 
