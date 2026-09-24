@@ -59,6 +59,50 @@
   margin: 0 0 8px 0;
 }
 
+/* Дата и место события (данные для сайта) */
+.poster-item__event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.poster-item__event-date {
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(52, 199, 89, 0.16);
+  border: 1px solid rgba(52, 199, 89, 0.35);
+  color: var(--admin-success);
+  white-space: nowrap;
+}
+
+.poster-item__event-sep {
+  color: var(--admin-text-secondary);
+}
+
+.poster-item__event-venue {
+  font-weight: 500;
+  color: var(--admin-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Дата + место в форме: одна строка на планшете и шире */
+.poster-form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 560px) {
+  .poster-form-row {
+    grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.2fr);
+  }
+}
+
 .poster-item__description {
   font-size: 14px;
   color: var(--admin-text-secondary);

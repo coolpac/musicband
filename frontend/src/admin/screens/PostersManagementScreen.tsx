@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useId, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { hapticImpact } from '../../telegram/telegramWebApp';
 import AdminHeader from '../components/AdminHeader';
@@ -12,10 +12,15 @@ import {
   updateAdminPoster,
   deleteAdminPoster,
   uploadPosterImage,
+  posterDateInputValue,
+  formatPosterDate,
   type AdminPoster,
 } from '../../services/adminPosterService';
 import '../../styles/admin.css';
 import './PostersManagementScreen.css';
+
+/** Место/время события на сайте — одна строка под датой. */
+const VENUE_MAX_LENGTH = 120;
 
 interface PosterInput {
   title: string;
@@ -23,9 +28,14 @@ interface PosterInput {
   imageUrl: string;
   link?: string;
   order?: number;
+  /** 'YYYY-MM-DD' или '' — дата события на сайте. */
+  eventDate: string;
+  venue: string;
 }
 
 export default function PostersManagementScreen() {
+  // Экран может быть смонтирован дважды (режимы «Приложение» и «Сайт») — id полей должны быть уникальными.
+  const fieldId = useId();
   const [posters, setPosters] = useState<AdminPoster[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -38,6 +48,8 @@ export default function PostersManagementScreen() {
     description: '',
     imageUrl: '',
     link: '',
+    eventDate: '',
+    venue: '',
   });
 
   const sortPosters = (list: AdminPoster[]) =>
@@ -73,6 +85,8 @@ export default function PostersManagementScreen() {
       imageUrl: '',
       link: '',
       order: posters.length + 1,
+      eventDate: '',
+      venue: '',
     });
     setShowModal(true);
   };
@@ -121,6 +135,8 @@ export default function PostersManagementScreen() {
       description: poster.description ?? '',
       imageUrl: poster.imageUrl ?? '',
       link: poster.link ?? '',
+      eventDate: posterDateInputValue(poster.eventDate),
+      venue: poster.venue ?? '',
     });
     setShowModal(true);
   };
@@ -164,12 +180,17 @@ export default function PostersManagementScreen() {
         imageUrl = await uploadPosterImage(imageUrl);
       }
 
+      const eventDate = formData.eventDate ? formData.eventDate : null;
+      const venue = formData.venue.trim() ? formData.venue.trim() : null;
+
       if (editingPoster) {
         await updateAdminPoster(editingPoster.id, {
           title: formData.title.trim(),
           description: formData.description?.trim() || undefined,
           imageUrl,
           link: formData.link?.trim() || undefined,
+          eventDate,
+          venue,
         });
         toast.success('Афиша обновлена');
       } else {
@@ -179,6 +200,8 @@ export default function PostersManagementScreen() {
           imageUrl,
           link: formData.link?.trim() || undefined,
           order: formData.order,
+          eventDate,
+          venue,
         });
         toast.success('Афиша добавлена');
       }
@@ -226,6 +249,8 @@ export default function PostersManagementScreen() {
           <div className="posters-list">
             {posters.map((poster, index) => {
               const imgProps = getOptimizedImageProps(poster.imageUrl ?? undefined);
+              const eventDateLabel = formatPosterDate(poster.eventDate);
+              const venueLabel = poster.venue?.trim() || null;
               return (
               <div key={poster.id} className="poster-item">
                 {imgProps ? (
@@ -247,6 +272,19 @@ export default function PostersManagementScreen() {
                     {poster.title}
                     <span className="poster-order-pill">#{poster.order ?? '-'}</span>
                   </h3>
+                  {(eventDateLabel || venueLabel) && (
+                    <p className="poster-item__event">
+                      {eventDateLabel && (
+                        <span className="poster-item__event-date">{eventDateLabel}</span>
+                      )}
+                      {eventDateLabel && venueLabel && (
+                        <span className="poster-item__event-sep" aria-hidden="true">
+                          ·
+                        </span>
+                      )}
+                      {venueLabel && <span className="poster-item__event-venue">{venueLabel}</span>}
+                    </p>
+                  )}
                   {poster.description && (
                     <p className="poster-item__description">{poster.description}</p>
                   )}
@@ -335,6 +373,40 @@ export default function PostersManagementScreen() {
               placeholder="Краткое описание..."
               rows={3}
             />
+          </div>
+
+          <div className="poster-form-row">
+            <div className="admin-form-group">
+              <label className="admin-form-label" htmlFor={`${fieldId}-event-date`}>
+                Дата события
+              </label>
+              <input
+                id={`${fieldId}-event-date`}
+                type="date"
+                className="admin-form-input"
+                value={formData.eventDate}
+                onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+              />
+              <p className="admin-form-hint">Показывается на сайте. Пусто — афиша без даты</p>
+            </div>
+
+            <div className="admin-form-group">
+              <label className="admin-form-label" htmlFor={`${fieldId}-venue`}>
+                Место / время
+              </label>
+              <input
+                id={`${fieldId}-venue`}
+                type="text"
+                className="admin-form-input"
+                value={formData.venue}
+                maxLength={VENUE_MAX_LENGTH}
+                onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                placeholder="Парк «Зелёный», начало в 20:30"
+              />
+              <p className="admin-form-hint">
+                Свободный текст под датой, до {VENUE_MAX_LENGTH} символов
+              </p>
+            </div>
           </div>
 
           <div className="admin-form-group">

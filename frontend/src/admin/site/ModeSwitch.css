@@ -1,0 +1,103 @@
+/* Переключатель «Приложение | Сайт» — живёт в левом слоте admin-topbar */
+
+.admin-modeswitch {
+  position: relative;
+  /* Equal-width columns sized by the WIDER label: «Приложение» never truncates, the thumb's 50% stays exact. */
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: stretch;
+  flex: 0 0 auto;
+  width: max-content;
+  height: 36px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--admin-border);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.3));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  isolation: isolate;
+}
+
+/* Бегунок: ширина ровно половина рабочей области, двигается transform'ом */
+.admin-modeswitch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  height: calc(100% - 6px);
+  border-radius: 999px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transform: translateX(0);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), background 0.28s ease;
+  z-index: -1;
+}
+
+.admin-modeswitch__thumb[data-mode='site'] {
+  transform: translateX(100%);
+  background: linear-gradient(160deg, rgba(255, 49, 53, 0.55), rgba(200, 0, 31, 0.45));
+  border-color: rgba(255, 120, 120, 0.45);
+}
+
+.admin-modeswitch__option {
+  position: relative;
+  flex: 1 1 50%;
+  min-width: 0;
+  padding: 0 12px;
+  border: none;
+  background: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+
+/* Зона нажатия выше самого пилюли-переключателя: 36 + 2×6 = 48px */
+.admin-modeswitch__option::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
+.admin-modeswitch__option--active {
+  color: var(--admin-text);
+}
+
+.admin-modeswitch__option:active {
+  transform: scale(0.96);
+}
+
+.admin-modeswitch__option:focus-visible {
+  outline: 2px solid var(--admin-text);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .admin-modeswitch__option:hover {
+    color: var(--admin-text);
+  }
+}
+
+@media (min-width: 480px) {
+  .admin-modeswitch__option {
+    padding: 0 14px;
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-modeswitch__thumb,
+  .admin-modeswitch__option {
+    transition: none;
+  }
+}

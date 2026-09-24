@@ -8,9 +8,13 @@ import { getOrFetch, invalidate, CACHE_KEYS } from './adminDataCache';
 
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
 
+/** Откуда пришла заявка: Telegram Mini App или публичный сайт. */
+export type BookingOrigin = 'miniapp' | 'website';
+
 export type AdminBooking = {
   id: string;
-  userId: string;
+  /** null у заявок с сайта: там нет Telegram-пользователя. */
+  userId: string | null;
   formatId: string | null;
   bookingDate: string;
   fullName: string;
@@ -24,6 +28,22 @@ export type AdminBooking = {
   updatedAt: string;
   format?: { id: string; name: string } | null;
   user?: { id: string; telegramId?: number; username?: string; firstName?: string; lastName?: string } | null;
+  /* Поля появились вместе с сайтом: у не обновлённого бэкенда их может не быть. */
+  /** 'HH:mm' — желаемое время начала. */
+  bookingTime?: string | null;
+  email?: string | null;
+  comment?: string | null;
+  origin?: BookingOrigin | null;
+};
+
+/** Старые заявки пришли из Mini App, поэтому отсутствующее значение — 'miniapp'. */
+export function normalizeBookingOrigin(value: unknown): BookingOrigin {
+  return value === 'website' ? 'website' : 'miniapp';
+}
+
+export const BOOKING_ORIGIN_LABELS: Record<BookingOrigin, string> = {
+  miniapp: 'Приложение',
+  website: 'Сайт',
 };
 
 export type AdminBookingStats = {
@@ -83,6 +103,28 @@ const MOCK_BOOKINGS: AdminBooking[] = [
     updatedAt: '2026-01-18T14:30:00Z',
     format: { id: 'f2', name: 'Соло' },
     user: { id: 'u2', telegramId: 222, username: 'maria_s' },
+    origin: 'miniapp',
+  },
+  {
+    id: 'mock-web-1',
+    userId: null,
+    formatId: 'f1',
+    bookingDate: '2026-02-08',
+    bookingTime: '19:00',
+    fullName: 'Ольга Крылова',
+    contactType: null,
+    contactValue: '+7 912 000-11-22',
+    email: 'olga@example.com',
+    comment: 'Юбилей, нужен блок 90-х на час.',
+    city: 'Екатеринбург',
+    source: 'Сайт',
+    origin: 'website',
+    income: null,
+    status: 'pending',
+    createdAt: '2026-01-30T18:05:00Z',
+    updatedAt: '2026-01-30T18:05:00Z',
+    format: { id: 'f1', name: 'Дуэт' },
+    user: null,
   },
   {
     id: 'mock-3',
@@ -167,16 +209,22 @@ function buildMockCalendar(month: string): { dates: CalendarDate[] } {
 export async function getAdminBookings(params?: {
   date?: string;
   status?: BookingStatus;
+  /** Фильтр на стороне API (сайт/приложение). Лог фильтрует локально, чтобы не плодить запросы. */
+  origin?: BookingOrigin;
   page?: number;
   limit?: number;
 }): Promise<{ bookings: AdminBooking[]; total: number }> {
   if (isMockMode()) {
     await new Promise((r) => setTimeout(r, 200));
-    return { bookings: MOCK_BOOKINGS, total: MOCK_BOOKINGS.length };
+    const bookings = params?.origin
+      ? MOCK_BOOKINGS.filter((b) => normalizeBookingOrigin(b.origin) === params.origin)
+      : MOCK_BOOKINGS;
+    return { bookings, total: bookings.length };
   }
   const search = new URLSearchParams();
   if (params?.date) search.set('date', params.date);
   if (params?.status) search.set('status', params.status);
+  if (params?.origin) search.set('origin', params.origin);
   if (params?.page != null) search.set('page', String(params.page));
   if (params?.limit != null) search.set('limit', String(params.limit));
   const q = search.toString();

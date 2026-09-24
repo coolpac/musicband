@@ -2,6 +2,8 @@ import { ReactNode } from 'react';
 import topbarLogo from '../../assets/figma/topbar-left.svg';
 import '../../components/Header.css';
 import { useAdminAuth } from '../context/AdminAuthContext';
+import { useAdminMode } from '../site/AdminModeContext';
+import ModeSwitch from '../site/ModeSwitch';
 import './AdminHeader.css';
 
 interface AdminHeaderProps {
@@ -20,11 +22,15 @@ export default function AdminHeader({
 }: AdminHeaderProps) {
   const { avatarUrl, avatarLetter: avatarLetterFromContext, loading } = useAdminAuth();
   const avatarLetter = avatarLetterProp ?? avatarLetterFromContext;
+  // Вне оболочки админки (например, в изолированных превью) контекста режима нет — тогда слот пустой.
+  const modeContext = useAdminMode();
 
   return (
     <header className="app-header admin-header">
-      <div className="app-topbar admin-topbar">
-        <div className="admin-topbar__left" aria-hidden="true" />
+      <div className={`app-topbar admin-topbar ${modeContext ? 'admin-topbar--with-mode' : ''}`}>
+        <div className="admin-topbar__left">
+          {modeContext && <ModeSwitch mode={modeContext.mode} onChange={modeContext.requestMode} />}
+        </div>
         <div className="admin-topbar__center">
           {customContent ??
             (showAvatar ? (

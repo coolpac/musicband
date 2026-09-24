@@ -9,6 +9,14 @@ export interface AdminPoster {
   imageUrl?: string | null;
   link?: string | null;
   order?: number;
+  /**
+   * Дата события для сайта. Бэкенд отдаёт `@db.Date`, поэтому в JSON приходит
+   * либо 'YYYY-MM-DD', либо ISO-строка; null — афиша без даты.
+   * Поле появилось вместе с сайтом — у старого бэкенда его может не быть.
+   */
+  eventDate?: string | null;
+  /** Площадка и/или время свободным текстом: «Парк «Зелёный», 20:30». */
+  venue?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -19,6 +27,9 @@ export interface CreatePosterInput {
   imageUrl?: string;
   link?: string;
   order?: number;
+  /** 'YYYY-MM-DD' или null (очистить). */
+  eventDate?: string | null;
+  venue?: string | null;
 }
 
 export interface UpdatePosterInput {
@@ -27,6 +38,25 @@ export interface UpdatePosterInput {
   imageUrl?: string;
   link?: string;
   order?: number;
+  eventDate?: string | null;
+  venue?: string | null;
+}
+
+/** Нормализует дату афиши к значению <input type="date"> ('' — даты нет). */
+export function posterDateInputValue(value: string | null | undefined): string {
+  if (typeof value !== 'string' || value.length < 10) return '';
+  const candidate = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(candidate) ? candidate : '';
+}
+
+/** «2026-05-12» → «12 мая 2026». Возвращает null, если даты нет или она битая. */
+export function formatPosterDate(value: string | null | undefined): string | null {
+  const iso = posterDateInputValue(value);
+  if (!iso) return null;
+  const [year, month, day] = iso.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export async function getAdminPosters(): Promise<AdminPoster[]> {
@@ -41,6 +71,8 @@ export async function createAdminPoster(input: CreatePosterInput): Promise<Admin
     imageUrl: input.imageUrl || undefined,
     link: input.link || undefined,
     order: input.order,
+    eventDate: input.eventDate,
+    venue: input.venue,
   });
 }
 
@@ -51,6 +83,8 @@ export async function updateAdminPoster(id: string, input: UpdatePosterInput): P
     imageUrl: input.imageUrl,
     link: input.link,
     order: input.order,
+    eventDate: input.eventDate,
+    venue: input.venue,
   });
 }
 

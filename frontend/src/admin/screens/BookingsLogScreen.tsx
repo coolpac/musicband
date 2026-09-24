@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import AdminHeader from '../components/AdminHeader';
 import { ApiError, formatApiErrorMessage } from '../../services/apiClient';
@@ -8,7 +8,10 @@ import {
   updateAdminBookingIncome,
   completeAdminBooking,
   deleteAdminBooking,
+  normalizeBookingOrigin,
+  BOOKING_ORIGIN_LABELS,
   type AdminBooking,
+  type BookingOrigin,
 } from '../../services/adminBookingService';
 import { getCached, CACHE_KEYS } from '../../services/adminDataCache';
 import { IconCheck, IconX, IconTrash } from '../assets/icons';
@@ -16,12 +19,17 @@ import { openTelegramLink, hapticImpact } from '../../telegram/telegramWebApp';
 import '../../styles/admin.css';
 import './BookingsLogScreen.css';
 
+/** Колонок в таблице — нужно для colSpan строки с подробностями. */
+const TABLE_COLUMN_COUNT = 13;
+
 interface BookingRow {
   id: string;
   fullName: string;
   contactType: string | null;
   contactValue: string;
   bookingDate: string;
+  /** 'HH:mm' — заполняется только заявками с сайта. */
+  bookingTime: string | null;
   formatName?: string;
   city?: string | null;
   source?: string | null;
@@ -30,6 +38,9 @@ interface BookingRow {
   /** Username из Telegram (при заявке через Mini App) */
   telegramUsername?: string | null;
   income?: number | null;
+  email: string | null;
+  comment: string | null;
+  origin: BookingOrigin;
 }
 
 function coerceIncome(value: unknown): number | null {
@@ -50,6 +61,7 @@ function mapApiBooking(b: AdminBooking): BookingRow {
     contactType: b.contactType ?? null,
     contactValue: b.contactValue,
     bookingDate,
+    bookingTime: typeof b.bookingTime === 'string' && b.bookingTime ? b.bookingTime : null,
     formatName: b.format?.name ?? undefined,
     city: b.city ?? null,
     source: b.source ?? null,
@@ -57,10 +69,14 @@ function mapApiBooking(b: AdminBooking): BookingRow {
     createdAt: b.createdAt,
     telegramUsername: b.user?.username ?? null,
     income: coerceIncome(b.income),
+    email: typeof b.email === 'string' && b.email ? b.email : null,
+    comment: typeof b.comment === 'string' && b.comment.trim() ? b.comment.trim() : null,
+    origin: normalizeBookingOrigin(b.origin),
   };
 }
 
 export type BookingsLogStatusFilter = 'all' | 'pending' | 'confirmed' | 'cancelled';
+export type BookingsLogOriginFilter = 'all' | BookingOrigin;
 
 type BookingsLogScreenProps = {
   onGoToCalendar?: () => void;
@@ -68,6 +84,8 @@ type BookingsLogScreenProps = {
   initialStatusFilter?: BookingsLogStatusFilter | null;
   /** Вызвать после применения initialStatusFilter, чтобы не сбрасывать фильтр при следующем открытии лога */
   onConsumeInitialFilter?: () => void;
+  /** Стартовый фильтр по источнику: во вкладке «Сайт» лог открывается сразу на заявках с сайта. */
+  initialOriginFilter?: BookingsLogOriginFilter;
 };
 
 function sortedRows(res: { bookings?: AdminBooking[] }): BookingRow[] {
@@ -80,11 +98,14 @@ export default function BookingsLogScreen({
   onGoToCalendar,
   initialStatusFilter = null,
   onConsumeInitialFilter,
+  initialOriginFilter = 'all',
 }: BookingsLogScreenProps) {
   const cached = getCached<{ bookings: AdminBooking[]; total: number }>(CACHE_KEYS.ADMIN_BOOKINGS_LIST);
   const [list, setList] = useState<BookingRow[]>(cached ? sortedRows(cached) : []);
   const [loading, setLoading] = useState(!cached);
   const [statusFilter, setStatusFilter] = useState<BookingsLogStatusFilter>(initialStatusFilter ?? 'all');
+  const [originFilter, setOriginFilter] = useState<BookingsLogOriginFilter>(initialOriginFilter);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
@@ -114,16 +135,26 @@ export default function BookingsLogScreen({
     loadList();
   }, []);
 
+  // Источник фильтруем локально: список уже загружен целиком, лишний запрос не нужен.
+  const originList =
+    originFilter === 'all' ? list : list.filter((b) => b.origin === originFilter);
+
   const filteredList =
     statusFilter === 'all'
-      ? list
-      : list.filter((b) => b.status === statusFilter);
+      ? originList
+      : originList.filter((b) => b.status === statusFilter);
 
   const counts = {
+    all: originList.length,
+    pending: originList.filter((b) => b.status === 'pending').length,
+    confirmed: originList.filter((b) => b.status === 'confirmed').length,
+    cancelled: originList.filter((b) => b.status === 'cancelled').length,
+  };
+
+  const originCounts = {
     all: list.length,
-    pending: list.filter((b) => b.status === 'pending').length,
-    confirmed: list.filter((b) => b.status === 'confirmed').length,
-    cancelled: list.filter((b) => b.status === 'cancelled').length,
+    miniapp: list.filter((b) => b.origin === 'miniapp').length,
+    website: list.filter((b) => b.origin === 'website').length,
   };
 
   const handleUpdateStatus = async (bookingId: string, status: 'confirmed' | 'cancelled') => {
@@ -246,6 +277,33 @@ export default function BookingsLogScreen({
           </div>
         )}
 
+        {/* Фильтр по источнику заявки: приложение или сайт */}
+        {!loading && list.length > 0 && (
+          <div className="bookings-log-filters bookings-log-filters--origin" role="group" aria-label="Фильтр по источнику заявок">
+            {(
+              [
+                { key: 'all' as const, label: 'Все источники', count: originCounts.all },
+                { key: 'miniapp' as const, label: BOOKING_ORIGIN_LABELS.miniapp, count: originCounts.miniapp },
+                { key: 'website' as const, label: BOOKING_ORIGIN_LABELS.website, count: originCounts.website },
+              ] as const
+            ).map(({ key, label, count }) => (
+              <button
+                key={key}
+                type="button"
+                className={`bookings-log-filter-chip bookings-log-origin-chip ${
+                  originFilter === key ? 'bookings-log-filter-chip--active bookings-log-origin-chip--active' : ''
+                }`}
+                onClick={() => setOriginFilter(key)}
+                aria-pressed={originFilter === key}
+                aria-label={`${label}: ${count} заявок`}
+              >
+                <span className="bookings-log-filter-chip__label">{label}</span>
+                <span className="bookings-log-filter-chip__count" aria-hidden>{count}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Фильтр по статусу: чипы с счётчиками */}
         {!loading && list.length > 0 && (
           <div className="bookings-log-filters" role="group" aria-label="Фильтр по статусу заявок">
@@ -276,6 +334,10 @@ export default function BookingsLogScreen({
           <div className="admin-loading">Загрузка списка...</div>
         ) : list.length === 0 ? (
           <div className="bookings-log__empty">Нет заявок</div>
+        ) : originFilter !== 'all' && originList.length === 0 ? (
+          <div className="bookings-log__empty">
+            Нет заявок из источника «{BOOKING_ORIGIN_LABELS[originFilter]}»
+          </div>
         ) : filteredList.length === 0 ? (
           <div className="bookings-log__empty">
             Нет заявок со статусом «
@@ -297,6 +359,7 @@ export default function BookingsLogScreen({
                   <th>Тип контакта</th>
                   <th>Город</th>
                   <th>Источник</th>
+                  <th>Откуда</th>
                   <th>Формат</th>
                   <th>Доход</th>
                   <th>Статус</th>
@@ -304,10 +367,19 @@ export default function BookingsLogScreen({
                 </tr>
               </thead>
               <tbody>
-                {filteredList.map((b) => (
-                    <tr key={b.id}>
+                {filteredList.map((b) => {
+                  const hasDetails = Boolean(b.bookingTime || b.email || b.comment);
+                  const isExpanded = expandedId === b.id;
+                  return (
+                    <Fragment key={b.id}>
+                    <tr>
                       <td>{b.createdAt ? new Date(b.createdAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
-                      <td>{b.bookingDate}</td>
+                      <td>
+                        {b.bookingDate}
+                        {b.bookingTime && (
+                          <span className="bookings-log-time">{b.bookingTime}</span>
+                        )}
+                      </td>
                       <td>{b.fullName}</td>
                       <td>
                         {b.telegramUsername ? (
@@ -326,10 +398,22 @@ export default function BookingsLogScreen({
                           '—'
                         )}
                       </td>
-                      <td>{b.contactValue}</td>
+                      <td>
+                        {b.contactValue}
+                        {b.email && (
+                          <a className="bookings-log-email" href={`mailto:${b.email}`}>
+                            {b.email}
+                          </a>
+                        )}
+                      </td>
                       <td>{b.contactType || '—'}</td>
                       <td>{b.city || '—'}</td>
                       <td>{b.source || '—'}</td>
+                      <td>
+                        <span className={`bookings-log-origin bookings-log-origin--${b.origin}`}>
+                          {BOOKING_ORIGIN_LABELS[b.origin]}
+                        </span>
+                      </td>
                       <td>{b.formatName || '—'}</td>
                       <td className="bookings-log-table__income">
                         {editingIncomeId === b.id ? (
@@ -447,10 +531,56 @@ export default function BookingsLogScreen({
                           >
                             {deletingId === b.id ? <span className="bookings-log-action-dots">…</span> : <IconTrash size={18} />}
                           </button>
+                          {hasDetails && (
+                            <button
+                              type="button"
+                              className={`bookings-log-action-btn bookings-log-details-btn ${
+                                isExpanded ? 'bookings-log-details-btn--open' : ''
+                              }`}
+                              onClick={() => setExpandedId(isExpanded ? null : b.id)}
+                              aria-expanded={isExpanded}
+                              aria-label={isExpanded ? 'Скрыть подробности заявки' : 'Показать подробности заявки'}
+                              title="Подробности: время, e-mail, комментарий"
+                            >
+                              <span className="bookings-log-details-chevron" aria-hidden="true" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                ))}
+                    {hasDetails && isExpanded && (
+                      <tr className="bookings-log-details-row">
+                        <td colSpan={TABLE_COLUMN_COUNT}>
+                          <dl className="bookings-log-details">
+                            {b.bookingTime && (
+                              <div className="bookings-log-details__item">
+                                <dt>Время</dt>
+                                <dd>{b.bookingTime}</dd>
+                              </div>
+                            )}
+                            {b.email && (
+                              <div className="bookings-log-details__item">
+                                <dt>E-mail</dt>
+                                <dd>
+                                  <a className="bookings-log-email" href={`mailto:${b.email}`}>
+                                    {b.email}
+                                  </a>
+                                </dd>
+                              </div>
+                            )}
+                            {b.comment && (
+                              <div className="bookings-log-details__item bookings-log-details__item--wide">
+                                <dt>Комментарий</dt>
+                                <dd>{b.comment}</dd>
+                              </div>
+                            )}
+                          </dl>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

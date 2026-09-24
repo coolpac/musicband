@@ -130,3 +130,15 @@
 .admin-tabbar__item--active .admin-tabbar__icon svg {
   animation: iconPulse 0.4s ease-out;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-tabbar__item--active .admin-tabbar__icon svg {
+    animation: none;
+  }
+
+  .admin-tabbar__item,
+  .admin-tabbar__item::before,
+  .admin-tabbar__icon {
+    transition: none;
+  }
+}
