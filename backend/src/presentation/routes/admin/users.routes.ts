@@ -28,23 +28,27 @@ router.use(asyncHandler(adminRateLimiter));
 router.get('/export', asyncHandler(async (req: Request, res: Response) => {
   const segment = (req.query.segment as string) || 'all';
 
-  let whereClause = {};
+  // CSV export covers Telegram users only (header is telegram_id). Max users are
+  // exported via their own platform-specific flow once that exists.
+  let whereClause: { platform: 'telegram'; platformId?: { in: bigint[] } } = {
+    platform: 'telegram',
+  };
   if (segment === 'just_person' || segment === 'organizer') {
     const role = segment === 'just_person' ? 'just_person' : 'organizer';
     // Get telegram IDs from onboarding_answers with this role
     const onboardingAnswers = await prisma.onboardingAnswer.findMany({
-      where: { role },
-      select: { telegramId: true },
+      where: { role, platform: 'telegram' },
+      select: { platformId: true },
     });
-    const telegramIds = onboardingAnswers.map((a) => a.telegramId);
-    whereClause = { telegramId: { in: telegramIds } };
+    const platformIds = onboardingAnswers.map((a) => a.platformId);
+    whereClause = { platform: 'telegram', platformId: { in: platformIds } };
   }
 
   const users = await prisma.user.findMany({
     where: whereClause,
     orderBy: { createdAt: 'desc' },
     select: {
-      telegramId: true,
+      platformId: true,
       username: true,
       firstName: true,
       lastName: true,
@@ -54,18 +58,19 @@ router.get('/export', asyncHandler(async (req: Request, res: Response) => {
 
   // Get all onboarding answers to map roles
   const allOnboarding = await prisma.onboardingAnswer.findMany({
-    select: { telegramId: true, role: true },
+    where: { platform: 'telegram' },
+    select: { platformId: true, role: true },
   });
-  const roleMap = new Map(allOnboarding.map((a) => [a.telegramId.toString(), a.role]));
+  const roleMap = new Map(allOnboarding.map((a) => [a.platformId.toString(), a.role]));
 
   // Build CSV with BOM for Excel compatibility
   const BOM = '\uFEFF';
   const header = 'telegram_id,username,first_name,last_name,role,created_at';
   const rows = users.map((u) => {
-    const role = roleMap.get(u.telegramId.toString()) || '';
+    const role = roleMap.get(u.platformId.toString()) || '';
     const roleLabel = role === 'just_person' ? 'Физлицо' : role === 'organizer' ? 'Организатор' : role === 'agent' ? 'Агент' : '';
     return [
-      u.telegramId.toString(),
+      u.platformId.toString(),
       escapeCsv(u.username || ''),
       escapeCsv(u.firstName || ''),
       escapeCsv(u.lastName || ''),
@@ -87,41 +92,47 @@ router.get('/export', asyncHandler(async (req: Request, res: Response) => {
 // Отправить CSV через admin-бота текущему администратору (для Telegram WebApp)
 router.post('/export-bot', asyncHandler(async (req: Request, res: Response) => {
   const segment = (req.query.segment as string) || 'all';
-  const adminTelegramId = req.user?.telegramId ? Number(req.user.telegramId) : null;
+  const adminTelegramId = req.user?.platformId ? Number(req.user.platformId) : null;
 
   if (!adminTelegramId) {
     res.status(400).json({ error: 'Admin telegram ID not found' });
     return;
   }
 
-  let whereClause = {};
+  let whereClause: { platform: 'telegram'; platformId?: { in: bigint[] } } = {
+    platform: 'telegram',
+  };
   if (segment === 'just_person' || segment === 'organizer') {
     const role = segment === 'just_person' ? 'just_person' : 'organizer';
     const onboardingAnswers = await prisma.onboardingAnswer.findMany({
-      where: { role },
-      select: { telegramId: true },
+      where: { role, platform: 'telegram' },
+      select: { platformId: true },
     });
-    whereClause = { telegramId: { in: onboardingAnswers.map((a) => a.telegramId) } };
+    whereClause = {
+      platform: 'telegram',
+      platformId: { in: onboardingAnswers.map((a) => a.platformId) },
+    };
   }
 
   const users = await prisma.user.findMany({
     where: whereClause,
     orderBy: { createdAt: 'desc' },
-    select: { telegramId: true, username: true, firstName: true, lastName: true, createdAt: true },
+    select: { platformId: true, username: true, firstName: true, lastName: true, createdAt: true },
   });
 
   const allOnboarding = await prisma.onboardingAnswer.findMany({
-    select: { telegramId: true, role: true },
+    where: { platform: 'telegram' },
+    select: { platformId: true, role: true },
   });
-  const roleMap = new Map(allOnboarding.map((a) => [a.telegramId.toString(), a.role]));
+  const roleMap = new Map(allOnboarding.map((a) => [a.platformId.toString(), a.role]));
 
   const BOM = '\uFEFF';
   const header = 'telegram_id,username,first_name,last_name,role,created_at';
   const rows = users.map((u) => {
-    const role = roleMap.get(u.telegramId.toString()) || '';
+    const role = roleMap.get(u.platformId.toString()) || '';
     const roleLabel = role === 'just_person' ? 'Физлицо' : role === 'organizer' ? 'Организатор' : role === 'agent' ? 'Агент' : '';
     return [
-      u.telegramId.toString(),
+      u.platformId.toString(),
       escapeCsv(u.username || ''),
       escapeCsv(u.firstName || ''),
       escapeCsv(u.lastName || ''),
@@ -140,7 +151,14 @@ router.post('/export-bot', asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  await botManager.sendCsvToAdmin(adminTelegramId, Buffer.from(csv, 'utf-8'), filename);
+  // CSV отправляется самому запросившему админу — на ЕГО платформу (req.user.platform).
+  // Если платформа не указана в токене (старые токены) — fallback на telegram.
+  const adminPlatform = req.user?.platform ?? 'telegram';
+  await botManager.sendCsvToAdmin(
+    { platform: adminPlatform, platformId: String(adminTelegramId) },
+    Buffer.from(csv, 'utf-8'),
+    filename
+  );
   res.json({ ok: true, count: users.length, filename });
 }));
 

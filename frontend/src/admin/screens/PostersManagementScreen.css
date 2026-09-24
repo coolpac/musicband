@@ -126,11 +126,16 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  /* Кнопок стало больше (добавилась «Скрыть») — позволяем переносить, чтобы
+     строка действий не вылезала за карточку. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .poster-item__actions .admin-btn {
   padding: 10px 16px;
   font-size: 14px;
+  white-space: nowrap;
 }
 
 /* Responsive */
@@ -151,7 +156,9 @@
   }
 
   .poster-item__actions .admin-btn {
-    flex: 1;
+    /* min-width, чтобы текст не сжимался — кнопки переносятся на след. строку. */
+    flex: 1 1 auto;
+    min-width: 110px;
   }
 }
 
@@ -197,4 +204,23 @@
 .poster-order-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* Скрытая афиша: приглушаем превью, но кнопки/действия остаются активными. */
+.poster-item--hidden .poster-item__image,
+.poster-item--hidden .poster-item__placeholder,
+.poster-item--hidden .poster-item__content {
+  opacity: 0.45;
+}
+
+.poster-hidden-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--admin-text-secondary, #aaa);
+  vertical-align: middle;
 }

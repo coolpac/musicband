@@ -39,6 +39,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@maxhub/max-bot-api": "^0.2.2",
     "@prisma/client": "^5.7.1",
     "@socket.io/redis-adapter": "^8.2.0",
     "bcryptjs": "^2.4.3",
@@ -55,10 +56,10 @@
     "qrcode": "^1.5.3",
     "sharp": "^0.33.2",
     "socket.io": "^4.5.4",
+    "tsx": "^4.7.0",
     "winston": "^3.11.0",
     "xss": "^1.0.15",
-    "zod": "^3.22.4",
-    "tsx": "^4.7.0"
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

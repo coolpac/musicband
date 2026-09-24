@@ -6,7 +6,7 @@ boxes but isn't part of the docker stack itself.
 ## host-nginx/
 
 Vhost files for the host-level nginx reverse proxy on the multi-tenant
-server (77.91.65.252). Install at `/etc/nginx/sites-available/` and
+server (185.69.121.178). Install at `/etc/nginx/sites-available/` and
 symlink into `sites-enabled/`.
 
 ## letsencrypt/

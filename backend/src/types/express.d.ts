@@ -7,7 +7,8 @@ declare global {
     interface Request {
       user?: {
         userId: string;
-        telegramId: string;
+        platform: import('@prisma/client').Platform;
+        platformId: string;
         role: string;
       };
       /** JWT строка — заполняется authenticate, используется в logout для отзыва */

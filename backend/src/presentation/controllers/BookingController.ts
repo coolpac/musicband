@@ -43,26 +43,34 @@ export class BookingController {
       const bookingUser = booking.user;
       if (botManager && bookingUser) {
         const bookingDateStr = formatDateInTimezone(booking.bookingDate);
-        // Уведомление админам
-        await botManager.notifyNewBooking({
+        // Уведомление админам: фан-аут на админов ВСЕХ платформ, чтобы ни один админ
+        // не пропустил заявку (независимо от платформы клиента).
+        await botManager.notifyNewBookingToAllAdmins({
           id: booking.id,
           bookingDate: bookingDateStr,
           formatName: booking.format?.name,
           fullName: booking.fullName,
           contactValue: booking.contactValue,
           city: booking.city || undefined,
-          telegramId: bookingUser.telegramId.toString(),
+          platform: bookingUser.platform,
+          telegramId: bookingUser.platformId.toString(),
           username: bookingUser.username ?? undefined,
           firstName: bookingUser.firstName ?? undefined,
           lastName: bookingUser.lastName ?? undefined,
         });
 
-        // Уведомление пользователю о получении заявки
-        await botManager.sendBookingReceived(Number(bookingUser.telegramId), {
-          bookingDate: bookingDateStr,
-          formatName: booking.format?.name,
-          fullName: booking.fullName,
-        });
+        // Уведомление пользователю о получении заявки — на ЕГО платформу.
+        await botManager.sendBookingReceived(
+          {
+            platform: bookingUser.platform,
+            platformId: bookingUser.platformId.toString(),
+          },
+          {
+            bookingDate: bookingDateStr,
+            formatName: booking.format?.name,
+            fullName: booking.fullName,
+          }
+        );
       }
 
       const response = {

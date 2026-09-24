@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback, type ReactNode } from 'react';
 import { apiGet, apiPost } from '../../services/apiClient';
-import { getTelegramWebApp, getInitData } from '../../telegram/telegramWebApp';
+import { getPlatform, getInitData, getStartParam } from '../../platform/platform';
 
 const API_BASE = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL ?? '';
 const TOKEN_KEY = 'admin_token';
@@ -73,15 +73,16 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const checkAuth = async () => {
-      // 1. Если есть initData от Admin Bot — авторизуемся по нему
-      const tg = getTelegramWebApp();
+      // 1. Если есть initData от Admin Bot — авторизуемся по нему.
+      // Платформа выбирает эндпоинт: Telegram → /api/auth/telegram, Max → /api/auth/max.
       const initData = getInitData();
 
       if (initData) {
         try {
-          const response = await apiPost<{ user: AdminUser; token: string }>('/api/auth/telegram', {
+          const endpoint = getPlatform() === 'max' ? '/api/auth/max' : '/api/auth/telegram';
+          const response = await apiPost<{ user: AdminUser; token: string }>(endpoint, {
             initData,
-            startParam: tg?.initDataUnsafe?.start_param,
+            startParam: getStartParam(),
           });
 
           if (cancelled) return;

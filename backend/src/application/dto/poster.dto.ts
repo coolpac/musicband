@@ -29,6 +29,7 @@ export const CreatePosterSchema = z.object({
   order: z.number().int().min(0).optional(),
   eventDate,
   venue,
+  isActive: z.boolean().optional(),
 });
 
 export const UpdatePosterSchema = z.object({
@@ -39,6 +40,7 @@ export const UpdatePosterSchema = z.object({
   order: z.number().int().min(0).optional(),
   eventDate,
   venue,
+  isActive: z.boolean().optional(),
 });
 
 export type CreatePosterDto = z.infer<typeof CreatePosterSchema>;

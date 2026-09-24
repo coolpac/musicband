@@ -39,7 +39,7 @@ export class PrismaAgentRepository implements IAgentRepository {
         user: {
           select: {
             id: true,
-            telegramId: true,
+            platformId: true,
             username: true,
             firstName: true,
             lastName: true,
@@ -57,7 +57,7 @@ export class PrismaAgentRepository implements IAgentRepository {
         user: {
           select: {
             id: true,
-            telegramId: true,
+            platformId: true,
             username: true,
             firstName: true,
             lastName: true,
@@ -74,7 +74,7 @@ export class PrismaAgentRepository implements IAgentRepository {
         user: {
           select: {
             id: true,
-            telegramId: true,
+            platformId: true,
             username: true,
             firstName: true,
             lastName: true,
@@ -91,7 +91,7 @@ export class PrismaAgentRepository implements IAgentRepository {
         user: {
           select: {
             id: true,
-            telegramId: true,
+            platformId: true,
             username: true,
             firstName: true,
             lastName: true,
@@ -112,7 +112,7 @@ export class PrismaAgentRepository implements IAgentRepository {
         user: {
           select: {
             id: true,
-            telegramId: true,
+            platformId: true,
             username: true,
             firstName: true,
             lastName: true,
@@ -132,7 +132,7 @@ export class PrismaAgentRepository implements IAgentRepository {
         user: {
           select: {
             id: true,
-            telegramId: true,
+            platformId: true,
             username: true,
             firstName: true,
             lastName: true,

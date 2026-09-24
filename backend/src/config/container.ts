@@ -170,7 +170,9 @@ class Container {
         process.env.JWT_EXPIRES_IN || '7d',
         process.env.TELEGRAM_ADMIN_BOT_TOKEN || '',
         process.env.TELEGRAM_USER_BOT_TOKEN,
-        redis
+        redis,
+        process.env.MAX_ADMIN_BOT_TOKEN,
+        process.env.MAX_USER_BOT_TOKEN
       );
     }
     return this._authService;

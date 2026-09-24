@@ -71,8 +71,15 @@ export async function endSession(id: string): Promise<unknown> {
   return apiPost<unknown>(`${BASE}/sessions/${id}/end`);
 }
 
-export async function getSessionQR(id: string): Promise<{ qrCode: { dataURL: string; deepLink: string } }> {
-  const data = await apiGet<{ qrCode: { dataURL: string; deepLink: string } }>(`${BASE}/sessions/${id}/qr`);
+export type QrPlatform = 'telegram' | 'max';
+
+export async function getSessionQR(
+  id: string,
+  platform: QrPlatform = 'telegram'
+): Promise<{ qrCode: { dataURL: string; deepLink: string; platform?: QrPlatform } }> {
+  const data = await apiGet<{ qrCode: { dataURL: string; deepLink: string; platform?: QrPlatform } }>(
+    `${BASE}/sessions/${id}/qr?platform=${platform}`
+  );
   return data;
 }
 

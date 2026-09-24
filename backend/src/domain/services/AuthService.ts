@@ -2,11 +2,13 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import type Redis from 'ioredis';
+import type { Platform } from '@prisma/client';
 import {
   IUserRepository,
   CreateUserData,
 } from '../../infrastructure/database/repositories/UserRepository';
 import { validateInitData } from '../../shared/utils/telegram';
+import { validateMaxInitData } from '../../shared/utils/max';
 import { UnauthorizedError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
 import { USER_ROLES } from '../../shared/constants';
@@ -15,7 +17,8 @@ const BLACKLIST_PREFIX = 'token_blacklist:';
 
 export interface JWTPayload {
   userId: string;
-  telegramId: string;
+  platform: Platform;
+  platformId: string;
   role: string;
   jti?: string;
   iat?: number;
@@ -25,7 +28,8 @@ export interface JWTPayload {
 export interface AuthResult {
   user: {
     id: string;
-    telegramId: string;
+    platform: Platform;
+    platformId: string;
     username?: string;
     firstName?: string;
     lastName?: string;
@@ -42,7 +46,9 @@ export class AuthService {
     private jwtExpiresIn: string,
     private adminBotToken: string,
     private userBotToken?: string, // Токен User Bot для валидации initData от пользователей
-    private redis?: Redis
+    private redis?: Redis,
+    private maxAdminBotToken?: string, // Токен Admin Bot для валидации Max initData
+    private maxUserBotToken?: string // Токен User Bot для валидации Max initData
   ) {}
 
   /**
@@ -80,11 +86,12 @@ export class AuthService {
     const sessionStartParam = startParam || initData.start_param;
 
     const telegramUser = initData.user;
-    const telegramId = BigInt(telegramUser.id);
+    const platformId = BigInt(telegramUser.id);
 
     // Ищем или создаём пользователя (findOrCreate предотвращает duplicate key при race condition)
     const createData: CreateUserData = {
-      telegramId,
+      platform: 'telegram',
+      platformId,
       username: telegramUser.username,
       firstName: telegramUser.first_name,
       lastName: telegramUser.last_name,
@@ -92,13 +99,13 @@ export class AuthService {
     };
 
     const { user: foundOrCreated, created } =
-      await this.userRepository.findOrCreateByTelegramId(createData);
+      await this.userRepository.findOrCreateByIdentity(createData);
     let user = foundOrCreated;
 
     if (created) {
       logger.info('New user created from Telegram', {
         userId: user.id,
-        telegramId: telegramUser.id,
+        platformId: telegramUser.id,
       });
 
       // Отправляем уведомление админам о новом пользователе
@@ -106,8 +113,12 @@ export class AuthService {
         const { getBotManager } = await import('../../infrastructure/telegram/botManager');
         const botManager = getBotManager();
         if (botManager) {
-          await botManager.notifyNewUser({
-            telegramId: user.telegramId.toString(),
+          // Фан-аут на админов всех платформ: о новом пользователе должны узнать
+          // все админы, а не только админы платформы этого пользователя.
+          // platform в notice — реальная платформа пользователя (user.platform).
+          await botManager.notifyNewUserToAllAdmins({
+            platform: user.platform,
+            platformId: user.platformId.toString(),
             username: user.username || undefined,
             firstName: user.firstName || undefined,
             lastName: user.lastName || undefined,
@@ -135,7 +146,8 @@ export class AuthService {
     // Генерируем JWT токен
     const token = this.generateToken({
       userId: user.id,
-      telegramId: user.telegramId.toString(),
+      platform: user.platform,
+      platformId: user.platformId.toString(),
       role: user.role,
     });
 
@@ -148,7 +160,128 @@ export class AuthService {
     return {
       user: {
         id: user.id,
-        telegramId: user.telegramId.toString(),
+        platform: user.platform,
+        platformId: user.platformId.toString(),
+        username: user.username || undefined,
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+        role: user.role,
+      },
+      token,
+      startParam: processedStartParam,
+    };
+  }
+
+  /**
+   * Авторизация через Max Mini App
+   * Поддерживает initData от обоих ботов (Admin Bot и User Bot Max)
+   * @param rawInitData - initData от Max
+   * @param startParam - опциональный start_param из deep link (например, vote_{sessionId})
+   */
+  async authenticateWithMax(rawInitData: string, startParam?: string): Promise<AuthResult> {
+    // Пробуем валидировать initData от обоих ботов Max
+    // Сначала пробуем User Bot (для обычных пользователей)
+    let initData = this.maxUserBotToken
+      ? validateMaxInitData(rawInitData, this.maxUserBotToken, 3600, { logFailures: false })
+      : null;
+
+    // Если не прошло, пробуем Admin Bot (для админов)
+    if (!initData && this.maxAdminBotToken) {
+      initData = validateMaxInitData(rawInitData, this.maxAdminBotToken);
+    }
+
+    if (!initData || !initData.user) {
+      logger.warn('auth/max initData validation failed', {
+        hadUserBot: !!this.maxUserBotToken,
+        hadAdminBot: !!this.maxAdminBotToken,
+        rawLength: typeof rawInitData === 'string' ? rawInitData.length : 0,
+      });
+      throw new UnauthorizedError('Invalid or expired initData');
+    }
+
+    // Используем startParam из initData или переданный параметр
+    const sessionStartParam = startParam || initData.start_param;
+
+    const maxUser = initData.user;
+    const platformId = BigInt(maxUser.id);
+
+    // Ищем или создаём пользователя (findOrCreate предотвращает duplicate key при race condition)
+    const createData: CreateUserData = {
+      platform: 'max',
+      platformId,
+      username: maxUser.username,
+      firstName: maxUser.first_name,
+      lastName: maxUser.last_name,
+      photoUrl: maxUser.photo_url,
+      role: USER_ROLES.USER, // По умолчанию user, админ назначается вручную
+    };
+
+    const { user: foundOrCreated, created } =
+      await this.userRepository.findOrCreateByIdentity(createData);
+    let user = foundOrCreated;
+
+    if (created) {
+      logger.info('New user created from Max', {
+        userId: user.id,
+        platformId: maxUser.id,
+      });
+
+      // Отправляем уведомление админам о новом пользователе
+      try {
+        const { getBotManager } = await import('../../infrastructure/telegram/botManager');
+        const botManager = getBotManager();
+        if (botManager) {
+          // Фан-аут на админов всех платформ: о новом пользователе должны узнать
+          // все админы, а не только админы платформы этого пользователя.
+          // platform в notice — реальная платформа пользователя (user.platform).
+          await botManager.notifyNewUserToAllAdmins({
+            platform: user.platform,
+            platformId: user.platformId.toString(),
+            username: user.username || undefined,
+            firstName: user.firstName || undefined,
+            lastName: user.lastName || undefined,
+          });
+        }
+      } catch (error) {
+        logger.warn('Failed to send new user notification', { error });
+      }
+    } else {
+      // Обновляем данные пользователя если изменились
+      const needsUpdate =
+        user.username !== (maxUser.username ?? null) ||
+        user.firstName !== (maxUser.first_name ?? null) ||
+        user.lastName !== (maxUser.last_name ?? null) ||
+        user.photoUrl !== (maxUser.photo_url ?? null);
+
+      if (needsUpdate) {
+        user = await this.userRepository.update(user.id, {
+          username: maxUser.username,
+          firstName: maxUser.first_name,
+          lastName: maxUser.last_name,
+          photoUrl: maxUser.photo_url,
+        });
+      }
+    }
+
+    // Генерируем JWT токен
+    const token = this.generateToken({
+      userId: user.id,
+      platform: user.platform,
+      platformId: user.platformId.toString(),
+      role: user.role,
+    });
+
+    // Обрабатываем startParam если есть (для голосования)
+    let processedStartParam: string | undefined;
+    if (sessionStartParam && sessionStartParam.startsWith('vote_')) {
+      processedStartParam = sessionStartParam; // vote_{sessionId}
+    }
+
+    return {
+      user: {
+        id: user.id,
+        platform: user.platform,
+        platformId: user.platformId.toString(),
         username: user.username || undefined,
         firstName: user.firstName || undefined,
         lastName: user.lastName || undefined,
@@ -163,7 +296,8 @@ export class AuthService {
    * Авторизация админа через email/password (для админки)
    */
   async authenticateAdmin(telegramId: number, password: string): Promise<AuthResult> {
-    const user = await this.userRepository.findByTelegramId(BigInt(telegramId));
+    // Админ всегда привязан к telegram-аккаунту.
+    const user = await this.userRepository.findByIdentity('telegram', BigInt(telegramId));
 
     if (!user) {
       throw new UnauthorizedError('Invalid credentials');
@@ -194,14 +328,16 @@ export class AuthService {
     // Генерируем JWT токен
     const token = this.generateToken({
       userId: user.id,
-      telegramId: user.telegramId.toString(),
+      platform: user.platform,
+      platformId: user.platformId.toString(),
       role: user.role,
     });
 
     return {
       user: {
         id: user.id,
-        telegramId: user.telegramId.toString(),
+        platform: user.platform,
+        platformId: user.platformId.toString(),
         username: user.username || undefined,
         firstName: user.firstName || undefined,
         lastName: user.lastName || undefined,
@@ -216,7 +352,17 @@ export class AuthService {
    */
   verifyToken(token: string): JWTPayload {
     try {
-      const payload = jwt.verify(token, this.jwtSecret) as JWTPayload;
+      const payload = jwt.verify(token, this.jwtSecret) as JWTPayload & { telegramId?: string };
+      // Обратная совместимость: токены, выпущенные ДО перехода на (platform, platformId),
+      // несут только telegramId. Чтобы существующие Telegram-пользователи не потеряли
+      // platform/platformId в req.user (иначе ломается, например, аватарка) до истечения
+      // токена (≤7д), нормализуем такие токены как telegram.
+      if (!payload.platform) {
+        payload.platform = 'telegram';
+      }
+      if (!payload.platformId && payload.telegramId) {
+        payload.platformId = payload.telegramId;
+      }
       return payload;
     } catch (error) {
       throw new UnauthorizedError('Invalid or expired token');

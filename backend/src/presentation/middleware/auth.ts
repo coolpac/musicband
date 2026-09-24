@@ -37,7 +37,8 @@ export function authenticate(authService: AuthService) {
       req.token = token;
       req.user = {
         userId: payload.userId,
-        telegramId: payload.telegramId,
+        platform: payload.platform,
+        platformId: payload.platformId,
         role: payload.role,
       };
 

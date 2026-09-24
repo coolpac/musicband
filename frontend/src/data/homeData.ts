@@ -50,6 +50,7 @@ export const liveVideos: LiveVideoItem[] = [
 ];
 
 export const promoVideos: PromoVideoItem[] = [
+  { id: 'promo-formats', src: 'https://rutube.ru/video/a9885aeae1d2219c9378d86b4314be76/', poster: promoImage, title: 'НАШИ ФОРМАТЫ' },
   { id: 'promo-1', src: 'https://rutube.ru/video/56fd172a86aff0d705834ea2bab83d2d/', poster: promoImage, title: 'НОВОЕ ПРОМО "ГАНГСТЕРЫ" 2025' },
   { id: 'promo-2', src: 'https://rutube.ru/video/f3403d22144bf5398978b71eb7407423/', poster: promoImage, title: 'ПРИЗВАНИЕ АРТИСТ 2025 (ПОБЕДА!)' },
   { id: 'promo-3', src: 'https://rutube.ru/video/6db676dc12f800c2f0525c11d2f2f209/', poster: promoImage, title: 'КВАРТИРНИК №1 (ВГУЛ) ОТЧЁТНИК' },

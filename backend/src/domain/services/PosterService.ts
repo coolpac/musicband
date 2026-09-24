@@ -17,6 +17,7 @@ export interface PosterInput {
   order?: number;
   eventDate?: string | null;
   venue?: string | null;
+  isActive?: boolean;
 }
 
 /** 'YYYY-MM-DD' → Date, '' / null → null, undefined → undefined (поле не прислали). */
@@ -40,8 +41,14 @@ function toVenue(value: string | null | undefined): string | null | undefined {
 export class PosterService {
   constructor(private posterRepository: IPosterRepository) {}
 
+  /** Все афиши (включая скрытые) — для админки. */
   async getAllPosters() {
     return this.posterRepository.findAll();
+  }
+
+  /** Только видимые афиши — для публичной выдачи (главная). */
+  async getActivePosters() {
+    return this.posterRepository.findActive();
   }
 
   async getPosterById(id: string) {
@@ -92,6 +99,14 @@ export class PosterService {
     await invalidatePublicSiteCache();
 
     return poster;
+  }
+
+  /** Переключить видимость афиши (скрыть/показать без удаления). */
+  async togglePosterActive(id: string) {
+    const poster = await this.getPosterById(id);
+    const updated = await this.posterRepository.update(id, { isActive: !poster.isActive });
+    logger.info('Poster visibility toggled', { posterId: id, isActive: updated.isActive });
+    return updated;
   }
 
   async deletePoster(id: string) {

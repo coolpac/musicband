@@ -1,4 +1,4 @@
-# 🚀 Руководство по деплою на сервер 77.91.65.252
+# 🚀 Руководство по деплою на сервер 185.69.121.178
 
 ## Подготовка к деплою
 
@@ -11,7 +11,7 @@
 chmod +x scripts/*.sh
 
 # Полная автоматическая настройка сервера
-REMOTE_HOST=77.91.65.252 ./scripts/server-provision.sh \
+REMOTE_HOST=185.69.121.178 ./scripts/server-provision.sh \
   https://github.com/username/musicians.git vgulcover.ru
 ```
 
@@ -27,7 +27,7 @@ REMOTE_HOST=77.91.65.252 ./scripts/server-provision.sh \
 
 ```bash
 # 1. Подключаемся к серверу
-ssh root@77.91.65.252
+ssh root@185.69.121.178
 cd /opt/musicians
 
 # 2. Добавляем Telegram bot tokens в .env
@@ -44,7 +44,7 @@ nano .env
 
 ```bash
 # 1. Подключение к серверу
-ssh root@77.91.65.252
+ssh root@185.69.121.178
 
 # 2. Установка зависимостей
 apt update && apt upgrade -y
@@ -138,7 +138,7 @@ chmod +x init.sh deploy.sh scripts/*.sh
 ```bash
 # После установки Docker:
 exit
-ssh root@77.91.65.252
+ssh root@185.69.121.178
 cd /opt/musicians
 ./init.sh
 ```
@@ -169,11 +169,11 @@ cd /opt/musicians
 ```bash
 # Первый запуск на сервере
 chmod +x scripts/remote-init.sh scripts/remote-deploy.sh
-REMOTE_HOST=77.91.65.252 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-init.sh
+REMOTE_HOST=185.69.121.178 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-init.sh
 
 # Деплой обновлений
-REMOTE_HOST=77.91.65.252 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-deploy.sh
-REMOTE_HOST=77.91.65.252 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-deploy.sh --backend
+REMOTE_HOST=185.69.121.178 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-deploy.sh
+REMOTE_HOST=185.69.121.178 REMOTE_USER=root REMOTE_PATH=/opt/musicians ./scripts/remote-deploy.sh --backend
 
 # Дополнительно (при необходимости)
 # REMOTE_PORT=22
@@ -430,6 +430,6 @@ docker inspect musicians-backend | grep -A 10 Health
 
 ---
 
-**Сервер:** 77.91.65.252  
+**Сервер:** 185.69.121.178  
 **Проект:** /opt/musicians  
 **Документация:** [SERVER_50_USERS.md](./SERVER_50_USERS.md), [VIDEO_HOSTING_AND_SERVER.md](./VIDEO_HOSTING_AND_SERVER.md)

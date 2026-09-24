@@ -3,6 +3,7 @@ import { prisma } from '../../../config/database';
 
 export interface IPosterRepository {
   findAll(): Promise<Poster[]>;
+  findActive(): Promise<Poster[]>;
   findById(id: string): Promise<Poster | null>;
   create(data: CreatePosterData): Promise<Poster>;
   update(id: string, data: UpdatePosterData): Promise<Poster>;
@@ -18,6 +19,7 @@ export interface CreatePosterData {
   /** Дата события (без времени). null — баннер без даты, он не «протухает». */
   eventDate?: Date | null;
   venue?: string | null;
+  isActive?: boolean;
 }
 
 export interface UpdatePosterData {
@@ -28,6 +30,7 @@ export interface UpdatePosterData {
   order?: number;
   eventDate?: Date | null;
   venue?: string | null;
+  isActive?: boolean;
 }
 
 export class PrismaPosterRepository implements IPosterRepository {
@@ -35,6 +38,14 @@ export class PrismaPosterRepository implements IPosterRepository {
 
   async findAll(): Promise<Poster[]> {
     return this.client.poster.findMany({
+      orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  /** Только видимые афиши — для публичной выдачи (главная). */
+  async findActive(): Promise<Poster[]> {
+    return this.client.poster.findMany({
+      where: { isActive: true },
       orderBy: [{ order: 'asc' }, { createdAt: 'desc' }],
     });
   }
@@ -55,6 +66,7 @@ export class PrismaPosterRepository implements IPosterRepository {
         order: data.order,
         eventDate: data.eventDate ?? null,
         venue: data.venue ?? null,
+        isActive: data.isActive,
       },
     });
   }
@@ -71,6 +83,7 @@ export class PrismaPosterRepository implements IPosterRepository {
         // undefined — «поле не прислали», null — «очистить»
         ...(data.eventDate !== undefined && { eventDate: data.eventDate }),
         ...(data.venue !== undefined && { venue: data.venue }),
+        isActive: data.isActive,
       },
     });
   }

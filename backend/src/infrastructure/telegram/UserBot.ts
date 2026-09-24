@@ -62,7 +62,10 @@ export class UserBot {
             await this.handleReferralLink(chatId, referralCode, msg.from);
           } else {
             // Обычный старт: сначала онбординг «Кто вы?», затем приветствие
-            const existing = await this.onboardingRepository.findByTelegramId(BigInt(chatId));
+            const existing = await this.onboardingRepository.findByIdentity(
+              'telegram',
+              BigInt(chatId)
+            );
             if (existing) {
               await this.sendWelcome(chatId);
               return;
@@ -272,7 +275,7 @@ export class UserBot {
               return;
             }
             await redis.del(key);
-            await this.onboardingRepository.create(BigInt(chatId), role);
+            await this.onboardingRepository.create('telegram', BigInt(chatId), role);
 
             // Уведомляем админов о новом пользователе
             try {
@@ -280,7 +283,8 @@ export class UserBot {
               const botManager = getBotManager();
               if (botManager) {
                 await botManager.notifyNewUser({
-                  telegramId: chatId.toString(),
+                  platform: 'telegram',
+                  platformId: chatId.toString(),
                   username: query.from?.username,
                   firstName: query.from?.first_name,
                   lastName: query.from?.last_name,

@@ -40,6 +40,7 @@ export default function VotingManagementScreen() {
 
   const [showStartModal, setShowStartModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [qrPlatform, setQrPlatform] = useState<adminVoteService.QrPlatform>('telegram');
   const [selectedSongs, setSelectedSongs] = useState<Set<string>>(new Set());
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [qrDeepLink, setQrDeepLink] = useState<string>('');
@@ -166,17 +167,40 @@ export default function VotingManagementScreen() {
     }
   };
 
+  const loadQr = async (platform: adminVoteService.QrPlatform) => {
+    if (!activeSession) return;
+    const data = await adminVoteService.getSessionQR(activeSession.id, platform);
+    setQrCodeDataUrl(data.qrCode?.dataURL ?? '');
+    setQrDeepLink(data.qrCode?.deepLink ?? '');
+  };
+
   const handleShowQR = async () => {
     if (!activeSession) return;
 
     try {
-      const data = await adminVoteService.getSessionQR(activeSession.id);
-      setQrCodeDataUrl(data.qrCode?.dataURL ?? '');
-      setQrDeepLink(data.qrCode?.deepLink ?? '');
+      setQrPlatform('telegram');
+      await loadQr('telegram');
       setShowQRModal(true);
     } catch (error) {
       console.error('Error loading QR:', error);
       toast.error('Не удалось загрузить QR-код');
+    }
+  };
+
+  // Переключение платформы QR в модалке (Telegram ↔ Max).
+  const handleSwitchQrPlatform = async (platform: adminVoteService.QrPlatform) => {
+    if (platform === qrPlatform) return;
+    setQrPlatform(platform);
+    try {
+      await loadQr(platform);
+    } catch (error) {
+      console.error('Error loading QR for platform:', platform, error);
+      // 422 при незаданном username бота платформы — даём понятную подсказку.
+      toast.error(
+        platform === 'max'
+          ? 'QR для Max недоступен: не задан MAX_USER_BOT_USERNAME'
+          : 'Не удалось загрузить QR для Telegram'
+      );
     }
   };
 
@@ -185,7 +209,7 @@ export default function VotingManagementScreen() {
       let dataUrl = qrCodeDataUrl;
       let deepLink = qrDeepLink;
       if ((!dataUrl || !deepLink) && activeSession) {
-        const data = await adminVoteService.getSessionQR(activeSession.id);
+        const data = await adminVoteService.getSessionQR(activeSession.id, qrPlatform);
         dataUrl = data.qrCode?.dataURL ?? '';
         deepLink = data.qrCode?.deepLink ?? '';
         if (dataUrl) setQrCodeDataUrl(dataUrl);
@@ -199,7 +223,7 @@ export default function VotingManagementScreen() {
 
       const link = document.createElement('a');
       link.href = dataUrl;
-      link.download = `voting-qr-${activeSession?.id || 'session'}.png`;
+      link.download = `voting-qr-${qrPlatform}-${activeSession?.id || 'session'}.png`;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
@@ -209,11 +233,13 @@ export default function VotingManagementScreen() {
       if (activeSession) {
         setIsSendingQrToAdmins(true);
         try {
+          // Рассылка QR админам идёт по всем платформам автоматически
+          // (Telegram-админам — t.me-QR, Max-админам — max.ru-QR).
           await adminVoteService.sendSessionQRToAdmins(activeSession.id);
-          toast.success('QR-код отправлен администраторам в Telegram');
+          toast.success('QR-код отправлен администраторам');
         } catch (sendError) {
           console.error('Error sending QR to admins:', sendError);
-          toast.error('QR скачан, но отправить в Telegram не удалось');
+          toast.error('QR скачан, но отправить администраторам не удалось');
         } finally {
           setIsSendingQrToAdmins(false);
         }
@@ -256,7 +282,7 @@ export default function VotingManagementScreen() {
     let deepLink = qrDeepLink;
     if (!deepLink && activeSession) {
       try {
-        const data = await adminVoteService.getSessionQR(activeSession.id);
+        const data = await adminVoteService.getSessionQR(activeSession.id, qrPlatform);
         deepLink = data.qrCode?.deepLink ?? '';
         if (deepLink) setQrDeepLink(deepLink);
       } catch {
@@ -514,6 +540,33 @@ export default function VotingManagementScreen() {
         size="sm"
       >
         <div className="voting-qr-modal">
+          {/* Переключатель платформы: Telegram (t.me) или Max (max.ru). */}
+          <div
+            className="voting-qr-platform-toggle"
+            role="group"
+            aria-label="Платформа QR"
+            style={{ display: 'flex', gap: 8, marginBottom: 12 }}
+          >
+            <button
+              type="button"
+              className={`admin-btn ${qrPlatform === 'telegram' ? '' : 'admin-btn--secondary'}`}
+              style={{ flex: 1 }}
+              aria-pressed={qrPlatform === 'telegram'}
+              onClick={() => { hapticImpact('light'); void handleSwitchQrPlatform('telegram'); }}
+            >
+              Telegram
+            </button>
+            <button
+              type="button"
+              className={`admin-btn ${qrPlatform === 'max' ? '' : 'admin-btn--secondary'}`}
+              style={{ flex: 1 }}
+              aria-pressed={qrPlatform === 'max'}
+              onClick={() => { hapticImpact('light'); void handleSwitchQrPlatform('max'); }}
+            >
+              Max
+            </button>
+          </div>
+
           {qrCodeDataUrl && (
             <div className="voting-qr-container">
               <img src={qrCodeDataUrl} alt="QR Code" className="voting-qr-image" />

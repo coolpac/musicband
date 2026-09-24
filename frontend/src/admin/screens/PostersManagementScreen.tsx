@@ -11,6 +11,7 @@ import {
   createAdminPoster,
   updateAdminPoster,
   deleteAdminPoster,
+  toggleAdminPoster,
   uploadPosterImage,
   posterDateInputValue,
   formatPosterDate,
@@ -108,7 +109,11 @@ export default function PostersManagementScreen() {
       order: index + 1,
     }));
 
-    const changed = normalized.filter((poster, index) => poster.order !== (posters[index].order ?? index + 1));
+    // Сравниваем новый порядок с прежним ПО ID афиши, а не по позиции в массиве.
+    // (Раньше сравнение шло по индексу: после свопа значения order на каждой позиции
+    //  оставались 1,2,3…, поэтому «изменённых» не находилось и порядок не сохранялся.)
+    const oldOrderById = new Map(posters.map((p) => [p.id, p.order ?? 0]));
+    const changed = normalized.filter((poster) => poster.order !== oldOrderById.get(poster.id));
     setPosters(normalized);
     setIsReordering(true);
 
@@ -158,6 +163,23 @@ export default function PostersManagementScreen() {
     } catch (error) {
       console.error('Error deleting poster:', error);
       toast.error('Не удалось удалить афишу');
+    }
+  };
+
+  const handleToggle = async (id: string) => {
+    hapticImpact('light');
+    const poster = posters.find((p) => p.id === id);
+    if (!poster) return;
+    const next = !(poster.isActive ?? true);
+    // Оптимистично переключаем, при ошибке откатываем.
+    setPosters((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: next } : p)));
+    try {
+      await toggleAdminPoster(id);
+      toast.success(next ? 'Афиша показана на главной' : 'Афиша скрыта с главной');
+    } catch (error) {
+      console.error('Error toggling poster:', error);
+      toast.error('Не удалось изменить видимость');
+      setPosters((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: !next } : p)));
     }
   };
 
@@ -251,8 +273,9 @@ export default function PostersManagementScreen() {
               const imgProps = getOptimizedImageProps(poster.imageUrl ?? undefined);
               const eventDateLabel = formatPosterDate(poster.eventDate);
               const venueLabel = poster.venue?.trim() || null;
+              const isVisible = poster.isActive ?? true;
               return (
-              <div key={poster.id} className="poster-item">
+              <div key={poster.id} className={`poster-item${isVisible ? '' : ' poster-item--hidden'}`}>
                 {imgProps ? (
                   <div className="poster-item__image">
                     <OptimizedImage
@@ -271,6 +294,7 @@ export default function PostersManagementScreen() {
                   <h3 className="poster-item__title">
                     {poster.title}
                     <span className="poster-order-pill">#{poster.order ?? '-'}</span>
+                    {!isVisible && <span className="poster-hidden-badge">Скрыта</span>}
                   </h3>
                   {(eventDateLabel || venueLabel) && (
                     <p className="poster-item__event">
@@ -321,6 +345,13 @@ export default function PostersManagementScreen() {
                       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 11.5L2 5.5H12L7 11.5Z" fill="currentColor"/></svg>
                     </button>
                   </div>
+                  <button
+                    className="admin-btn admin-btn--secondary"
+                    onClick={() => handleToggle(poster.id)}
+                    aria-label={isVisible ? 'Скрыть афишу' : 'Показать афишу'}
+                  >
+                    {isVisible ? '🙈 Скрыть' : '👁 Показать'}
+                  </button>
                   <button
                     className="admin-btn admin-btn--secondary"
                     onClick={() => handleEdit(poster)}

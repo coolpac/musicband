@@ -2,7 +2,7 @@
 
 Пошаговая настройка HTTPS для vgulcover.ru через Let's Encrypt (Certbot).
 
-> **Note:** This document describes the legacy single-tenant TLS approach where nginx inside the frontend container terminates TLS on ports 80/443. After the 2026-05 migration to 77.91.65.252, TLS is terminated by host-level nginx and the container listens on `127.0.0.1:8084`. See `docs/plans/2026-05-20-server-migration-design.md` and `infra/host-nginx/vgulcover.ru.conf.example` for the current setup. Keep this doc as a reference if you ever need to stand up the single-tenant pattern again (e.g. on a fresh dedicated VM).
+> **Note:** This document describes the legacy single-tenant TLS approach where nginx inside the frontend container terminates TLS on ports 80/443. After the 2026-05 migration (server now at 185.69.121.178), TLS is terminated by host-level nginx and the container listens on `127.0.0.1:8084`. See `docs/plans/2026-05-20-server-migration-design.md` and `infra/host-nginx/vgulcover.ru.conf.example` for the current setup. Keep this doc as a reference if you ever need to stand up the single-tenant pattern again (e.g. on a fresh dedicated VM).
 
 ## Предусловия
 
@@ -17,7 +17,7 @@
 Подключитесь к серверу и выполните:
 
 ```bash
-ssh root@77.91.65.252
+ssh root@185.69.121.178
 cd /opt/musicians
 ```
 

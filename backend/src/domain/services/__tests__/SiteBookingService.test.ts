@@ -1,4 +1,4 @@
-const notifyNewBooking = jest.fn().mockResolvedValue(undefined);
+const notifyNewBookingToAllAdmins = jest.fn().mockResolvedValue(undefined);
 const getBotManager = jest.fn();
 
 jest.mock('../../../infrastructure/telegram/botManager', () => ({
@@ -69,7 +69,7 @@ function build(options: { outcome?: CreateBookingOutcome; format?: Format | null
 
 beforeEach(() => {
   jest.clearAllMocks();
-  getBotManager.mockReturnValue({ notifyNewBooking });
+  getBotManager.mockReturnValue({ notifyNewBookingToAllAdmins });
 });
 
 describe('SiteBookingService — phone normalisation', () => {
@@ -219,13 +219,13 @@ describe('SiteBookingService — admin notification', () => {
     await service.createBooking(baseInput());
     await Promise.resolve();
 
-    expect(notifyNewBooking).toHaveBeenCalledWith(
+    expect(notifyNewBookingToAllAdmins).toHaveBeenCalledWith(
       expect.objectContaining({ origin: 'website', id: 'booking-1', bookingDate: '2026-12-31' })
     );
   });
 
   it('still succeeds when telegram fails', async () => {
-    notifyNewBooking.mockRejectedValueOnce(new Error('telegram is down'));
+    notifyNewBookingToAllAdmins.mockRejectedValueOnce(new Error('telegram is down'));
     const { service } = build();
 
     await expect(service.createBooking(baseInput())).resolves.toMatchObject({ status: 'created' });
@@ -236,6 +236,6 @@ describe('SiteBookingService — admin notification', () => {
     const { service } = build();
 
     await expect(service.createBooking(baseInput())).resolves.toMatchObject({ status: 'created' });
-    expect(notifyNewBooking).not.toHaveBeenCalled();
+    expect(notifyNewBookingToAllAdmins).not.toHaveBeenCalled();
   });
 });

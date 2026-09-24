@@ -30,7 +30,7 @@ export type BookingOrigin = 'miniapp' | 'website';
 /** Краткая карточка пользователя, которую подтягивает список заявок админки. */
 export type BookingListUser = Pick<
   User,
-  'id' | 'telegramId' | 'username' | 'firstName' | 'lastName'
+  'id' | 'platform' | 'platformId' | 'username' | 'firstName' | 'lastName'
 >;
 
 /** Строка списка заявок в админке. `user` = null у заявок с сайта. */
@@ -219,7 +219,8 @@ export class PrismaBookingRepository implements IBookingRepository {
           user: {
             select: {
               id: true,
-              telegramId: true,
+              platform: true,
+              platformId: true,
               username: true,
               firstName: true,
               lastName: true,

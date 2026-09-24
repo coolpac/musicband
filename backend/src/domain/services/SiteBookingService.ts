@@ -126,7 +126,8 @@ export class SiteBookingService {
     try {
       const botManager = getBotManager();
       if (!botManager) return;
-      await botManager.notifyNewBooking({ ...payload, origin: 'website' });
+      // У посетителя сайта нет платформы — уведомляем админов на ВСЕХ платформах (Telegram и Max).
+      await botManager.notifyNewBookingToAllAdmins({ ...payload, origin: 'website' });
     } catch (error) {
       logger.error('Failed to notify admins about a website booking', {
         error,
