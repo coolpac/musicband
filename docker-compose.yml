@@ -72,9 +72,52 @@ services:
       MINI_APP_URL: ${FRONTEND_URL}
       UPLOAD_DIR: /app/uploads
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+      # Public site: where to POST /__purge after an admin saves a section (best effort).
+      SITE_SSR_URL: ${SITE_SSR_URL:-http://site:4000}
+      SITE_PURGE_TOKEN: ${SITE_PURGE_TOKEN:-}
     volumes:
       - uploads_data:/app/uploads
       - backend_logs:/app/logs
+    networks:
+      - app-network
+
+  # ========================
+  # Public site (SSR, Node)
+  # ========================
+  # Same build stage as `frontend`, so dist/ and dist-ssr/ always carry matching asset hashes.
+  # Deliberately NOT gated on the backend's health: the landing page must come up — and stay up —
+  # even when the API is down (it then renders the content defaults bundled into the SSR bundle).
+  site:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: site-ssr
+      args:
+        VITE_API_URL: ""
+        VITE_USE_MOCK: "false"
+    image: musicians-site:latest
+    container_name: musicians-site
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      # Pin V8's heap below mem_limit. Without it Node may size the default old-space from the
+      # HOST's memory, grow past 256 MB and be OOM-killed; the container would then restart-loop
+      # and the site would quietly fall back to the prerendered snapshots.
+      NODE_OPTIONS: --max-old-space-size=192
+      SITE_API_ORIGIN: ${SITE_API_ORIGIN:-http://backend:3000}
+      SITE_CACHE_TTL_MS: ${SITE_CACHE_TTL_MS:-30000}
+      SITE_PURGE_TOKEN: ${SITE_PURGE_TOKEN:-}
+    # Internal network only — nginx is the single public entry point.
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/__health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    mem_limit: 256m
     networks:
       - app-network
 
@@ -85,6 +128,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      # Explicit: the Dockerfile now has two final stages. Without `target` docker builds the LAST
+      # one, and this container would start the Node SSR server instead of nginx.
+      target: production
       args:
         VITE_API_URL: ""
         VITE_USE_MOCK: "false"
@@ -92,8 +138,12 @@ services:
     container_name: musicians-frontend
     restart: unless-stopped
     depends_on:
+      # service_started, not service_healthy: nginx only needs the `backend` name to resolve at
+      # startup (its /api/ block uses a literal upstream). Waiting for health used to take the
+      # whole static site down with a sick backend. `site` is intentionally absent — nginx
+      # resolves it lazily and serves the prerendered snapshot while it is missing.
       backend:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "${APP_PORT:-80}:80"
       - "443:443"

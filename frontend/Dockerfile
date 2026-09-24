@@ -1,7 +1,10 @@
 # ============================
-# Stage 1: Build
+# Stage 1: Build (shared)
 # ============================
-FROM node:20-alpine AS build
+# Both final targets are produced from THIS stage, so the nginx image and the SSR image always
+# carry the same asset hashes (`dist-ssr/entry-server.js` references `/assets/<name>-<hash>`
+# files that only `dist/` contains — a mismatch would break every image on the site).
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
@@ -16,11 +19,43 @@ ARG VITE_USE_MOCK=false
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_USE_MOCK=$VITE_USE_MOCK
 
+# client build (dist/) + SSR build (dist-ssr/) + prerendered fallback snapshots (dist/site-static/)
 RUN npm run build
 
 # ============================
-# Stage 2: Nginx Production
+# Stage 2a: Public site SSR
 # ============================
+# Zero-dependency Node service: server/site-server.mjs renders dist-ssr/entry-server.js into the
+# dist/site.html template. nginx proxies the site's routes here and falls back to
+# dist/site-static/*.html when this container is down, so the landing page survives an outage.
+FROM node:22-alpine AS site-ssr
+
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    PORT=4000
+
+COPY --from=build /app/dist/site.html ./dist/site.html
+COPY --from=build /app/dist-ssr ./dist-ssr
+COPY --from=build /app/server ./server
+
+# node:*-alpine ships an unprivileged `node` user (uid 1000); nothing here is written at runtime.
+USER node
+
+EXPOSE 4000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:4000/__health || exit 1
+
+CMD ["node", "server/site-server.mjs"]
+
+# ============================
+# Stage 2b: Nginx Production
+# ============================
+# MUST STAY LAST. `docker compose build frontend`, `init.sh` and the docs all build this file
+# WITHOUT --target, and docker then builds the final stage. If site-ssr were last, the frontend
+# container would start the Node SSR server instead of nginx — an instant outage. The compose
+# services also pin `target:` explicitly; this ordering is the second line of defence.
 FROM nginx:1.27-alpine AS production
 
 # Удаляем дефолтный конфиг
@@ -29,6 +64,11 @@ RUN rm /etc/nginx/conf.d/default.conf
 # Копируем наш конфиг
 ARG NGINX_CONF=nginx/nginx.conf
 COPY ${NGINX_CONF} /etc/nginx/conf.d/default.conf
+
+# Public-site routing. `map` is only valid at http level, so it ships as its own conf.d drop-in
+# (loaded before default.conf); the location blocks are `include`d from inside each server block.
+COPY nginx/site-maps.conf /etc/nginx/conf.d/00-site-maps.conf
+COPY nginx/site-locations.conf /etc/nginx/snippets/site-locations.conf
 
 # Копируем собранный фронтенд
 COPY --from=build /app/dist /usr/share/nginx/html

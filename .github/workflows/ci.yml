@@ -20,7 +20,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Vite 7 requires ^20.19 || >=22.12; frontend/Dockerfile builds on node:22-alpine.
+          node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -28,9 +29,27 @@ jobs:
         run: npm ci
         working-directory: frontend
 
+      - name: Type check
+        run: npm run typecheck
+        working-directory: frontend
+
+      # client build (dist/) + SSR build (dist-ssr/) + prerendered snapshots (dist/site-static/)
       - name: Build
         run: npm run build
         working-directory: frontend
+
+      - name: Check the site build produced its fallback snapshots
+        working-directory: frontend
+        run: |
+          set -e
+          for f in index.html booking.html booking-form.html booking-success.html 404.html robots.txt sitemap.xml; do
+            test -s "dist/site-static/$f" || { echo "missing dist/site-static/$f"; exit 1; }
+          done
+          test -s dist/site.html
+          test -s dist-ssr/entry-server.js
+          for f in favicon.ico icon.svg apple-touch-icon.png icon-192.png icon-512.png icon-maskable-512.png manifest.webmanifest og-default.jpg; do
+            test -s "dist/site/$f" || { echo "missing dist/site/$f — run node scripts/generate-site-icons.mjs and commit"; exit 1; }
+          done
 
   backend:
     name: Backend (TS)
@@ -62,3 +81,100 @@ jobs:
         run: npm run build
         working-directory: backend
 
+  images:
+    # The only automated check of the nginx configuration and of the runtime images. There is no
+    # `nginx -t` anywhere else — a bad location block would otherwise be found by production.
+    name: Docker images (nginx -t + site smoke test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # All three builds share the single `build` stage, so npm ci + vite build run once.
+      - name: Build nginx image (behind host proxy — production config)
+        run: >
+          docker build -f frontend/Dockerfile --target production
+          --build-arg NGINX_CONF=nginx/nginx-behind-proxy.conf
+          -t musicians-frontend:ci-proxy frontend
+
+      - name: nginx -t (behind host proxy)
+        # `backend` is a literal proxy_pass upstream and is resolved while the config is parsed;
+        # `site` is reached through a variable + resolver, so it must NOT need to resolve here.
+        run: docker run --rm --add-host backend:127.0.0.1 --entrypoint nginx musicians-frontend:ci-proxy -t
+
+      - name: Build nginx image (standalone TLS config)
+        run: >
+          docker build -f frontend/Dockerfile --target production
+          --build-arg NGINX_CONF=nginx/nginx.conf
+          -t musicians-frontend:ci-tls frontend
+
+      - name: nginx -t (standalone TLS)
+        run: |
+          docker run --rm --add-host backend:127.0.0.1 --entrypoint sh musicians-frontend:ci-tls -c '
+            set -e
+            command -v openssl >/dev/null || apk add --no-cache openssl >/dev/null
+            mkdir -p /etc/letsencrypt/live/vgulcover.ru
+            openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=vgulcover.ru" \
+              -keyout /etc/letsencrypt/live/vgulcover.ru/privkey.pem \
+              -out /etc/letsencrypt/live/vgulcover.ru/fullchain.pem 2>/dev/null
+            nginx -t
+          '
+
+      - name: Build site SSR image
+        run: docker build -f frontend/Dockerfile --target site-ssr -t musicians-site:ci frontend
+
+      - name: Site SSR smoke test (no backend — must serve bundled defaults)
+        run: |
+          set -e
+          cid=$(docker run -d -p 4000:4000 -e SITE_API_ORIGIN=http://127.0.0.1:1 musicians-site:ci)
+          trap 'docker logs "$cid" || true; docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4000/__health >/dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4000/__health
+          code() { curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:4000$1"; }
+          test "$(code /)" = "200"
+          test "$(code /booking)" = "200"
+          test "$(code /booking/form)" = "200"
+          test "$(code /booking/)" = "301"
+          test "$(code /definitely-not-a-page)" = "404"
+          curl -fsS http://127.0.0.1:4000/robots.txt | grep -q '^Sitemap: '
+          curl -fsS http://127.0.0.1:4000/sitemap.xml | grep -q '<urlset'
+          test "$(curl -sI http://127.0.0.1:4000/ | tr -d '\r' | awk -F': ' '/^[Xx]-[Ss]ite-[Dd]ata/{print $2}')" = "fallback"
+
+      - name: Compose files parse and build targets are pinned
+        run: |
+          set -e
+          docker compose -p ci -f docker-compose.yml config >/dev/null
+          docker compose -p ci -f docker-compose.yml -f docker-compose.host-proxy.yml \
+            config --format json > /tmp/compose-resolved.json
+
+          # frontend/Dockerfile has TWO final stages. If `frontend` lost its explicit
+          # `target: production`, or if `production` stopped being the last stage, then
+          # `docker compose build frontend` (deploy.sh, init.sh) would silently ship the Node SSR
+          # server as the public web server. Both invariants are cheap to assert, so assert them.
+          assert_target() {
+            got=$(jq -r ".services.\"$1\".build.target // \"<unset>\"" /tmp/compose-resolved.json)
+            [ "$got" = "$2" ] || { echo "docker-compose.yml: service '$1' build target is '$got', expected '$2'"; exit 1; }
+          }
+          assert_target frontend production
+          assert_target site site-ssr
+
+          last_stage=$(grep -E '^FROM[[:space:]].*[[:space:]]AS[[:space:]]' frontend/Dockerfile | tail -1 | awk '{print $NF}')
+          [ "$last_stage" = "production" ] \
+            || { echo "frontend/Dockerfile: last stage is '$last_stage' — 'production' must stay last"; exit 1; }
+          echo "build targets ok (last Dockerfile stage: $last_stage)"
+        env:
+          POSTGRES_PASSWORD: ci
+          REDIS_PASSWORD: ci
+          JWT_SECRET: ci
+          TELEGRAM_ADMIN_BOT_TOKEN: ci
+          FRONTEND_URL: https://example.com
+        env:
+          POSTGRES_PASSWORD: ci
+          REDIS_PASSWORD: ci
+          JWT_SECRET: ci
+          TELEGRAM_ADMIN_BOT_TOKEN: ci
+          FRONTEND_URL: https://example.com

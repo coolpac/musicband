@@ -1,6 +1,7 @@
 node_modules
 npm-debug.log*
 dist
+dist-ssr
 .env
 .env.*
 !.env.example
@@ -13,7 +14,10 @@ coverage/
 Thumbs.db
 *.swp
 *.swo
+*.tsbuildinfo
 *.md
 README*
 LICENSE
-scripts/
+# NOTE: scripts/ must NOT be ignored — `npm run build` runs scripts/prerender-site.mjs, and the
+# whole directory is a few kilobytes. It only ever reaches the build stage; the final images copy
+# dist/, dist-ssr/ and server/ only.

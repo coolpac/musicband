@@ -1,5 +1,10 @@
 # Override for hosts where TLS is terminated by a host-level reverse proxy.
 # Usage: docker compose -f docker-compose.yml -f docker-compose.host-proxy.yml up -d
+# (in practice: COMPOSE_FILE=docker-compose.yml:docker-compose.host-proxy.yml in .env — deploy.sh
+#  refuses to run without an explicit choice, see its pre-flight check.)
+#
+# The `site` service needs no override: it publishes no ports and mounts nothing, it is reached
+# only through the frontend nginx on the internal app-network.
 services:
   frontend:
     build:

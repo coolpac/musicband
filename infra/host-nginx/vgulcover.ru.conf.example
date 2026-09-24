@@ -9,6 +9,12 @@
 #     so large image uploads aren't 413-rejected at the outer layer.
 #   - Proxies to the frontend container on 127.0.0.1:8084 (set by
 #     HOST_PROXY_PORT in docker-compose.host-proxy.yml).
+#   - Nothing about the public website needs to change here: the container routes /, /booking*,
+#     /robots.txt, /sitemap.xml and /site/ internally (frontend/nginx/site-locations.conf).
+#     The ONE addition below is the www → apex redirect.
+#
+# THIS FILE IS A TEMPLATE. /etc/nginx/sites-available/vgulcover.ru.conf on the box is edited by
+# hand and may have drifted — diff before copying, then `nginx -t && systemctl reload nginx`.
 
 server {
     listen 80;
@@ -26,7 +32,7 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name vgulcover.ru www.vgulcover.ru;
+    server_name vgulcover.ru;
 
     ssl_certificate     /etc/letsencrypt/live/vgulcover.ru/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/vgulcover.ru/privkey.pem;
@@ -54,4 +60,27 @@ server {
         proxy_set_header Connection "upgrade";
         proxy_read_timeout 60s;
     }
+}
+
+# Canonical host = the apex. Every canonical URL, the sitemap and the JSON-LD the site emits point
+# at https://vgulcover.ru, so www must 301 there instead of serving a duplicate copy of the site.
+#
+# ADD THIS BLOCK BY HAND on the server — the certificate already covers www.vgulcover.ru.
+# It MUST stay AFTER the apex block: on a multi-tenant box the first `listen 443 ssl` server block
+# nginx parses becomes the implicit default for connections whose SNI matches nothing, and a
+# blanket redirect to vgulcover.ru is the wrong default for the other projects on this host.
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name www.vgulcover.ru;
+
+    ssl_certificate     /etc/letsencrypt/live/vgulcover.ru/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/vgulcover.ru/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # The redirect itself must carry HSTS, otherwise www keeps a plaintext downgrade window.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    return 301 https://vgulcover.ru$request_uri;
 }

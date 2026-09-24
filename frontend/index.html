@@ -2,6 +2,9 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
+    <!-- Mini App и админка живут на том же домене, что и публичный сайт, но искать их в
+         поисковиках не нужно. Сайт отдаёт свои robots-мета сам, из src/site/seo. -->
+    <meta name="robots" content="noindex, nofollow" />
     <style>
       /* Критический фон: без этого при монтировании React возможна вспышка/перерисовка градиентов */
       #root { background: #111111; min-height: 100vh; }

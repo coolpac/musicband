@@ -7,9 +7,12 @@ set -euo pipefail
 # Использование:
 #   ./deploy.sh              — полный деплой
 #   ./deploy.sh --backend    — только backend
-#   ./deploy.sh --frontend   — только frontend
+#   ./deploy.sh --frontend   — frontend (nginx+dist) и site (SSR) вместе
 #   ./deploy.sh --migrate    — только миграции БД
 #   ./deploy.sh --rollback   — откат на предыдущую версию
+#
+# Порядок при выкатке сайта: сначала --backend (миграции + API), затем --frontend.
+# См. docs/WEBSITE.md.
 
 # Цвета для вывода
 RED='\033[0;31m'
@@ -41,6 +44,38 @@ set -a
 # shellcheck source=/dev/null
 . ./.env
 set +a
+
+# --- Pre-flight: какой набор compose-файлов будет использован ----------------
+# docker compose здесь вызывается без -f, поэтому режим задаётся ТОЛЬКО переменной
+# COMPOSE_FILE из .env. Если её нет, а override для host-proxy лежит рядом, docker compose
+# молча соберёт frontend с TLS-конфигом и попытается занять :80/:443 — конфликт с host nginx
+# и мгновенный простой. Лучше упасть здесь.
+check_compose_mode() {
+    if [ -n "${COMPOSE_FILE:-}" ]; then
+        log "COMPOSE_FILE=$COMPOSE_FILE"
+        return 0
+    fi
+    if [ ! -f docker-compose.host-proxy.yml ]; then
+        return 0
+    fi
+    if [ "${DEPLOY_MODE:-}" = "standalone" ]; then
+        warn "DEPLOY_MODE=standalone: контейнер frontend сам терминирует TLS и занимает :80/:443."
+        return 0
+    fi
+    error "COMPOSE_FILE не задан в .env, но docker-compose.host-proxy.yml существует."
+    error ""
+    error "  Без COMPOSE_FILE deploy.sh пересоберёт frontend с nginx/nginx.conf (TLS),"
+    error "  попробует занять :80 и :443 и смонтировать /etc/letsencrypt — на этой машине"
+    error "  порты держит host nginx, будет простой."
+    error ""
+    error "  За host-proxy (текущий прод) добавьте в .env:"
+    error "    COMPOSE_FILE=docker-compose.yml:docker-compose.host-proxy.yml"
+    error "    HOST_PROXY_PORT=8084"
+    error "  Если TLS действительно терминирует сам контейнер — добавьте в .env:"
+    error "    DEPLOY_MODE=standalone"
+    exit 1
+}
+check_compose_mode
 
 # Сохраняем текущий commit для rollback
 PREV_COMMIT=$(git rev-parse HEAD)
@@ -98,22 +133,36 @@ deploy_backend() {
 }
 
 deploy_frontend() {
-    log "Деплой frontend..."
+    log "Деплой frontend + site..."
     # Обновляем код если не полный деплой
     if [ "${FULL_DEPLOY:-false}" != "true" ]; then
         log "Получение обновлений из git..."
         git pull origin "$CURRENT_BRANCH"
     fi
-    
-    docker compose up -d --no-deps --build frontend
-    log "Frontend обновлён"
+
+    # frontend (nginx + dist) и site (SSR) собираются из ОДНОГО build-стейджа и должны
+    # обновляться вместе: dist-ssr ссылается на хешированные ассеты из dist.
+    docker compose up -d --no-deps --build frontend site
+    log "Frontend и site обновлены"
+
+    # Сайт обязан подняться даже при лежащем backend — проверяем это явно.
+    local retries=15
+    while [ $retries -gt 0 ]; do
+        if docker compose exec -T site wget -qO- http://127.0.0.1:4000/__health >/dev/null 2>&1; then
+            log "Site SSR готов!"
+            return 0
+        fi
+        retries=$((retries - 1))
+        sleep 2
+    done
+    warn "Site SSR не ответил на /__health за 30 секунд — nginx пока отдаёт статический снапшот."
 }
 
 rollback() {
     warn "Откат на commit: ${PREV_COMMIT:0:8}"
     git checkout "$PREV_COMMIT"
-    docker compose build backend frontend
-    docker compose up -d backend frontend
+    docker compose build backend frontend site
+    docker compose up -d backend frontend site
     log "Откат завершён"
 }
 
