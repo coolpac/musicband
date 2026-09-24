@@ -9,9 +9,10 @@
 #     so large image uploads aren't 413-rejected at the outer layer.
 #   - Proxies to the frontend container on 127.0.0.1:8084 (set by
 #     HOST_PROXY_PORT in docker-compose.host-proxy.yml).
-#   - Nothing about the public website needs to change here: the container routes /, /booking*,
-#     /robots.txt, /sitemap.xml and /site/ internally (frontend/nginx/site-locations.conf).
-#     The ONE addition below is the www → apex redirect.
+#   - Since 2026-09-24 this host serves ONLY the public website; the Mini App and /admin live on
+#     vgul.cyberslon.ru (its own vhost, same container). Old Mini App links on this host are
+#     redirected by the container (frontend/nginx/site-locations.conf).
+#   - The www → apex redirect block at the bottom is required for SEO (one canonical host).
 #
 # THIS FILE IS A TEMPLATE. /etc/nginx/sites-available/vgulcover.ru.conf on the box is edited by
 # hand and may have drifted — diff before copying, then `nginx -t && systemctl reload nginx`.
@@ -45,9 +46,9 @@ server {
     # first three, but the host edge is the authoritative place — duplicating
     # is harmless and survives container-side regressions).
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    # frame-ancestors вместо X-Frame-Options: Mini App встраивается в Telegram и Max.
-    # X-Frame-Options не умеет несколько источников, поэтому используем CSP.
-    add_header Content-Security-Policy "frame-ancestors 'self' https://*.telegram.org https://web.telegram.org https://*.max.ru https://max.ru" always;
+    # The public website is not embedded anywhere. The messenger frame-ancestors policy moved to
+    # the Mini App's own vhost (vgul.cyberslon.ru.conf.example) together with the Mini App.
+    add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 

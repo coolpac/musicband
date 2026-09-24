@@ -4,6 +4,15 @@ import { ReferralService } from '../../domain/services/ReferralService';
 import { CreateReferralLinkDto } from '../../application/dto/agent.dto';
 import { logger } from '../../shared/utils/logger';
 
+/**
+ * Реферальная ссылка ведёт в Mini App. FRONTEND_URL — это CORS-список (сайт + Mini App через
+ * запятую), поэтому базовый адрес берём из MINI_APP_URL, а из FRONTEND_URL — только первый origin.
+ */
+function miniAppBaseUrl(): string {
+  const fromList = (process.env.FRONTEND_URL ?? '').split(',')[0]?.trim();
+  return (process.env.MINI_APP_URL || fromList || 'https://t.me/your_bot').replace(/\/+$/, '');
+}
+
 export class AgentController {
   constructor(
     private agentService: AgentService,
@@ -45,7 +54,7 @@ export class AgentController {
       const links = await this.referralService.getAgentLinks(agent.id);
 
       // Формируем полные URL для ссылок
-      const baseUrl = process.env.FRONTEND_URL || 'https://t.me/your_bot';
+      const baseUrl = miniAppBaseUrl();
       const linksWithUrls = links.map((link) => ({
         ...link,
         fullUrl: `${baseUrl}?start=${link.linkCode}`,
@@ -78,7 +87,7 @@ export class AgentController {
         expiresAt: data.expiresAt,
       });
 
-      const baseUrl = process.env.FRONTEND_URL || 'https://t.me/your_bot';
+      const baseUrl = miniAppBaseUrl();
       const fullUrl = `${baseUrl}?start=${link.linkCode}`;
 
       logger.info('Referral link created by agent', {

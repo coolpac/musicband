@@ -1,0 +1,43 @@
+# Host-level nginx vhost for the Telegram/Max Mini App + admin on the multi-tenant server.
+# Installed at /etc/nginx/sites-available/vgul.cyberslon.ru.conf (NOT inside the docker
+# container), symlinked into sites-enabled.
+#
+# Written the way the sibling *.cyberslon.ru vhosts on this box are: an http-only server block,
+# then `certbot --nginx -d vgul.cyberslon.ru --redirect` issues the certificate and appends the
+# TLS block itself (the «# managed by Certbot» lines). Do not hand-write the 443 block first —
+# certbot would then duplicate it.
+#
+# Proxies to the SAME frontend container as vgulcover.ru (127.0.0.1:8084, HOST_PROXY_PORT);
+# the container routes by Host — see frontend/nginx/nginx-behind-proxy.conf.
+#
+# THIS FILE IS A TEMPLATE — diff against the box before copying, then `nginx -t && systemctl reload nginx`.
+
+server {
+    include snippets/block-dotfiles.conf;
+    listen 80;
+    listen [::]:80;
+    server_name vgul.cyberslon.ru;
+
+    client_max_body_size 64m;
+
+    # Mini App must be embeddable by Telegram and Max — frame-ancestors, not X-Frame-Options.
+    # The container emits the same header on its HTML; both must agree.
+    add_header Content-Security-Policy "frame-ancestors 'self' https://*.telegram.org https://web.telegram.org https://*.max.ru https://max.ru" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    location / {
+        proxy_pass http://127.0.0.1:8084;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 60s;
+    }
+
+    access_log /var/log/nginx/vgul.cyberslon.ru.access.log;
+    error_log /var/log/nginx/vgul.cyberslon.ru.error.log;
+}

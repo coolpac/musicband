@@ -60,25 +60,43 @@
 
 ---
 
-## 2. Сосуществование сайта и Telegram на «/»
+## 2. Два хоста: сайт на vgulcover.ru, Mini App на vgul.cyberslon.ru
 
-`/` — это одновременно главная сайта и URL, который Telegram открывает для Mini App
-(настройка BotFather, кнопки ботов, **напечатанные QR-коды**). Менять их задним числом нельзя,
-поэтому «/» разводится в два шага:
+С 2026-09-24 сайт и Mini App живут на разных хостах, но обслуживаются **одним** контейнером
+`frontend` — nginx внутри него роутит по `Host` (`frontend/nginx/nginx-behind-proxy.conf`):
 
-1. **Запуск с параметрами в query** — `?screen=…`, `?tgWebAppStartParam=…`, `?startapp=…`.
-   `map $args $site_root_file` (`frontend/nginx/site-maps.conf`) подменяет цель `try_files` на
-   `/index.html`, и nginx отдаёт оболочку Mini App **без редиректа** — параметры сохраняются.
-2. **Запуск с данными только в hash** (`#tgWebAppData=…`). Хеш не доходит до сервера, поэтому
-   его ловит инлайн-шим в начале `frontend/site.html`: он определяет Telegram и делает
-   `location.replace('/app/' + search + hash)`. Ради этого и существует `/app`.
+| Хост | Что отдаёт | Индексация |
+|---|---|---|
+| `vgulcover.ru` (default server) | сайт: `/`, `/booking*`, `/privacy`… → SSR-контейнер `site`, снапшот при сбое; всё остальное — 404 сайта | index |
+| `vgul.cyberslon.ru` | Mini App и `/admin`: SPA-оболочка `dist/index.html`; `robots.txt` = `Disallow: /` | `X-Robots-Tag: noindex` на всё |
 
-Проверка признаков в шиме — только положительная (hash Telegram, query-параметры,
-`window.TelegramWebviewProxy`, ранее сохранённый `tg_webapp_init_data`): ложное срабатывание
-увело бы живого посетителя или краулер в Mini App, что гораздо хуже пропущенного экзотического
-клиента.
+Общие для обоих хостов location (`/assets`, `/js`, `/api`, `/socket.io`, `/uploads`, `/health`) —
+в `frontend/nginx/common-locations.conf`.
 
-`/admin` и `/admin/*` **не менялись**: они по-прежнему попадают в общий SPA-fallback.
+**Старые ссылки на Mini App** (кнопки ботов и реферальные ссылки, созданные до переезда,
+закладки на `/admin`) продолжают работать за счёт редиректов на хосте сайта
+(`frontend/nginx/site-locations.conf`):
+
+* `/?screen=…`, `/?start=…`, `/?tgWebAppStartParam=…`, `/?startapp=…`, `/?sessionId=…` и т.п.
+  (`map $args $mini_app_launch` в `site-maps.conf`) → **302** на `https://vgul.cyberslon.ru/?…`,
+  query сохраняется;
+* `/app`, `/app/*`, `/admin`, `/admin/*` → **301** на тот же путь на хосте Mini App.
+* Запуск из Telegram/Max, у которого данные только в **hash** (`#tgWebAppData=…`, `#WebAppData=…`),
+  сервер не видит — его ловит инлайн-шим в начале `frontend/site.html` и делает
+  `location.replace(VITE_MINI_APP_URL + '/' + search + hash)`. Адрес подставляется при сборке
+  (`VITE_MINI_APP_URL`, build-arg в `docker-compose.yml`); без него шим уводит на `/app/` того же хоста.
+
+Хост Mini App задаётся в трёх местах, и они должны совпадать: `map "" $mini_app_origin`
+(`site-maps.conf`), `MINI_APP_URL`/`ADMIN_PANEL_URL` в `.env` (кнопки ботов) и build-arg
+`VITE_MINI_APP_URL` (по умолчанию берётся из `MINI_APP_URL`). `FRONTEND_URL` теперь —
+CORS-список через запятую: `https://vgulcover.ru,https://vgul.cyberslon.ru`.
+
+Хостовый nginx (вне docker) держит по одному vhost на домен, оба проксируют на
+`127.0.0.1:8084` — шаблоны в `infra/host-nginx/`. Сертификат для `vgul.cyberslon.ru`
+выпускается как у соседних поддоменов на этой машине: `certbot --nginx -d vgul.cyberslon.ru`.
+
+После переезда в **BotFather** (Bot Settings → Menu Button / Web App URL) и в настройках
+Max-бота адрес Mini App должен быть `https://vgul.cyberslon.ru` — это делается руками.
 
 ---
 
@@ -217,29 +235,33 @@ curl -sI $BASE/site/manifest.webmanifest | grep -i '^content-type'  # applicatio
 curl -s -o /dev/null -w '%{http_code}\n' $BASE/site-static/index.html                # 404
 curl -s -o /dev/null -w '%{http_code}\n' $BASE/site.html                             # 404
 
-# 5. Telegram по-прежнему открывает Mini App
-curl -s "$BASE/?screen=home" | grep -c 'telegram-web-app.js'                         # 1
-curl -s $BASE/app/ | grep -c 'telegram-web-app.js'                                   # 1
-curl -sI $BASE/app/ | grep -i x-robots-tag                                           # noindex, nofollow
-curl -sI "$BASE/?screen=home" | grep -i x-robots-tag                                 # noindex, nofollow
+# 5. Старые ссылки Mini App уводят на новый хост, а сам сайт — нет
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "$BASE/?screen=home"   # 302 https://vgul.cyberslon.ru/?screen=home
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "$BASE/admin"          # 301 https://vgul.cyberslon.ru/admin
+curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "$BASE/app/"           # 301 https://vgul.cyberslon.ru/app/
 curl -s $BASE/ | grep -c 'telegram-web-app.js'                                       # 0
 
 # 5a. КРИТИЧНО: на страницах сайта не должно быть X-Robots-Tag
 curl -sI $BASE/ | grep -i x-robots-tag                                               # пусто!
 curl -s $BASE/ | grep -o '<meta name="robots"[^>]*>'   # index, follow, max-image-preview:large
 
-# 6. Админка и API не задеты
-curl -s -o /dev/null -w '%{http_code}\n' $BASE/admin                                 # 200
-curl -s $BASE/api/formats | head -c 80                                               # {"success":true,…
+# 6. Mini App и админка на своём хосте
+APP=https://vgul.cyberslon.ru
+curl -s $APP/ | grep -c 'telegram-web-app.js'                                        # 1
+curl -s -o /dev/null -w '%{http_code}\n' $APP/admin                                  # 200
+curl -sI $APP/ | grep -i x-robots-tag                                                # noindex, nofollow
+curl -s $APP/robots.txt                                                              # Disallow: /
+curl -sI $APP/ | grep -i content-security-policy                                     # frame-ancestors … telegram … max
+curl -s $APP/api/formats | head -c 80                                                # {"success":true,…
 
 # 7. Контейнеры
 docker compose ps                     # frontend, site, backend, postgres, redis — healthy
 docker compose logs --tail=50 site
 ```
 
-Реальный запуск из Telegram проверяется только руками: открыть бота, нажать кнопку Mini App,
-затем отсканировать один из напечатанных QR-кодов. В обоих случаях должно открыться приложение,
-а не лендинг.
+Реальный запуск из Telegram проверяется только руками: открыть бота, нажать кнопку Mini App
+(после смены URL в BotFather), затем отсканировать один из напечатанных QR-кодов (они ведут через
+`t.me/…?startapp=` и не зависят от домена). В обоих случаях должно открыться приложение, а не лендинг.
 
 ---
 

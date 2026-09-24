@@ -8,7 +8,8 @@
        * (BotFather config, printed QR codes, bot buttons — none of which we can change retroactively).
        * nginx already routes «/?screen=…» and «/?tgWebAppStartParam=…» to the Mini App, but a plain
        * Telegram launch carries its data only in the URL *hash*, which a server never sees.
-       * So: detect Telegram here, before anything renders, and hand over to /app/ with query + hash intact.
+       * So: detect Telegram here, before anything renders, and hand over to the Mini App host
+       * (VITE_MINI_APP_URL at build time; «/app/» on this host when built without it) with query + hash intact.
        */
       (function () {
         try {
@@ -16,13 +17,20 @@
           var inTelegram =
             l.hash.indexOf('tgWebAppData=') !== -1 ||
             l.hash.indexOf('tgWebAppVersion=') !== -1 ||
+            l.hash.indexOf('WebAppData=') !== -1 || // Max (max.ru) launch data
+            typeof window.WebApp !== 'undefined' || // Max SDK injected
             /[?&](screen|tgWebAppStartParam)=/.test(l.search) ||
             typeof window.TelegramWebviewProxy !== 'undefined' ||
             !!sessionStorage.getItem('tg_webapp_init_data');
           // Only positive, Telegram-specific signals: a false positive would send a real visitor
           // (or a crawler) into the Mini App, which is far worse than a missed exotic client.
-          if (inTelegram && l.pathname.indexOf('/app') !== 0) {
-            l.replace('/app/' + l.search + l.hash);
+          var target = '%VITE_MINI_APP_URL%';
+          // Vite leaves the placeholder untouched when the variable is not defined at build time.
+          if (!target || target.charAt(0) === '%') target = '/app/';
+          else target = target.replace(/\/+$/, '') + '/';
+          var crossHost = target.indexOf('http') === 0;
+          if (inTelegram && (crossHost || l.pathname.indexOf('/app') !== 0)) {
+            l.replace(target + l.search + l.hash);
           }
         } catch (e) {}
       })();

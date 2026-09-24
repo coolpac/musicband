@@ -73,9 +73,11 @@ services:
       MAX_USER_BOT_TOKEN: ${MAX_USER_BOT_TOKEN:-}
       MAX_USER_BOT_USERNAME: ${MAX_USER_BOT_USERNAME:-}
       MAX_ADMIN_BOT_USERNAME: ${MAX_ADMIN_BOT_USERNAME:-}
+      # FRONTEND_URL is the CORS allow-list (comma-separated): the website AND the Mini App hosts.
+      # The Mini App / admin URLs the bots put into buttons are therefore set on their own.
       FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
-      ADMIN_PANEL_URL: ${FRONTEND_URL}/admin
-      MINI_APP_URL: ${FRONTEND_URL}
+      MINI_APP_URL: ${MINI_APP_URL:-https://vgul.cyberslon.ru}
+      ADMIN_PANEL_URL: ${ADMIN_PANEL_URL:-https://vgul.cyberslon.ru/admin}
       UPLOAD_DIR: /app/uploads
       ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
       # Public site: where to POST /__purge after an admin saves a section (best effort).
@@ -101,6 +103,7 @@ services:
       args:
         VITE_API_URL: ""
         VITE_USE_MOCK: "false"
+        VITE_MINI_APP_URL: ${MINI_APP_URL:-https://vgul.cyberslon.ru}
     image: musicians-site:latest
     container_name: musicians-site
     restart: unless-stopped
@@ -140,6 +143,7 @@ services:
       args:
         VITE_API_URL: ""
         VITE_USE_MOCK: "false"
+        VITE_MINI_APP_URL: ${MINI_APP_URL:-https://vgul.cyberslon.ru}
     image: musicians-frontend:latest
     container_name: musicians-frontend
     restart: unless-stopped
