@@ -1,0 +1,278 @@
+/*
+ * Month calendar. Geometry follows booking-datetime-v2 at 1440px: 1200px card, 56px padding,
+ * 64px day cells laid out on the same 7-column `space-between` rhythm as the weekday row.
+ * Below 900px the row switches to equal columns so the cells stay ≥ 40px on a phone instead of
+ * being squeezed by desktop gaps.
+ */
+.site-cal {
+  --cal-cell-max: 64px;
+  --cal-col-gap: clamp(2px, 0.55vw, 8px);
+  --cal-row-gap: clamp(6px, 0.167rem + 0.926vw, 16px); /*  6 → 16 */
+  --cal-block-gap: clamp(1rem, 0.5rem + 2.222vw, 2.5rem); /* 16 → 40 */
+
+  padding-block: clamp(1.25rem, 0.5rem + 3.333vw, 3.5rem); /* 20 → 56 */
+  padding-inline: clamp(0.5rem, -0.5rem + 4.444vw, 3.5rem); /*  8 → 56 */
+}
+
+/* ── Month navigation ───────────────────────────────────────── */
+
+.site-cal__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+
+.site-cal__month {
+  flex: 1 1 auto;
+  font-size: var(--fs-h4);
+  font-weight: 700;
+  text-align: center;
+}
+
+.site-cal__month-skeleton {
+  display: inline-block;
+  width: min(220px, 60%);
+  height: 1em;
+  border-radius: var(--r-sm);
+  background: var(--c-surface-raised);
+}
+
+.site-cal__step {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-pill);
+  color: var(--c-text);
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-cal__step:hover:not([aria-disabled='true']) {
+    background: var(--bk-wash);
+  }
+}
+
+.site-cal__step:active:not([aria-disabled='true']) {
+  transform: scale(0.9);
+}
+
+/* Out of range. Kept focusable on purpose — see the comment in Calendar.tsx. */
+.site-cal__step[aria-disabled='true'] {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.site-cal__devbadge {
+  margin-top: var(--space-3);
+  color: var(--c-accent);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* ── Grid ───────────────────────────────────────────────────── */
+
+.site-cal__grid {
+  margin-top: var(--cal-block-gap);
+}
+
+.site-cal__head {
+  display: block;
+  margin-bottom: var(--cal-block-gap);
+}
+
+.site-cal__weeks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cal-row-gap);
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+.site-cal__grid.is-loading .site-cal__weeks {
+  opacity: 0.45;
+}
+
+.site-cal__row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  column-gap: var(--cal-col-gap);
+}
+
+@media (min-width: 900px) {
+  .site-cal__row {
+    /* Matches Figma exactly: 7 × 64px cells spread across the 1088px content box. */
+    grid-template-columns: repeat(7, var(--cal-cell-max));
+    justify-content: space-between;
+    column-gap: 0;
+  }
+}
+
+.site-cal__weekday {
+  color: var(--c-text-muted);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ── Day cells ──────────────────────────────────────────────── */
+
+.site-cal__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: var(--cal-cell-max);
+  min-height: 40px;
+  margin-inline: auto;
+  aspect-ratio: 1;
+  border: 1px solid transparent;
+  border-radius: var(--r-tile);
+  background: transparent;
+  color: var(--c-text);
+  font-family: var(--font-text);
+  font-size: var(--fs-body);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+/* Leading/trailing blanks keep the 7-column rhythm. They stay in the accessibility tree as empty
+   gridcells (not `visibility: hidden`) so every row still reports seven columns. */
+.site-cal__cell--blank {
+  pointer-events: none;
+}
+
+.site-cal__cell--skeleton {
+  border-color: transparent;
+  background: var(--c-surface-raised);
+  opacity: 0.6;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-cal__cell--free:hover {
+    /* Over the translucent step-1 card this picks up whatever the watermark puts behind it,
+       which is why it is a light wash rather than a solid fill. */
+    background: var(--bk-wash);
+  }
+}
+
+.site-cal__cell--free:active {
+  transform: scale(0.94);
+}
+
+/* Today gets the ring Figma never drew; red is otherwise reserved for the chosen day. */
+.site-cal__cell.is-today {
+  border-color: var(--c-accent);
+}
+
+.site-cal__cell--past,
+.site-cal__cell--pending {
+  color: var(--c-text-faint);
+  cursor: default;
+}
+
+/* «Занято»: Figma dims the label twice (50 % colour × 0.30 layer opacity). Over the translucent
+   card that lands near 15 % white and stops reading as a number, so it is flattened to one
+   deliberate faint value on a 10 % plate. */
+.site-cal__cell--blocked {
+  border-color: var(--c-border);
+  background: var(--bk-wash);
+  color: var(--c-text-faint);
+  cursor: not-allowed;
+}
+
+.site-cal__cell.is-selected {
+  border-color: transparent;
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-cal__cell.is-selected {
+    /* No fill mode: the cell must fall back to its own styles so :active still presses. */
+    animation: site-cal-pick var(--dur-3) var(--ease-spring);
+  }
+}
+
+@keyframes site-cal-pick {
+  from {
+    transform: scale(0.82);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* ── Month change ───────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-cal__weeks[data-dir='next'] {
+    animation: site-cal-in-next var(--dur-3) var(--ease-out);
+  }
+
+  .site-cal__weeks[data-dir='prev'] {
+    animation: site-cal-in-prev var(--dur-3) var(--ease-out);
+  }
+}
+
+@keyframes site-cal-in-next {
+  from {
+    opacity: 0;
+    transform: translate3d(28px, 0, 0);
+  }
+}
+
+@keyframes site-cal-in-prev {
+  from {
+    opacity: 0;
+    transform: translate3d(-28px, 0, 0);
+  }
+}
+
+/* ── Failure ────────────────────────────────────────────────── */
+
+.site-cal__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--cal-block-gap);
+  color: var(--c-danger);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+.site-cal__retry {
+  min-height: 40px;
+  padding-inline: var(--space-4);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-pill);
+  color: var(--c-text);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-cal__retry:hover {
+    border-color: var(--c-text);
+    background: var(--bk-wash-soft);
+  }
+}

@@ -1,0 +1,123 @@
+/*
+ * ВГУЛ site design tokens. Source: Figma file uGYI33VHTA0fp4bIT1zZEf (1440px frames).
+ * Fluid values interpolate linearly between a 360px phone and the 1440px design,
+ * landing on the exact Figma number at ≥1440px. Never hardcode a colour, font size,
+ * radius or duration in a component — extend this file instead.
+ */
+:root {
+  /* ── Colour ─────────────────────────────────────────────── */
+  --c-bg: #000;
+  --c-surface: #111;
+  --c-surface-raised: #181818;
+  /* One brand red. Figma also contains #ff291f / #ff0000 on pasted logo art — drift, normalised here. */
+  --c-accent: #ff3135;
+  --c-accent-hover: #ff4b4f;
+  --c-accent-active: #e3262a;
+  --c-accent-soft: rgb(255 49 53 / 0.15);
+  --c-accent-glow: rgb(255 49 53 / 0.35);
+  --c-text: #fff;
+  --c-text-muted: rgb(255 255 255 / 0.5); /* 5.3:1 on --c-bg, 4.9:1 on --c-surface — AA for body text */
+  --c-text-faint: rgb(255 255 255 / 0.3); /* decorative / disabled only, never for readable copy */
+  --c-border: rgb(255 255 255 / 0.17);
+  --c-border-strong: rgb(255 255 255 / 0.3);
+  --c-on-accent: #fff;
+  --c-on-light: #000;
+  --c-light: #fff;
+  --c-danger: #ff6b6e;
+  --c-success: #4ade80;
+  --c-scrim: rgb(0 0 0 / 0.72);
+  --scrim-photo-strong: rgb(0 0 0 / 0.6);
+  --scrim-photo-soft: rgb(0 0 0 / 0.25);
+  /* One reusable Figma layer (350:2320 / 350:2344): darkens the left so red decor never fights the copy. */
+  --scrim-left: linear-gradient(269.585deg, rgb(0 0 0 / 0) 25.379%, #000 107.84%);
+
+  /* ── Typography ─────────────────────────────────────────── */
+  --font-display: 'Unbounded', 'Unbounded Fallback', 'Arial Black', Arial, sans-serif;
+  --font-text: 'Geologica', 'Geologica Fallback', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+
+  --fs-display: clamp(1.875rem, 1.333rem + 2.407vw, 3.5rem); /* 30 → 56  hero headline */
+  --fs-h1: clamp(1.75rem, 1.333rem + 1.852vw, 3rem); /*        28 → 48  «Почему мы?» */
+  --fs-h2: clamp(1.625rem, 1.333rem + 1.296vw, 2.5rem); /*     26 → 40  section titles */
+  --fs-h2-sm: clamp(1.75rem, 1.583rem + 0.741vw, 2.25rem); /*  28 → 36  video headline */
+  --fs-h3: clamp(1.375rem, 1.167rem + 0.926vw, 2rem); /*       22 → 32  secondary section titles */
+  --fs-h4: clamp(1.25rem, 1.083rem + 0.741vw, 1.75rem); /*     20 → 28  month label */
+  --fs-h5: clamp(1.125rem, 1rem + 0.556vw, 1.5rem); /*         18 → 24  card / widget titles */
+  --fs-title: clamp(1.0625rem, 0.958rem + 0.463vw, 1.375rem); /* 17 → 22 event card title */
+  --fs-lead: clamp(1rem, 0.917rem + 0.37vw, 1.25rem); /*       16 → 20 */
+  --fs-body-lg: clamp(0.9375rem, 0.875rem + 0.278vw, 1.125rem); /* 15 → 18 */
+  --fs-body: 1rem; /*                                           16 */
+  --fs-list: clamp(0.875rem, 0.792rem + 0.37vw, 1.0625rem); /*  14 → 17  repertoire tracks */
+  --fs-small: 0.875rem; /*                                      14 */
+  --fs-caption: 0.75rem; /*                                     12 */
+
+  --lh-tight: 1.15;
+  --lh-snug: 1.25;
+  --lh-body-tight: 1.4;
+  --lh-normal: 1.5;
+
+  /* ── Layout ─────────────────────────────────────────────── */
+  --container-max: 1280px;
+  --gutter: clamp(1rem, -0.333rem + 5.926vw, 5rem); /*          16 → 80 */
+  --section-y: clamp(3.5rem, 2.583rem + 4.074vw, 6.25rem); /*   56 → 100 */
+  --section-y-sm: clamp(2.5rem, 2rem + 2.222vw, 4rem); /*       40 → 64 */
+  --band-y: clamp(3.5rem, 2.583rem + 4.074vw, 5rem); /*         56 → 80  CTA / partners / social / footer bands */
+  --gap-grid: clamp(1rem, 0.667rem + 1.481vw, 2rem); /*         16 → 32 */
+  --header-h: 64px;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-tile: 16px;
+  --r-card: clamp(18px, 1rem + 0.556vw, 24px);
+  --r-pill: 999px;
+
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 24px 48px -24px rgb(0 0 0 / 0.8);
+  --shadow-glow: 0 0 0 1px var(--c-accent), 0 0 48px -8px var(--c-accent-glow);
+
+  /* ── Motion ─────────────────────────────────────────────── */
+  --dur-1: 140ms; /* press, colour */
+  --dur-2: 240ms; /* hover lift, chips, focus */
+  --dur-3: 420ms; /* panels, menus, accordions */
+  --dur-4: 760ms; /* scroll reveals, hero entrance */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-emphasis: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 12.9%, 0.938 16.7%, 1.017 19.4%, 1.067 22.5%, 1.088 25.8%, 1.085 29.3%, 1.015 42.4%, 0.995 49.1%, 0.994 58.6%, 1);
+  --reveal-distance: 28px;
+  --stagger: 70ms;
+
+  /* ── Layers ─────────────────────────────────────────────── */
+  --z-decor: 0;
+  --z-content: 1;
+  --z-header: 100;
+  --z-menu: 200;
+  --z-modal: 300;
+
+  color-scheme: dark;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --header-h: 90px;
+  }
+}
+
+/* Motion is an enhancement: with this preference everything still works, it just does not move. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-1: 1ms;
+    --dur-2: 1ms;
+    --dur-3: 1ms;
+    --dur-4: 1ms;
+    --reveal-distance: 0px;
+    --stagger: 0ms;
+  }
+}

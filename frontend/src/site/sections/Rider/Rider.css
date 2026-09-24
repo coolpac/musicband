@@ -1,0 +1,71 @@
+/*
+ * Райдер. Figma 345:1402 gives only a red band with the heading «РАЙДЕР» on it.
+ * Reproducing that red would put two identical red slabs back to back (the repertoire block above
+ * is brand red while collapsed), so the band is inverted: a dark surface card on the page
+ * background, with the brand red kept as an edge and a soft glow. The heading, scale and centring
+ * of the Figma frame are preserved; only the fill moves from the band to the accent.
+ */
+/* Two classes on purpose: .site-section (base.css) sets --section-y and is loaded after this file. */
+.site-section.site-rider {
+  padding-block: var(--section-y-sm);
+  background: var(--c-bg);
+}
+
+.site-rider__card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.5rem, 1.167rem + 1.481vw, 2.5rem);
+  padding: clamp(2rem, 1.333rem + 2.963vw, 4rem) clamp(1.5rem, 0.833rem + 2.963vw, 4rem);
+  padding-left: clamp(1.75rem, 1rem + 3.333vw, 4.5rem);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-card);
+  background-color: var(--c-surface);
+  background-image: radial-gradient(70% 140% at 0% 50%, var(--c-accent-soft), transparent 58%);
+  box-shadow: var(--shadow-card);
+  overflow: clip;
+}
+
+/* The red the Figma band was filled with, kept as the card's leading edge. */
+.site-rider__card::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: clamp(4px, 0.25rem + 0.185vw, 6px);
+  background: var(--c-accent);
+}
+
+.site-rider__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.site-rider__title {
+  font-size: var(--fs-h2);
+  text-transform: uppercase;
+}
+
+.site-rider__text {
+  max-width: 62ch;
+  color: var(--c-text-muted);
+  font-size: var(--fs-body-lg);
+  /* The admin writes this in a textarea: keep the line breaks that were typed. */
+  white-space: pre-line;
+}
+
+.site-rider__cta {
+  justify-self: start;
+}
+
+@media (min-width: 900px) {
+  .site-rider__card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .site-rider__cta {
+    justify-self: end;
+  }
+}

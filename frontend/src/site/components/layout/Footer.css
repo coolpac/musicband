@@ -1,0 +1,163 @@
+/*
+ * Figma 345:1451 — black band, padding 80/80/40, 48px between the column row, the hairline
+ * and the centred copyright. Columns 360/220/220/260 with `space-between` become a real
+ * 4-column grid here (the 73.33px Figma gaps are just leftover slack, not a design value).
+ */
+.site-footer {
+  /* Figma's 80/40. `--section-y` (56→100) is the page rhythm and overshoots this band. */
+  --footer-y-start: clamp(3.5rem, 2.583rem + 4.074vw, 5rem);
+  --footer-y-end: clamp(2rem, 1.667rem + 1.481vw, 2.5rem);
+
+  padding-block: var(--footer-y-start) calc(var(--footer-y-end) + env(safe-area-inset-bottom));
+  background: var(--c-bg);
+}
+
+.site-footer__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+}
+
+.site-footer__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 42ch;
+}
+
+.site-footer__tagline {
+  color: var(--c-text-muted);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+}
+
+.site-footer__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.site-footer__heading {
+  color: var(--c-accent);
+  font-family: var(--font-text);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  line-height: 1.3;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.site-footer__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--c-text-muted);
+  font-size: var(--fs-body);
+  text-transform: uppercase;
+}
+
+.site-footer__list--plain {
+  text-transform: none;
+}
+
+.site-footer__link {
+  display: inline-block;
+  color: var(--c-text-muted);
+  transition: color var(--dur-2) var(--ease-out);
+}
+
+.site-footer__label {
+  color: var(--c-text-muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-footer__link:hover {
+    color: var(--c-text);
+  }
+}
+
+.site-footer__divider {
+  height: 1px;
+  margin: var(--space-7) 0 0;
+  border: 0;
+  background: var(--c-border);
+}
+
+.site-footer__copy {
+  margin-top: var(--space-7);
+  color: var(--c-text-muted);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+/* Touch targets: on a phone the links are the only thing in the column, give them room. */
+@media (max-width: 639.98px) {
+  .site-footer__list {
+    gap: var(--space-2);
+  }
+
+  .site-footer__link {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  /*
+   * The contact lines keep their «Email: value» shape; the row carries the touch target.
+   * Flex items are block boxes, so the space typed after «Email:» is trimmed away here —
+   * `column-gap` puts it back rather than leaving «Email:hello@…».
+   */
+  .site-footer__list--plain > li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.3em;
+    min-height: 44px;
+  }
+
+  .site-footer__list--plain .site-footer__link {
+    display: inline;
+    min-height: 0;
+  }
+}
+
+@media (min-width: 640px) {
+  .site-footer__top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-7) var(--space-6);
+  }
+
+  .site-footer__brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1024px) {
+  /*
+   * One row: the brand keeps 1.5fr, every column that actually rendered gets an equal share.
+   * Implicit columns rather than a fixed four, so hiding «Документы» or «Контакты» closes
+   * the gap instead of leaving a hole where Figma drew a column.
+   */
+  .site-footer__top {
+    grid-template-columns: minmax(0, 1.5fr);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    column-gap: clamp(var(--space-6), 4.5vw, var(--space-8));
+    align-items: start;
+  }
+
+  .site-footer__brand {
+    grid-column: auto;
+  }
+}
+
+/* Tablets are touch devices too: the 44px target must not stop at the phone breakpoint. */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .site-footer__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}

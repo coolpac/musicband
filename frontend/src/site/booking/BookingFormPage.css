@@ -1,0 +1,160 @@
+/* Step 2 — the anketa card (Figma booking-form-v2: 640 × 603, 48px padding, radius 32). */
+
+.site-bform {
+  /* Figma puts 32px between the title and the card here, not the 48 of step 1. */
+  margin-top: clamp(1.25rem, 1.083rem + 0.741vw, 2rem);
+  padding: clamp(1.25rem, 0.667rem + 2.593vw, 3rem); /* 20 → 48 */
+  /* The card is what morphs out of the calendar and on into the confirmation. */
+  view-transition-name: booking-card;
+}
+
+/* ── Chosen date, echoed back ───────────────────────────────── */
+
+.site-bform__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: clamp(1.25rem, 1.083rem + 0.741vw, 2rem); /* 20 → 32 */
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  background: var(--c-surface-raised);
+  font-size: var(--fs-small);
+}
+
+.site-bform__summary-label {
+  color: var(--c-text-muted);
+}
+
+.site-bform__summary-value {
+  font-weight: 700;
+}
+
+.site-bform__change {
+  margin-left: auto;
+  color: var(--c-accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-bform__change:hover {
+    color: var(--c-accent-hover);
+  }
+}
+
+/* ── Fields ─────────────────────────────────────────────────── */
+
+.site-bform__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* Figma: 20px between rows, 16px between the two columns. */
+  gap: clamp(1rem, 0.917rem + 0.37vw, 1.25rem) var(--space-4);
+  align-items: start;
+}
+
+.site-bform__field--wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .site-bform__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Request-level failure ──────────────────────────────────── */
+
+.site-bform__alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--c-danger) 10%, transparent);
+  color: var(--c-danger);
+  font-size: var(--fs-small);
+}
+
+.site-bform__alert-link {
+  color: var(--c-text);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Submit + consent ───────────────────────────────────────── */
+
+.site-bform .site-btn {
+  /* Figma's submit button is 55px tall; Button's md size is 52. */
+  min-height: 55px;
+  margin-top: clamp(1.25rem, 1.083rem + 0.741vw, 2rem); /* 20 → 32 */
+}
+
+.site-bform__consent {
+  margin-top: var(--space-4);
+  color: var(--c-text-muted);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.site-bform__consent a {
+  color: var(--c-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-bform__consent a:hover {
+    color: var(--c-accent);
+  }
+}
+
+/* ── Entrance ───────────────────────────────────────────────── */
+/* The card itself is left alone: it is the view-transition subject and morphs from step 1. */
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-bform__summary,
+  .site-bform__fields > * {
+    animation: site-bform-rise 420ms var(--ease-out) both;
+  }
+
+  .site-bform__fields > *:nth-child(1) {
+    animation-delay: 60ms;
+  }
+
+  .site-bform__fields > *:nth-child(2) {
+    animation-delay: 110ms;
+  }
+
+  .site-bform__fields > *:nth-child(3) {
+    animation-delay: 150ms;
+  }
+
+  .site-bform__fields > *:nth-child(4) {
+    animation-delay: 190ms;
+  }
+
+  .site-bform__fields > *:nth-child(5) {
+    animation-delay: 230ms;
+  }
+
+  .site-bform__fields > *:nth-child(n + 6) {
+    animation-delay: 270ms;
+  }
+}
+
+@keyframes site-bform-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+}

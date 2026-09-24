@@ -1,0 +1,510 @@
+/*
+ * Site header. Figma: bar 1440×90, black, 1px rgba(255,255,255,0.17) bottom rule,
+ * logo lock-up left, 5-item uppercase nav optically centred, phone + red pill CTA right.
+ * Figma's asymmetric gutters (80 left / 52 right) are a slip — `.site-container` makes
+ * them symmetric, which lands the nav on the same optical centre anyway.
+ */
+.site-header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: var(--z-header);
+  height: var(--header-h);
+  /* Only ever non-zero in browsers without `scrollbar-gutter`, while the menu locks the page. */
+  padding-right: var(--site-scroll-lock-gap, 0px);
+}
+
+/*
+ * The surface is a pseudo-element on purpose: `backdrop-filter` turns its element into a
+ * containing block for fixed descendants, which would trap the full-screen menu inside the bar.
+ */
+.site-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-bottom: 1px solid var(--c-border);
+  background-color: var(--c-bg);
+  transition:
+    background-color var(--dur-3) var(--ease-out),
+    border-color var(--dur-3) var(--ease-out),
+    box-shadow var(--dur-3) var(--ease-out);
+}
+
+.site-header.is-scrolled::before {
+  border-bottom-color: var(--c-border-strong);
+  box-shadow: 0 16px 40px -28px rgb(0 0 0 / 0.95);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header.is-scrolled::before {
+    background-color: rgb(0 0 0 / 0.62);
+    -webkit-backdrop-filter: blur(18px) saturate(1.6);
+    backdrop-filter: blur(18px) saturate(1.6);
+  }
+}
+
+.site-header__bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: 100%;
+}
+
+/* Logo and burger float above the open menu sheet so the bar stays usable. */
+.site-header__logo {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  /* As a grid item the link would stretch across its 1fr cell, making ~400px of empty bar clickable. */
+  justify-self: start;
+}
+
+/* ── Burger ───────────────────────────────────────────────────
+ * Hidden by default: it only exists once JS can open the panel it controls.
+ */
+.site-header__burger {
+  display: none;
+  position: relative;
+  z-index: 2;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  /* Pull the optical edge of the icon back onto the gutter line. */
+  margin-right: -10px;
+  color: var(--c-text);
+}
+
+.site-header__burger-box {
+  position: relative;
+  display: block;
+  width: 24px;
+  height: 16px;
+}
+
+.site-header__burger-box > span {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentcolor;
+  transform-origin: 50% 50%;
+  transition:
+    transform var(--dur-3) var(--ease-emphasis),
+    opacity var(--dur-1) var(--ease-out);
+}
+
+.site-header__burger-box > span:nth-child(1) {
+  top: 0;
+}
+
+.site-header__burger-box > span:nth-child(2) {
+  top: 7px;
+}
+
+.site-header__burger-box > span:nth-child(3) {
+  top: 14px;
+}
+
+.site-header__burger[aria-expanded='true'] .site-header__burger-box > span:nth-child(1) {
+  transform: translate3d(0, 7px, 0) rotate(45deg);
+}
+
+.site-header__burger[aria-expanded='true'] .site-header__burger-box > span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0.2);
+}
+
+.site-header__burger[aria-expanded='true'] .site-header__burger-box > span:nth-child(3) {
+  transform: translate3d(0, -7px, 0) rotate(-45deg);
+}
+
+/* ── Panel ────────────────────────────────────────────────────
+ * Base = the no-JS phone layout: a plain stacked block under the bar.
+ * ≥1024px it dissolves into the bar's grid; with JS below that it becomes the menu sheet.
+ */
+.site-header__panel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.site-header__panel:focus {
+  outline: none;
+}
+
+.site-header__nav {
+  min-width: 0;
+}
+
+.site-header__nav-list {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.site-header__nav-link {
+  position: relative;
+  display: block;
+  /* The label is only ~20px tall; the padding is what makes the row a 44px touch target
+     on the 1024px-wide tablets that get the desktop bar. */
+  padding-block: max(4px, calc((44px - 1.5em) / 2));
+  color: var(--c-text-muted);
+  font-size: var(--fs-body);
+  font-weight: 400;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color var(--dur-2) var(--ease-out);
+}
+
+/*
+ * The current item switches to SemiBold. This invisible copy reserves the heavier width so
+ * the row never reflows when the highlight moves. `visibility: hidden` keeps the duplicate
+ * out of the accessibility tree (Chrome exposes generated content otherwise).
+ */
+.site-header__nav-link::after {
+  content: attr(data-label);
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Sits 3px under the label's line box, wherever the touch padding puts that. */
+.site-header__nav-link::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: calc(50% - 0.75em - 5px);
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--c-accent);
+  transform: scaleX(0);
+  transition: transform var(--dur-3) var(--ease-emphasis);
+}
+
+.site-header__nav-link[aria-current] {
+  color: var(--c-text);
+  font-weight: 600;
+}
+
+.site-header__nav-link[aria-current]::before {
+  transform: scaleX(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-header__nav-link:hover {
+    color: var(--c-text);
+  }
+}
+
+.site-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.site-header__phone {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  white-space: nowrap;
+  transition: color var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  a.site-header__phone:hover {
+    color: var(--c-accent);
+  }
+}
+
+.site-header__social {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.site-header__social-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: var(--space-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-pill);
+  color: var(--c-text-muted);
+  font-size: var(--fs-small);
+  transition:
+    color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-header__social-link:hover {
+    border-color: var(--c-text);
+    color: var(--c-text);
+  }
+}
+
+/* Screen-reader escape hatch inside the dialog; becomes a real button once focused. */
+.site-header__close {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.site-header__close:focus-visible {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 12px 20px;
+  overflow: visible;
+  clip-path: none;
+  border-radius: var(--r-pill);
+  background: var(--c-light);
+  color: var(--c-on-light);
+  font-weight: 700;
+}
+
+/* ── Phones and tablets, JS available ─────────────────────────── */
+@media (max-width: 1023.98px) {
+  .site-js .site-header__burger {
+    display: inline-flex;
+  }
+
+  .site-js .site-header__panel {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    gap: var(--space-6);
+    padding:
+      calc(var(--header-h) + var(--space-5))
+      var(--gutter)
+      calc(var(--space-7) + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 55% at 50% 0%, rgb(255 49 53 / 0.18), transparent 62%),
+      rgb(0 0 0 / 0.94);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    opacity: 0;
+    visibility: hidden;
+    transform: translate3d(0, -10px, 0);
+    transition:
+      opacity var(--dur-3) var(--ease-out),
+      transform var(--dur-3) var(--ease-out),
+      visibility 0s linear var(--dur-3);
+  }
+
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .site-js .site-header__panel {
+      background:
+        radial-gradient(120% 55% at 50% 0%, rgb(255 49 53 / 0.18), transparent 62%),
+        rgb(0 0 0 / 0.8);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
+    }
+  }
+
+  .site-js .site-header__panel.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
+  }
+
+  /* The sheet owns the whole screen: let the bar behind it disappear. */
+  .site-header.is-menu-open {
+    z-index: var(--z-menu);
+  }
+
+  .site-header.is-menu-open::before {
+    border-bottom-color: transparent;
+    background-color: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+
+  .site-js .site-header__nav {
+    width: 100%;
+  }
+
+  .site-js .site-header__nav-list {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+  }
+
+  .site-js .site-header__nav-link {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    padding-block: var(--space-2);
+    font-size: var(--fs-h5);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  /* One link per row here, so the weight guard is dead weight — and a flex item at that. */
+  .site-js .site-header__nav-link::after {
+    display: none;
+  }
+
+  .site-js .site-header__nav-link::before {
+    right: auto;
+    bottom: auto;
+    left: -12px;
+    top: 50%;
+    width: 4px;
+    height: 22px;
+    margin-top: -11px;
+    transform: scaleY(0);
+  }
+
+  .site-js .site-header__nav-link[aria-current]::before {
+    transform: scaleY(1);
+  }
+
+  .site-js .site-header__actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-4);
+    width: 100%;
+    margin-top: auto;
+  }
+
+  .site-js .site-header__phone {
+    font-size: var(--fs-h5);
+    font-weight: 700;
+  }
+
+  .site-js .site-header__cta {
+    width: 100%;
+    min-height: 56px;
+    font-size: var(--fs-body-lg);
+  }
+
+  /* Staggered entrance. `--stagger` collapses to 0 under prefers-reduced-motion. */
+  .site-js .site-header__panel > *,
+  .site-js .site-header__panel .site-header__nav-item {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+    transition:
+      opacity var(--dur-3) var(--ease-out),
+      transform var(--dur-3) var(--ease-out);
+  }
+
+  .site-js .site-header__panel > .site-header__nav {
+    opacity: 1;
+    transform: none;
+  }
+
+  .site-js .site-header__panel.is-open > *,
+  .site-js .site-header__panel.is-open .site-header__nav-item {
+    opacity: 1;
+    transform: none;
+    transition-delay: calc(var(--i, 0) * var(--stagger));
+  }
+}
+
+/* ── Phones and tablets, JS disabled or the bundle never booted ── */
+@media (max-width: 1023.98px) {
+  :root:not(.site-js) .site-header {
+    position: static;
+    height: auto;
+  }
+
+  :root:not(.site-js) .site-header__bar {
+    flex-wrap: wrap;
+    height: auto;
+    padding-block: var(--space-3);
+    row-gap: var(--space-4);
+  }
+
+  :root:not(.site-js) .site-header__panel {
+    flex-basis: 100%;
+  }
+
+  :root:not(.site-js) .site-header__nav-list {
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-5);
+  }
+
+  /* `.site-main` reserves room for the fixed bar; there is no fixed bar in this mode. */
+  :root:not(.site-js) .site-main {
+    padding-top: 0;
+  }
+}
+
+/* ── Desktop ──────────────────────────────────────────────────── */
+@media (min-width: 1024px) {
+  .site-header__bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+
+  /* The panel stops being a box: nav and actions become cells of the bar's grid. */
+  .site-header__panel {
+    display: contents;
+  }
+
+  /*
+   * Placed explicitly rather than auto-flowed: with an empty nav (or empty actions) the
+   * remaining block must stay pinned to its own side instead of sliding into the free cell.
+   */
+  .site-header__nav {
+    grid-column: 2;
+  }
+
+  .site-header__actions {
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  .site-header__social,
+  .site-header__close {
+    display: none;
+  }
+
+  .site-header__nav-list {
+    gap: var(--space-5);
+  }
+
+  .site-header__nav-link {
+    font-size: var(--fs-small);
+  }
+
+  /* Below 1280px the phone is the first thing to go, exactly as the spec suggests. */
+  .site-header__phone {
+    display: none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .site-header__nav-list {
+    gap: var(--space-6);
+  }
+
+  .site-header__nav-link {
+    font-size: var(--fs-body);
+  }
+
+  .site-header__phone {
+    display: inline-flex;
+  }
+}

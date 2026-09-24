@@ -1,0 +1,292 @@
+/*
+ * Репертуар. Figma 345:1399 (closed, red slab + giant wordmark) and 354:2354 (open, #111 + list).
+ * One section, two states:
+ *   – the surface morphs red -> #111 by fading an opaque veil (opacity only, never background-color),
+ *   – the wordmark scales down into a small brand mark (transform + an fr-track, never width/height),
+ *   – the rows cascade in with a capped stagger derived from --stagger.
+ * The 370px of empty red at the bottom of the Figma frame is dead space and is not reproduced.
+ */
+.site-repertoire {
+  /* 49px wordmark gutter at 1440 (Figma), shrinking to the page gutter on phones. */
+  --rep-wordmark-gutter: clamp(1rem, 3.403vw, 49px);
+  /* Figma draws the wordmark 1342px wide — 62px wider than --container-max, a deliberate bleed. */
+  --rep-wordmark-max: 1342px;
+  /* Open state: the wordmark shrinks to a small brand mark. The fr-track and the scale factor are
+     the same number written twice (a <flex> value cannot be built from a unitless custom property)
+     — change them together or the mark stops filling its row. */
+  --rep-wordmark-rows: 0.34fr;
+  --rep-wordmark-scale: 0.34;
+  /* 17px at 1440 (Figma), 14px on phones — Unbounded ExtraBold is very wide. */
+  --rep-track-size: var(--fs-list, clamp(0.875rem, 0.792rem + 0.37vw, 1.0625rem));
+
+  position: relative;
+  isolation: isolate;
+  background: var(--c-accent);
+  color: var(--c-text);
+}
+
+/*
+ * The red -> dark morph. An opaque layer fading in costs one composited paint, nothing else.
+ * It is ON by default, and only `.site-js` + the closed state paint the red slab: whenever the
+ * list is expanded the surface must be dark, because the 17px white track text scores 3.7:1 on
+ * brand red (AA needs 4.5:1). Without JS — and after the 5s boot failsafe in site.html drops
+ * `.site-js` — the list is expanded, so that state gets the dark surface it needs.
+ */
+.site-repertoire__veil {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-decor);
+  display: block;
+  background-color: var(--c-surface);
+  background-image: radial-gradient(120% 70% at 50% -10%, var(--c-accent-soft), transparent 62%);
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity var(--dur-3) var(--ease-in-out);
+}
+
+.site-js .site-repertoire:not(.is-open) .site-repertoire__veil {
+  opacity: 0;
+}
+
+.site-repertoire__inner {
+  position: relative;
+  z-index: var(--z-content);
+}
+
+/* ── Head: centred title with the download pill parked on the right (Figma 1021…1375) ── */
+.site-repertoire__head {
+  display: grid;
+  /* minmax(0, 1fr), here and below: an `auto` track would size to the max-content of its child
+     (a 1342px wordmark, a multi-column list) and spill to one side instead of centring. */
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: var(--space-5);
+}
+
+.site-repertoire__title {
+  font-size: var(--fs-h2);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media (min-width: 1024px) {
+  .site-repertoire__head {
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .site-repertoire__title {
+    grid-column: 2;
+  }
+
+  .site-repertoire__download {
+    grid-column: 3;
+    justify-self: end;
+  }
+}
+
+/* Figma sets this one label in Unbounded ExtraBold 20px; every other button on the site is Geologica. */
+.site-btn.site-repertoire__download {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--fs-lead);
+}
+
+/* ── Toggle: the wordmark and the pill are one button, so the wordmark itself is clickable ── */
+.site-repertoire__toggle-wrap {
+  margin-top: var(--section-y-sm);
+}
+
+.site-repertoire__toggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: clamp(1.5rem, 0.833rem + 2.963vw, 3rem);
+  width: 100%;
+  color: inherit;
+  text-align: center;
+}
+
+.site-repertoire__wordmark {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  /* Figma bleeds the mark 31px past the 1280px content column on each side; the section clips. */
+  width: min(calc(100vw - 2 * var(--rep-wordmark-gutter)), var(--rep-wordmark-max));
+  transition: grid-template-rows var(--dur-3) var(--ease-emphasis);
+}
+
+.site-repertoire.is-open .site-repertoire__wordmark {
+  grid-template-rows: var(--rep-wordmark-rows);
+}
+
+.site-repertoire__wordmark-clip {
+  min-height: 0;
+  overflow: clip;
+}
+
+.site-repertoire__wordmark-img {
+  width: 100%;
+  height: auto;
+  transform-origin: top center;
+  transition:
+    transform var(--dur-3) var(--ease-emphasis),
+    opacity var(--dur-3) var(--ease-out);
+}
+
+.site-repertoire.is-open .site-repertoire__wordmark-img {
+  transform: scale(var(--rep-wordmark-scale));
+  opacity: 0.9;
+}
+
+.site-repertoire__cta {
+  /* Driven through a variable, not `border-color`, so the hover rule below still wins. */
+  --rep-cta-border: var(--c-border);
+
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  min-height: 52px;
+  padding: var(--space-3) clamp(22px, 1rem + 1vw, 32px);
+  border: 2px solid var(--rep-cta-border);
+  border-radius: var(--r-pill);
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-text);
+  font-size: var(--fs-body-lg);
+  font-weight: 700;
+  line-height: var(--lh-snug);
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
+}
+
+/* On the red slab the black pill already separates itself; on #111 it needs its hairline edge. */
+.site-js .site-repertoire:not(.is-open) .site-repertoire__cta {
+  --rep-cta-border: transparent;
+}
+
+/* No CSS-generated separator glyph: ::before content lands in the button's accessible name. */
+.site-repertoire__cta-count {
+  font-weight: 400;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-repertoire__toggle:hover .site-repertoire__cta {
+    transform: translate3d(0, -2px, 0);
+    border-color: var(--c-light);
+    background: var(--c-light);
+    color: var(--c-on-light);
+  }
+}
+
+.site-repertoire__toggle:active .site-repertoire__cta {
+  transform: scale(0.98);
+  transition-duration: var(--dur-1);
+}
+
+/* A ring around a 450px-tall button is meaningless — put the focus indicator on the pill. */
+.site-repertoire__toggle:focus-visible {
+  outline: none;
+}
+
+.site-repertoire__toggle:focus-visible .site-repertoire__cta {
+  outline: 2px solid var(--c-text);
+  outline-offset: 3px;
+}
+
+/* ── Panel: always in the DOM (SEO), collapsed by an fr-track, never display:none ── */
+.site-repertoire__panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  transition: grid-template-rows var(--dur-3) var(--ease-emphasis);
+}
+
+/* Only once the page is interactive may the list be hidden: no JS = fully expanded, readable page. */
+.site-js .site-repertoire:not(.is-open) .site-repertoire__panel {
+  grid-template-rows: 0fr;
+}
+
+/* No padding here: with box-sizing:border-box a stretched grid item cannot shrink below its own
+   padding, so 0fr would still leave a gap. The spacing lives on the clipped content instead. */
+.site-repertoire__panel-inner {
+  min-height: 0;
+  overflow: clip;
+}
+
+.site-repertoire__list {
+  columns: 1;
+  column-gap: clamp(2rem, 1.333rem + 2.963vw, 4rem);
+  counter-reset: site-track;
+}
+
+/* Two classes: base.css resets `ol[class]` padding and is loaded after this file. */
+.site-repertoire__panel-inner .site-repertoire__list {
+  padding-top: var(--section-y-sm);
+}
+
+@media (min-width: 768px) {
+  .site-repertoire__list {
+    columns: 2;
+  }
+}
+
+.site-repertoire__item {
+  display: grid;
+  grid-template-columns: minmax(2.75ch, max-content) 1fr;
+  column-gap: 0.5ch;
+  margin-bottom: var(--space-2);
+  break-inside: avoid;
+  counter-increment: site-track;
+  font-family: var(--font-display);
+  font-size: var(--rep-track-size);
+  font-weight: 800;
+  line-height: var(--lh-snug);
+  /* The cascade. Delay is applied in the open state only, so closing collapses everything at once. */
+  transition:
+    opacity var(--dur-3) var(--ease-out),
+    transform var(--dur-3) var(--ease-out);
+}
+
+.site-repertoire__item::before {
+  content: counter(site-track) '.';
+  font-variant-numeric: tabular-nums;
+}
+
+.site-repertoire__track {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.site-js .site-repertoire:not(.is-open) .site-repertoire__item {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0);
+}
+
+.site-repertoire.is-open .site-repertoire__item {
+  /* 70ms is far too slow for 30 rows; a sixth of it, capped at 24 steps, lands under 300ms. */
+  transition-delay: calc(min(var(--i, 0), 24) * var(--stagger) / 6);
+}
+
+.site-repertoire__footnote {
+  margin-top: var(--space-6);
+  max-width: 70ch;
+  color: var(--c-text-muted);
+  font-size: var(--fs-small);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-repertoire__toggle:hover .site-repertoire__cta,
+  .site-repertoire__toggle:active .site-repertoire__cta {
+    transform: none;
+  }
+}

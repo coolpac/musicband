@@ -1,0 +1,156 @@
+/* Step 1 — calendar card + time card, stacked, as in booking-datetime-v2. */
+
+.site-booking__cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bk-gap);
+  margin-top: var(--bk-gap);
+}
+
+/* The calendar is the element that morphs into the form card and then the confirmation card. */
+.site-booking--step1 .site-cal {
+  view-transition-name: booking-card;
+}
+
+/*
+ * Phones. A padded card inside the 16px page gutter leaves 37px day cells at 320px — under the
+ * 40px floor a date grid needs to stay tappable. Below 420px both cards run to 8px from the screen
+ * edge instead and the grid drops its column gap, which is how a calendar is laid out on a phone
+ * anyway: a full-width grid, not a shrunken desktop card.
+ */
+@media (max-width: 420px) {
+  .site-booking--step1 .site-booking-card {
+    margin-inline: calc(8px - var(--gutter));
+  }
+
+  .site-booking--step1 .site-cal {
+    padding-inline: 8px;
+  }
+
+  .site-booking--step1 .site-cal__row {
+    column-gap: 0;
+  }
+}
+
+/* ── Time card ──────────────────────────────────────────────── */
+
+.site-booking-time {
+  padding: clamp(1rem, 0.5rem + 2.222vw, 2.5rem); /* 16 → 40 */
+  border-radius: var(--bk-r-card-sm);
+  /* The medallion is the last child on purpose and hangs off the corner — never clip it. */
+  overflow: visible;
+}
+
+.site-booking-time__title {
+  font-size: var(--fs-h5);
+  font-weight: 700;
+  text-align: center;
+}
+
+.site-booking-time__slots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: clamp(1rem, 0.833rem + 0.741vw, 1.5rem); /* 16 → 24 */
+}
+
+.site-booking-time__slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding-inline: 20px;
+  /* Figma drops the border on the selected chip; keeping a transparent one stops a 2px jump. */
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-pill);
+  background: var(--c-bg);
+  color: var(--c-text-muted);
+  font-family: var(--font-text);
+  font-size: var(--fs-body);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-booking-time__slot:hover {
+    border-color: var(--c-border-strong);
+    color: var(--c-text);
+  }
+}
+
+.site-booking-time__slot:active {
+  transform: scale(0.95);
+}
+
+.site-booking-time__slot.is-selected {
+  border-color: transparent;
+  background: var(--c-accent);
+  color: var(--c-on-accent);
+  font-weight: 700;
+}
+
+.site-booking-time__action {
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(1rem, 0.833rem + 0.741vw, 1.5rem); /* 16 → 24 */
+}
+
+.site-booking-time__action--bare {
+  margin-top: var(--bk-gap);
+}
+
+/* Figma's confirm button is 55px tall; Button's md size is 52. */
+.site-booking-time__action .site-btn {
+  min-height: 55px;
+}
+
+/* ── Signature medallion ────────────────────────────────────── */
+
+.site-booking-time__sign {
+  display: none;
+  position: absolute;
+  right: -39px;
+  bottom: -56px;
+  width: 134px;
+  height: 135px;
+  pointer-events: none;
+}
+
+/* It needs the room outside the card that only a wide viewport has. */
+@media (min-width: 1200px) {
+  .site-booking-time__sign {
+    display: block;
+  }
+}
+
+.site-booking-time__ink {
+  position: absolute;
+  top: 28px;
+  left: 13px;
+  width: 118px;
+  height: 87px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-booking-time__sign {
+    animation: site-booking-sign-in 700ms var(--ease-spring) 420ms both;
+  }
+}
+
+@keyframes site-booking-sign-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-14deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}

@@ -27,11 +27,17 @@ pnpm-debug.log*
 !**/.env.*.example
 
 # Build outputs
+# NOTE: frontend/public/site/ is generated too (scripts/generate-site-icons.mjs) but IS committed —
+# the icons and the OG image must exist in the build context, not be re-rendered per deploy.
 **/dist/
 **/build/
 **/.vite/
 **/dist-ssr/
 **/*.tsbuildinfo
+
+# DB dumps written by deploy.sh and scripts/backup-db.sh (the server checkout must stay clean
+# or `git pull` in deploy.sh aborts)
+backups/
 
 # Tests / coverage
 **/coverage/
@@ -46,3 +52,10 @@ backend/exports/
 
 # git worktrees
 .worktrees/
+
+# Public site: raw Figma photo exports (2–12 MB each) stay local; the site imports only the
+# AVIF/WebP variants generated into src/site/assets/opt/ by `npm run optimize:site`.
+frontend/src/site/assets/*/*.png
+frontend/src/site/assets/*/*.jpg
+frontend/src/site/assets/*/*.jpeg
+!frontend/src/site/assets/social/icon-youtube-4x.png

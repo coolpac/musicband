@@ -1,0 +1,221 @@
+/*
+ * Shared frame for the three booking steps.
+ *
+ * The local custom properties below cover values the Figma booking screens use that have no token
+ * yet: the card radii (32 / 24 / 30) are larger than --r-card's 24px ceiling, and the body padding
+ * and card gap are step geometry. They are declared once here, derived fluidly from the 1440px
+ * design, and requested for promotion into styles/tokens.css (see sharedChangeRequests).
+ */
+.site-booking {
+  --bk-pad-y: clamp(2.5rem, 1.667rem + 3.704vw, 5rem); /*   40 → 80  body padding */
+  --bk-gap: clamp(1.5rem, 1rem + 2.222vw, 3rem); /*          24 → 48  title ↔ card, card ↔ card */
+  --bk-r-card: clamp(20px, 1rem + 1.111vw, 32px); /*         20 → 32  calendar / form card */
+  --bk-r-card-sm: clamp(18px, 1rem + 0.556vw, 24px); /*      18 → 24  time card */
+  --bk-inner-max: 1200px;
+  /* Figma's neutral plates: rgba(255,255,255,.1) and the hover wash derived from it. */
+  --bk-wash: rgb(255 255 255 / 0.1);
+  --bk-wash-soft: rgb(255 255 255 / 0.08);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(100svh - var(--header-h));
+  padding-block: var(--bk-pad-y);
+  /* Decor bleeds past the viewport by design; it must never create horizontal scroll. */
+  overflow: clip;
+  isolation: isolate;
+}
+
+.site-booking__inner {
+  position: relative;
+  z-index: var(--z-content);
+  width: min(100% - 2 * var(--gutter), var(--bk-inner-max));
+  margin-inline: auto;
+}
+
+.site-booking__title {
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  text-align: center;
+  view-transition-name: booking-title;
+}
+
+.site-booking__hint {
+  max-width: 62ch;
+  margin: var(--space-3) auto 0;
+  color: var(--c-text-muted);
+  font-size: var(--fs-body-lg);
+  text-align: center;
+}
+
+.site-booking__fallback-action {
+  margin-top: var(--space-5);
+  text-align: center;
+}
+
+.site-booking__fallback-action a {
+  color: var(--c-accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.site-booking--fallback {
+  min-height: 46svh;
+}
+
+/* ── The card every step shares ─────────────────────────────── */
+
+.site-booking-card {
+  position: relative;
+  border: 1px solid var(--c-border);
+  border-radius: var(--bk-r-card);
+  background: var(--c-surface);
+}
+
+/* Step 1 drops its cards to 80 % opacity so the art reads through them (Figma rgba(17,17,17,.8)).
+   Deliberately no backdrop-filter: the watermark is meant to stay legible, not be blurred. */
+@supports (background: color-mix(in srgb, #000 80%, transparent)) {
+  .site-booking--step1 .site-booking-card {
+    background: color-mix(in srgb, var(--c-surface) 80%, transparent);
+  }
+}
+
+/* ── Decorative layers ──────────────────────────────────────── */
+
+.site-booking__decor {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-decor);
+  pointer-events: none;
+  contain: layout paint style;
+}
+
+.site-booking__decor > * {
+  position: absolute;
+}
+
+.site-booking-decor__mark,
+.site-booking-decor__arc,
+.site-booking-decor__wave-shape {
+  background-color: var(--c-accent);
+  -webkit-mask-image: var(--bk-mask);
+  mask-image: var(--bk-mask);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+/* Wordmark watermark: 1342 × 355 at x 49 of a 1440 frame → 93.2 % wide, 3.4 % from the left.
+   Below 1024px it is deliberately over-scaled and centred so it crops like poster art instead
+   of shrinking into a thin red stripe. */
+.site-booking-decor__mark {
+  top: 12%;
+  left: 0;
+  right: 0;
+  width: max(93.2%, 620px);
+  margin-inline: auto;
+  aspect-ratio: 1342 / 355;
+}
+
+@media (min-width: 1024px) {
+  .site-booking-decor__mark {
+    top: 15%;
+    left: 3.4%;
+    right: auto;
+    width: 93.2%;
+    margin-inline: 0;
+  }
+}
+
+/* Three red arcs bleeding in from the bottom-left (Figma group 520 × 332 at x 49, bottom 8 %). */
+.site-booking-decor__arcs {
+  left: 3.4%;
+  bottom: 8%;
+  width: max(36.1%, 320px);
+  aspect-ratio: 520 / 332;
+}
+
+.site-booking-decor__arc {
+  position: absolute;
+}
+
+/* The dome asset is landscape (332 × 163) and Figma rotates each copy −90°, so the element is
+   laid out at its natural aspect and spun about its own centre; the rotated box then lands on
+   the coordinates below. */
+.site-booking-decor__arc--dome-a,
+.site-booking-decor__arc--dome-b {
+  top: 50%;
+  width: 63.84%;
+  height: 49%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.site-booking-decor__arc--dome-a {
+  left: 55.08%;
+}
+
+.site-booking-decor__arc--dome-b {
+  left: 15.65%;
+}
+
+.site-booking-decor__arc--wing {
+  top: 0;
+  left: 77.57%;
+  width: 31.86%;
+  height: 33.57%;
+}
+
+/* Right-to-left black gradient: transparent ~25 % in from the right, ~90 % black at the far left.
+   Figma's 269.683° is float noise for "pointing left"; the odd 107.84 % stop is intentional and
+   is what keeps the «В» of the watermark faintly visible. */
+.site-booking-decor__fade {
+  inset: 0;
+  background: linear-gradient(270deg, rgb(0 0 0 / 0) 25.379%, rgb(0 0 0) 107.84%);
+}
+
+/* Step 2: the red wave, floored at a minimum width so it never squashes to phone proportions. */
+.site-booking-decor__wave {
+  top: 0;
+  left: 0;
+  right: 0;
+  width: max(100%, 980px);
+  margin-inline: auto;
+  aspect-ratio: 1440 / 654;
+}
+
+.site-booking-decor__wave-shape {
+  position: absolute;
+  inset: 0;
+  transform: rotate(180deg);
+}
+
+/* Black → transparent, bottom-up, so the wave dissolves under the header instead of butting into
+   it (Figma: −0.415deg, i.e. `to top`, stops 69.042 % → 100.9 %). */
+.site-booking-decor__wave-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgb(0 0 0 / 0) 69.042%, rgb(0 0 0) 100.9%);
+}
+
+/* The art is an enhancement; its entrance should read as stage lights coming up. Only the two
+   shapes move — the gradients are what keeps the page readable and must be there on frame one. */
+@media (prefers-reduced-motion: no-preference) {
+  .site-booking-decor__mark,
+  .site-booking-decor__arcs,
+  .site-booking-decor__wave {
+    animation: site-booking-decor-in 900ms var(--ease-out) both;
+  }
+
+  .site-booking-decor__mark {
+    animation-delay: 80ms;
+  }
+}
+
+@keyframes site-booking-decor-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+}

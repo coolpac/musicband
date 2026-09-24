@@ -1,0 +1,189 @@
+/*
+ * Figma `WhyUsSection` 345:1358 — 1440 × 640.
+ *   headline box top 145 · cards 314…540 · 100px of photograph below the cards
+ *   card 405.333 × 226, #111, radius 24, padding 32, gap 24
+ * The 150px-tall headline wrapper in Figma held a deleted subtitle; only the resulting
+ * spacing is reproduced (spec §9.2), not the empty box.
+ */
+/* Two classes on purpose: `.site-section` (base.css) also sets `padding-block`, is equally
+   specific and is loaded after this file — a single class here would silently lose. */
+.site-section.site-why {
+  /* 56 → 145px: the Figma distance from the section top to the headline box. */
+  --why-pad-top: clamp(3.5rem, 1.646rem + 8.241vw, 9.0625rem);
+  /* 40 → 109px: headline bottom (205) to cards top (314). */
+  --why-title-gap: clamp(2.5rem, 1.0625rem + 6.389vw, 6.813rem);
+
+  isolation: isolate;
+  padding-block: var(--why-pad-top) var(--section-y);
+  /* Figma's #ff3135 root fill is dead paint under a full-cover photo — black is the honest fallback. */
+  background: var(--c-bg);
+}
+
+.site-why__bg,
+.site-why__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-decor);
+  pointer-events: none;
+}
+
+.site-why__photo-wrap {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.site-why__photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Figma shifts the 759px-tall image up by 99px inside a 660px window; against a 640px
+     section that framing lands at ~83% down. Keeps the stage lights level with the cards. */
+  object-position: center 83%;
+}
+
+/*
+ * Figma applies no overlay at all — but 48px white type sitting directly on a live photograph
+ * is a contrast gamble, and the two blown-out stage lights land right behind the outer cards.
+ * A soft vertical scrim buys AA without visibly touching the picture.
+ */
+.site-why__scrim {
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.58) 0%, rgb(0 0 0 / 0.26) 38%, rgb(0 0 0 / 0.24) 62%, rgb(0 0 0 / 0.62) 100%);
+}
+
+.site-why__inner {
+  position: relative;
+  z-index: var(--z-content);
+  display: grid;
+  gap: var(--why-title-gap);
+  justify-items: center;
+}
+
+.site-why__title {
+  max-width: 20ch;
+  font-size: var(--fs-h1);
+  text-align: center;
+  text-shadow: 0 2px 28px rgb(0 0 0 / 0.55);
+}
+
+.site-why__grid {
+  display: grid;
+  gap: var(--gap-grid);
+  width: 100%;
+  grid-template-columns: 1fr;
+}
+
+.site-why__item {
+  display: flex;
+}
+
+.site-why__card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  min-height: 0;
+  padding: clamp(1.25rem, 1rem + 1.111vw, 2rem);
+  border-radius: var(--r-card);
+  background: var(--c-surface);
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out);
+}
+
+/* Spotlight wash + a 1px rim that lights up under the cursor. Pointer effects exist only for a
+   real mouse (design doc §4), so the two extra paint layers are never even created on a phone. */
+@media (hover: hover) and (pointer: fine) {
+  .site-why__card::before,
+  .site-why__card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    opacity: var(--spot-on, 0);
+    transition: opacity var(--dur-3) var(--ease-out);
+    pointer-events: none;
+  }
+
+  .site-why__card::before {
+    background: radial-gradient(
+      16rem circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      var(--c-accent-soft),
+      rgb(0 0 0 / 0) 72%
+    );
+  }
+
+  .site-why__card::after {
+    padding: 1px;
+    background: radial-gradient(
+      12rem circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      var(--c-accent),
+      rgb(255 255 255 / 0) 68%
+    );
+    /* Ring trick: two mask layers, border-box minus content-box, leaves exactly the 1px padding.
+       -webkit-* first — Chrome aliases the shorthand onto `mask`, so the standard pair must win. */
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+}
+
+.site-why__label {
+  margin: 0;
+  color: var(--c-accent);
+  font-family: var(--font-display);
+  font-size: var(--fs-h5);
+  font-weight: 700;
+  line-height: var(--lh-snug);
+}
+
+.site-why__text {
+  color: var(--c-text);
+  font-size: var(--fs-body-lg);
+  line-height: var(--lh-normal);
+}
+
+/* ── Breakpoints ───────────────────────────────────────────────
+ * 1 → 2 → 3 columns. At two columns a lone trailing card would leave a hole, so it spans
+ * the row instead; at three columns that override is switched back off.
+ */
+@media (min-width: 640px) {
+  .site-why__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .site-why__item:nth-child(odd):last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1024px) {
+  .site-why__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .site-why__item:nth-child(odd):last-child {
+    grid-column: auto;
+  }
+
+  /* Figma hard-codes 226px. As a min-height it holds the Figma silhouette while letting edited
+     or translated copy grow the card instead of spilling out of it. */
+  .site-why__card {
+    min-height: 226px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-why__card:hover {
+    background: var(--c-surface-raised);
+    transform: translate3d(0, -4px, 0);
+  }
+}

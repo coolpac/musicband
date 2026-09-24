@@ -1,0 +1,112 @@
+/*
+ * Мы в социальных сетях. Figma 345:1435: black band, centred 32px title, 16px muted line,
+ * a row of 48px #111 circles with a hairline border and a 22px 50%-white glyph, 16px apart.
+ */
+/* Two classes on purpose: .site-section (base.css) sets --section-y and may load after this file. */
+.site-section.site-social {
+  /* Figma pads this band 80px, not the 100px page rhythm — same local token as Cta/Partners. */
+  --band-y: clamp(3.5rem, 2.583rem + 4.074vw, 5rem);
+
+  padding-block: var(--band-y);
+  background: var(--c-bg);
+}
+
+.site-social__inner {
+  display: grid;
+  /* An `auto` track would size to the paragraph's max-content width and break the centring. */
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: var(--space-5);
+  text-align: center;
+}
+
+.site-social__title {
+  font-size: var(--fs-h3);
+}
+
+.site-social__text {
+  max-width: 68ch;
+  color: var(--c-text-muted);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+}
+
+.site-social__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.site-social__item {
+  display: flex;
+}
+
+.site-social__link {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--c-border);
+  border-radius: 50%;
+  background: var(--c-surface);
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out);
+}
+
+/*
+ * The exported glyphs carry their 50% white as baked-in alpha, which neither `opacity` nor
+ * `color` can raise (and `filter: opacity()` above 1 is clamped by the spec). Two zero-offset
+ * drop shadows in the same white stack the silhouette behind itself — 0.5 → 0.75 → 0.94 alpha —
+ * so the icons brighten on hover exactly like the text badges. Declared transparent at rest so
+ * the filter lists match and the transition interpolates colour only.
+ */
+.site-social__icon {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
+  transition: filter var(--dur-2) var(--ease-out);
+}
+
+.site-social__badge {
+  color: var(--c-text-muted);
+  font-family: var(--font-display);
+  font-size: var(--fs-caption);
+  font-weight: 800;
+  line-height: 1;
+  transition: color var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-social__link:hover {
+    transform: translate3d(0, -3px, 0);
+    border-color: var(--c-accent);
+    background: var(--c-surface-raised);
+    box-shadow:
+      0 0 0 3px var(--c-accent-soft),
+      0 12px 24px -14px var(--c-accent-glow);
+  }
+
+  .site-social__link:hover .site-social__icon {
+    filter: drop-shadow(0 0 0 var(--c-light)) drop-shadow(0 0 0 var(--c-light));
+  }
+
+  .site-social__link:hover .site-social__badge {
+    color: var(--c-text);
+  }
+}
+
+.site-social__link:active {
+  transform: scale(0.94);
+  transition-duration: var(--dur-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-social__link:hover,
+  .site-social__link:active {
+    transform: none;
+  }
+}

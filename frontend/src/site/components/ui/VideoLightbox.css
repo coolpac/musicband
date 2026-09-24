@@ -1,0 +1,167 @@
+.site-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: clamp(0.75rem, 0.417rem + 1.481vw, 2rem);
+  background: var(--c-scrim);
+  animation: site-lightbox-veil var(--dur-2) var(--ease-out) both;
+}
+
+/* Clicks are dead while the dialog animates away, so a stray tap cannot re-trigger anything. */
+.site-lightbox.is-closing {
+  animation: site-lightbox-veil-out var(--dur-2) var(--ease-in-out) both;
+  pointer-events: none;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .site-lightbox {
+    background: rgb(0 0 0 / 0.66);
+    backdrop-filter: blur(10px) saturate(0.85);
+  }
+}
+
+.site-lightbox__dialog {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: end;
+  /* Never taller than the viewport: the 16:9 frame is driven by width, so cap the width instead
+     of the height — that keeps the frame exactly 16:9 at every window size. */
+  width: min(1200px, 100%, calc((100svh - 7rem) * 16 / 9));
+  animation: site-lightbox-in var(--dur-3) var(--ease-out) both;
+}
+
+.site-lightbox.is-closing .site-lightbox__dialog {
+  animation: site-lightbox-out var(--dur-2) var(--ease-in-out) both;
+}
+
+.site-lightbox__close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-pill);
+  background: rgb(255 255 255 / 0.12);
+  color: var(--c-text);
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-lightbox__close:hover {
+    background: var(--c-accent);
+    transform: rotate(90deg);
+  }
+}
+
+/* Two bars rather than an icon file: this control does not exist in the Figma frame. */
+.site-lightbox__cross {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.site-lightbox__cross::before,
+.site-lightbox__cross::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentcolor;
+}
+
+.site-lightbox__cross::before {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.site-lightbox__cross::after {
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+.site-lightbox__frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  background: var(--c-bg);
+  box-shadow: 0 40px 120px -40px rgb(0 0 0 / 0.9);
+}
+
+.site-lightbox__player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  border: 0;
+  background: var(--c-bg);
+}
+
+.site-lightbox__fallback {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  height: 100%;
+  padding: var(--space-5);
+  color: var(--c-text-muted);
+  text-align: center;
+}
+
+.site-lightbox__fallback a {
+  color: var(--c-accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@keyframes site-lightbox-veil {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes site-lightbox-veil-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes site-lightbox-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes site-lightbox-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.97);
+  }
+}

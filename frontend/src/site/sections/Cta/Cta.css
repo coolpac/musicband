@@ -1,0 +1,124 @@
+/*
+ * Figma «cta-pick-date» (345:1477): 1440×376 flat brand-red slab, 80px padding, 40px gaps,
+ * Unbounded ExtraBold 40px headline, Geologica 20px tagline, white button.
+ * Everything decorative here is composited-only: one horizontal translate and one scale.
+ */
+.site-section.site-cta {
+  /*
+   * Figma's 80px band padding. `--section-y` is the page rhythm and runs 20px taller here,
+   * so this band keeps its own scale (56 → 80). See `sharedChangeRequests`: it wants to be
+   * a `--band-y` token in styles/tokens.css rather than a component-local value.
+   */
+  --band-y: clamp(3.5rem, 2.583rem + 4.074vw, 5rem);
+
+  padding-block: var(--band-y);
+  background: var(--c-accent);
+  color: var(--c-light);
+  isolation: isolate;
+  text-align: center;
+}
+
+/* Slow breathing wash of light — pure transform/opacity, never repaints. */
+.site-cta::before {
+  content: '';
+  position: absolute;
+  inset: -25% -10%;
+  z-index: var(--z-decor);
+  background: radial-gradient(42% 58% at 50% 42%, rgb(255 255 255 / 0.22), transparent 70%);
+  pointer-events: none;
+  animation: site-cta-breathe 14s var(--ease-in-out) infinite alternate;
+  will-change: transform, opacity;
+}
+
+.site-cta__decor {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-decor);
+  display: grid;
+  align-content: center;
+  overflow: hidden;
+  opacity: 0.14;
+  pointer-events: none;
+}
+
+.site-cta__marquee {
+  display: flex;
+  width: max-content;
+  animation: site-cta-drift 46s linear infinite;
+  will-change: transform;
+}
+
+.site-cta__marquee-row {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 11vw, 9rem);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 2px var(--c-light);
+  /*
+   * Each row is a flex item, so the space the string ends with is trimmed off the end of its
+   * line. Without this the two copies would collide at the loop seam («… ·ВГУЛ …»); both rows
+   * carry it, so they stay the same width and the −50% shift still lands exactly on the repeat.
+   */
+  padding-inline-end: 0.3em;
+}
+
+.site-cta__inner {
+  position: relative;
+  z-index: var(--z-content);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(var(--space-5), 2.8vw, var(--space-7));
+}
+
+.site-cta__heading {
+  font-size: var(--fs-h2);
+  /* ExtraBold here, where the booking-flow titles at the same size are Bold — deliberate. */
+  font-weight: 800;
+  line-height: var(--lh-snug);
+}
+
+.site-cta__tagline {
+  /* Figma: Geologica Regular 20px — the band shouts with the headline, not with this line. */
+  font-size: var(--fs-lead);
+  font-weight: 400;
+  max-width: 42ch;
+}
+
+.site-cta__action {
+  /* Figma's shrink-wrapped 374px pill; on a narrow phone the long label gets to wrap. */
+  max-width: 100%;
+}
+
+.site-cta__action .site-btn {
+  max-width: 100%;
+  white-space: normal;
+}
+
+@keyframes site-cta-drift {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes site-cta-breathe {
+  from {
+    opacity: 0.65;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-cta::before,
+  .site-cta__marquee {
+    animation: none;
+    will-change: auto;
+  }
+}

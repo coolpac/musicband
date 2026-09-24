@@ -1,0 +1,242 @@
+/* Step 3 — confirmation card over the full-bleed stage photo (booking-success-v2). */
+
+.site-bsuccess {
+  --bs-pad: clamp(1.25rem, 0.667rem + 2.593vw, 3rem); /*  20 → 48 */
+  --bs-badge: clamp(56px, 2.667rem + 1.481vw, 80px); /*   56 → 80 */
+  --bs-r: clamp(20px, 1.042rem + 0.926vw, 30px); /*       20 → 30 */
+
+  position: relative;
+  /* No page title above it — the headline lives inside the card, so it centres on its own. */
+  padding: var(--bs-pad);
+  border: 2px solid var(--c-accent);
+  border-radius: var(--bs-r);
+  /* Figma: drop-shadow(0 16px 20px rgba(255,49,53,.15)) — exactly --c-accent-soft. */
+  box-shadow: 0 16px 20px var(--c-accent-soft);
+  view-transition-name: booking-card;
+}
+
+.site-bsuccess__badge {
+  display: grid;
+  place-items: center;
+  width: var(--bs-badge);
+  height: var(--bs-badge);
+  border-radius: var(--r-pill);
+  background: var(--c-accent);
+}
+
+.site-bsuccess__check {
+  width: 45%;
+  height: 45%;
+}
+
+.site-bsuccess__title {
+  margin-top: clamp(1.25rem, 0.917rem + 1.481vw, 2rem); /* 20 → 32 */
+  font-size: var(--fs-h2);
+  font-weight: 800;
+}
+
+.site-bsuccess__text {
+  margin-top: var(--space-4);
+  color: var(--c-text-muted);
+  font-size: var(--fs-lead);
+  line-height: var(--lh-normal);
+}
+
+/* Figma shows no booking details at all; repeating what was just reserved is the one thing a
+   confirmation always needs, and the 48/32 rhythm has room for it. */
+.site-bsuccess__echo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  margin-top: clamp(1.25rem, 0.917rem + 1.481vw, 2rem);
+  padding-top: clamp(1.25rem, 0.917rem + 1.481vw, 2rem);
+  border-top: 1px solid var(--c-border);
+}
+
+.site-bsuccess__echo-item dt {
+  color: var(--c-text-muted);
+  font-size: var(--fs-caption);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.site-bsuccess__echo-item dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--fs-body-lg);
+  font-weight: 700;
+}
+
+.site-bsuccess__devbadge {
+  margin-top: var(--space-4);
+  color: var(--c-accent);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Two class names on purpose: Button.css sets min-height/display at single-class specificity and
+   its import order relative to this file is not guaranteed. */
+.site-bsuccess .site-bsuccess__action {
+  margin-top: clamp(1.25rem, 0.917rem + 1.481vw, 2rem);
+  min-height: 55px;
+}
+
+@media (max-width: 480px) {
+  .site-bsuccess .site-bsuccess__action {
+    display: flex;
+    width: 100%;
+  }
+}
+
+/* ── Background photo ───────────────────────────────────────── */
+
+.site-bsuccess-photo,
+.site-bsuccess-photo__frame,
+.site-bsuccess-photo__scrim {
+  position: absolute;
+  inset: 0;
+}
+
+.site-bsuccess-photo__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  /* The source is 1280 × 854 stretched over a 1440-wide box: a whisper of blur turns the upscale
+     into atmosphere instead of mush. The scale hides the blurred edges. */
+  filter: blur(2px);
+  transform: scale(1.05);
+}
+
+.site-bsuccess-photo__scrim {
+  background:
+    radial-gradient(120% 90% at 50% 45%, rgb(0 0 0 / 0.35) 0%, rgb(0 0 0 / 0.78) 100%),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.5));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-bsuccess-photo__img {
+    animation: site-bsuccess-kenburns 24s var(--ease-in-out) both;
+  }
+}
+
+@keyframes site-bsuccess-kenburns {
+  from {
+    transform: scale(1.05);
+  }
+  to {
+    transform: scale(1.14);
+  }
+}
+
+/* ── Entrance ───────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-bsuccess__badge {
+    animation: site-bsuccess-pop 620ms var(--ease-spring) 80ms both;
+  }
+
+  /* The exported check is a stroked path inside an <img>, so it cannot be drawn with
+     stroke-dashoffset — a left-to-right clip reads the same and stays on the compositor. */
+  .site-bsuccess__check {
+    animation: site-bsuccess-draw 380ms var(--ease-out) 420ms both;
+  }
+
+  .site-bsuccess__title,
+  .site-bsuccess__text,
+  .site-bsuccess__echo,
+  .site-bsuccess__action {
+    animation: site-bsuccess-rise 460ms var(--ease-out) both;
+  }
+
+  .site-bsuccess__title {
+    animation-delay: 220ms;
+  }
+
+  .site-bsuccess__text {
+    animation-delay: 290ms;
+  }
+
+  .site-bsuccess__echo {
+    animation-delay: 350ms;
+  }
+
+  .site-bsuccess__action {
+    animation-delay: 410ms;
+  }
+}
+
+@keyframes site-bsuccess-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes site-bsuccess-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes site-bsuccess-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+}
+
+/* ── One-shot ember burst ───────────────────────────────────── */
+
+.site-bsuccess__sparks {
+  position: absolute;
+  top: calc(var(--bs-pad) + var(--bs-badge) / 2);
+  left: calc(var(--bs-pad) + var(--bs-badge) / 2);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.site-bsuccess__spark {
+  position: absolute;
+  width: 6px;
+  height: 10px;
+  margin: -5px 0 0 -3px;
+  border-radius: 1px;
+  background: var(--c-text);
+  opacity: 0;
+}
+
+.site-bsuccess__spark.is-accent {
+  background: var(--c-accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-bsuccess__spark {
+    animation: site-bsuccess-spark 1100ms var(--ease-out) calc(220ms + var(--spark-delay)) both;
+  }
+}
+
+@keyframes site-bsuccess-spark {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.4);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--spark-x), var(--spark-y), 0) rotate(var(--spark-r)) scale(1);
+  }
+}

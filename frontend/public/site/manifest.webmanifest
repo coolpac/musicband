@@ -1,0 +1,38 @@
+{
+  "name": "ВГУЛ — кавер-группа",
+  "short_name": "ВГУЛ",
+  "lang": "ru",
+  "dir": "ltr",
+  "description": "Кавер-группа ВГУЛ — живая музыка на праздники, корпоративы и свадьбы.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "browser",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "icons": [
+    {
+      "src": "/site/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/site/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/site/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/site/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

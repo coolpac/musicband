@@ -1,0 +1,476 @@
+/*
+ * Hero — Figma frame 345:1667 (1440×800, sitting directly under the 90px header).
+ *
+ * Figma slips that are deliberately NOT reproduced (spec/hero.md §9):
+ *   · the 2px white sliver on the right edge and the #FFFFFF frame fill — background is black;
+ *   · the left badge's 16px / right badge's 27px text inset — normalised to one value;
+ *   · the left secondary button sitting 3px higher than the primary — both are aligned;
+ *   · the 1–3px gutter drift from the overlay's −27px offset — built to a clean 80px gutter;
+ *   · the «Афиша» heading duplicated at the bottom — it belongs to the Events section only;
+ *   · the red wash painted OVER the copy — it sits under the content so the type stays clean.
+ *
+ * The few raw numbers below are Figma geometry, not design-system values, so they live here
+ * as named component constants rather than in tokens.css.
+ */
+.site-hero {
+  /* 800px at ≥1440 as in Figma, never taller than the screen under the fixed header. */
+  --hero-h: clamp(560px, calc(100svh - var(--header-h)), 800px);
+  /* Phone panel: tall enough to read as a poster, short enough to show the section below. */
+  --hero-panel-h: max(520px, min(86svh, 720px));
+  /* Black bottom gradient: transparent at 26% of the frame, solid black from 82% (Figma: 657/800). */
+  --hero-scrim-start: 26%;
+  --hero-scrim-end: 82%;
+  /* Figma: 20px between the two buttons of a column. */
+  --hero-actions-gap: clamp(12px, 1.39vw, 20px);
+  /* Figma: the content bottom edge sits 91px above the frame bottom. */
+  --hero-bottom: clamp(48px, 6.3vw, 91px);
+  /* Ken Burns settle on the poster — slower than any token, because it must go unnoticed. */
+  --hero-settle: 1600ms;
+  /* Figma's badge timeline cohort is 2000ms, looping (spec §7). */
+  --hero-breathe: 2000ms;
+  --hero-nudge: 1800ms;
+
+  position: relative;
+  background: var(--c-bg);
+  overflow: clip;
+  /* Lets a panel measure the hero, not the viewport, so the scrollbar never skews the gutters. */
+  container-type: inline-size;
+}
+
+.site-hero__track {
+  position: relative;
+  z-index: var(--z-content);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  min-height: var(--hero-h);
+}
+
+/* ── Panel ──────────────────────────────────────────────────── */
+.site-hero__panel {
+  /* Outer edge follows the page container (1280 max, --gutter minimum); the inner edge is
+     half a gutter, so at 1440 the columns land on Figma's 80 / 600 / 80 / 600 / 80. */
+  --hero-edge: max(var(--gutter), (100cqw - var(--container-max)) / 2);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  padding-block: var(--section-y-sm) var(--hero-bottom);
+  padding-inline: calc(var(--gutter) / 2);
+  overflow: clip;
+}
+
+.site-hero__panel:first-child {
+  padding-inline-start: var(--hero-edge);
+}
+
+.site-hero__panel:last-child {
+  padding-inline-end: var(--hero-edge);
+}
+
+/* ── The shared poster ──────────────────────────────────────────
+ * Every panel paints the WHOLE hero and clips it to its own column, so the diptych stays one
+ * continuous photograph across the seam at any viewport width. Same src + same `sizes` in
+ * every panel means the browser downloads exactly one file.
+ */
+.site-hero__panel-media {
+  position: absolute;
+  inset-block: 0;
+  left: calc(-100% * var(--hero-index, 0));
+  z-index: 0;
+  width: calc(100% * var(--hero-panels, 1));
+  /* base.css caps every <picture> at 100% — that cap would collapse the shared poster. */
+  max-width: none;
+  pointer-events: none;
+}
+
+.site-hero__panel-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Black bottom gradient — per panel, but identical, so it reads as one band. */
+.site-hero__panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0) var(--hero-scrim-start), var(--c-bg) var(--hero-scrim-end));
+  pointer-events: none;
+}
+
+/* Red wash — spans the whole hero like the poster does, so it does not restart per column. */
+.site-hero__panel::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: calc(-100% * var(--hero-index, 0));
+  z-index: 2;
+  width: calc(100% * var(--hero-panels, 1));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c-accent) 10%, transparent) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ── Content column ─────────────────────────────────────────── */
+.site-hero__panel-content {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  /* Figma heading column. */
+  max-width: 600px;
+}
+
+/* The closing panel mirrors the opening one, exactly as the diptych does. */
+.site-hero__panel:last-child:not(:first-child) .site-hero__panel-content {
+  align-items: flex-end;
+  margin-inline-start: auto;
+  text-align: end;
+}
+
+/* Between 900 and ~1100px the two labels no longer fit on one line; when they wrap, the second
+   button must stay on the mirrored panel's edge instead of jumping back to the left. */
+.site-hero__panel:last-child:not(:first-child) .site-hero__actions {
+  justify-content: flex-end;
+}
+
+.site-hero__badge {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 15px;
+  border: 1px solid var(--c-accent);
+  border-radius: var(--r-pill);
+  color: var(--c-accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  line-height: 1.285;
+  text-transform: uppercase;
+}
+
+.site-hero__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  text-transform: uppercase;
+}
+
+.site-hero__title-line {
+  display: block;
+}
+
+.site-hero__title-line--accent {
+  color: var(--c-accent);
+}
+
+.site-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hero-actions-gap);
+  /* 12px column gap + 4px = Figma's 16px between the headline and the buttons. */
+  margin-block-start: var(--space-1);
+}
+
+/* ── Entrance ───────────────────────────────────────────────────
+ * Pure CSS, running from the very first paint: nothing here waits for the bundle, and the
+ * poster only settles in scale — it is never held at opacity 0.
+ */
+@keyframes site-hero-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes site-hero-settle {
+  from {
+    transform: scale(1.06);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+.site-hero__panel-img {
+  animation: site-hero-settle var(--hero-settle) var(--ease-out) both;
+}
+
+.site-hero__badge,
+.site-hero__title-line,
+.site-hero__actions {
+  animation: site-hero-rise var(--dur-4) var(--ease-out) both;
+}
+
+.site-hero__title-line:first-child {
+  animation-delay: 80ms;
+}
+
+.site-hero__title-line:last-child {
+  animation-delay: 160ms;
+}
+
+.site-hero__actions {
+  animation-delay: 240ms;
+}
+
+/* Figma reports a 2000ms looping cohort on both badge groups but returns no keyframes
+   (spec §9.10). Authored here as a breathing glow — opacity + transform only, on a
+   pseudo-element, so the loop stays on the compositor. */
+@keyframes site-hero-breathe {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+.site-hero__badge::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: 0 0 24px 0 var(--c-accent-glow);
+  opacity: 0;
+  /* Starts once the badge has finished rising in. */
+  animation: site-hero-breathe var(--hero-breathe) var(--ease-in-out) var(--dur-4) infinite;
+  pointer-events: none;
+}
+
+/* Scroll-linked parallax: no listeners, no rAF. The scale exactly compensates the shift,
+   so the top edge of the poster never leaves the top of the hero. */
+@keyframes site-hero-parallax {
+  to {
+    transform: translate3d(0, 8%, 0) scale(1.16);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
+    /* Longhands on purpose: the shorthand would reset `animation-duration`, and a
+       scroll-driven animation needs it to stay at its initial `auto`. */
+    .site-hero__panel-media {
+      animation-name: site-hero-parallax;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(root block);
+      animation-range: 0px 100vh;
+    }
+  }
+}
+
+/* ── Carousel controls (phones / portrait tablets) ──────────── */
+.site-hero__nav {
+  display: none;
+}
+
+.site-hero__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--c-text-muted);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: opacity var(--dur-3) var(--ease-out);
+}
+
+.site-hero__hint::after {
+  content: '';
+  flex: none;
+  width: 20px;
+  height: 1px;
+  background: currentcolor;
+  animation: site-hero-nudge var(--hero-nudge) var(--ease-in-out) infinite;
+}
+
+@keyframes site-hero-nudge {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translate3d(7px, 0, 0);
+  }
+}
+
+.site-hero__nav.is-browsed .site-hero__hint {
+  opacity: 0;
+}
+
+/* Once the hint has faded there is nothing left to hint at: stop paying for the loop. */
+.site-hero__nav.is-browsed .site-hero__hint::after {
+  animation-play-state: paused;
+}
+
+.site-hero__dots {
+  display: flex;
+  gap: var(--space-1);
+  pointer-events: auto;
+}
+
+.site-hero__dot {
+  position: relative;
+  display: block;
+  /* The visual dot is 9px; the hit area stays a full touch target. */
+  width: 44px;
+  height: 44px;
+}
+
+.site-hero__dot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 9px;
+  height: 9px;
+  margin: auto;
+  border-radius: 50%;
+  background: var(--c-text-faint);
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out);
+}
+
+.site-hero__dot[aria-current='true']::before {
+  background: var(--c-accent);
+  transform: scale(1.35);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-hero__dot:hover::before {
+    background: var(--c-text);
+  }
+}
+
+@media (max-width: 899px) {
+  .site-hero {
+    /* A phone panel is far taller than it is wide, so the copy starts higher up the photo:
+       the scrim has to begin earlier to keep the badge and the headline legible. */
+    --hero-scrim-start: 18%;
+    --hero-scrim-end: 74%;
+  }
+
+  .site-hero__track {
+    display: flex;
+    gap: var(--space-2);
+    min-height: var(--hero-panel-h);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .site-hero__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .site-hero__panel {
+    /* The next panel peeks past the edge, so the swipe is discoverable without a hint. */
+    flex: 0 0 92%;
+    scroll-snap-align: start;
+    /* Leaves the bottom band of the panel to the pagination dots and the swipe hint. */
+    padding-block-end: clamp(92px, 15vh, 120px);
+    padding-inline: var(--gutter);
+  }
+
+  .site-hero__panel:first-child {
+    padding-inline-start: var(--gutter);
+  }
+
+  .site-hero__panel:last-child {
+    padding-inline-end: var(--gutter);
+  }
+
+  .site-hero__panel:only-child {
+    flex-basis: 100%;
+  }
+
+  /* Snapping the last panel to the end keeps the first one peeking on the way back. */
+  .site-hero__panel:last-child:not(:first-child) {
+    scroll-snap-align: end;
+  }
+
+  /* One panel = one full-width crop of the shared poster. */
+  .site-hero__panel-media,
+  .site-hero__panel::before {
+    left: 0;
+    width: 100%;
+  }
+
+  .site-hero__panel-img {
+    object-position: var(--hero-focal, 50%) center;
+  }
+
+  .site-hero__panel:last-child:not(:first-child) .site-hero__panel-content {
+    align-items: flex-start;
+    margin-inline-start: 0;
+    text-align: start;
+  }
+
+  .site-hero__panel:last-child:not(:first-child) .site-hero__actions {
+    justify-content: flex-start;
+  }
+
+  .site-hero__nav {
+    position: absolute;
+    inset-inline: 0;
+    bottom: clamp(6px, 1.6vh, 14px);
+    z-index: calc(var(--z-content) + 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* No gap: the dot button's own 44px touch box already separates the two rows. */
+    gap: 0;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .site-hero__actions {
+    width: 100%;
+  }
+
+  .site-hero__actions > .site-btn {
+    flex: 1 1 100%;
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────
+ * Tokens already collapse durations; loops and scroll-linked effects must be switched off
+ * explicitly, and smooth scrolling is dropped in JS (see Hero.tsx).
+ */
+@media (prefers-reduced-motion: reduce) {
+  .site-hero__panel-img,
+  .site-hero__panel-media,
+  .site-hero__badge,
+  .site-hero__badge::before,
+  .site-hero__title-line,
+  .site-hero__actions,
+  .site-hero__hint::after {
+    animation: none;
+  }
+}

@@ -1,0 +1,269 @@
+/*
+ * Figma `VideoSection` 345:1389 — 1440 × 540 on black.
+ *   thumbnail 600 × 338 at x 88 · text column 616 wide at x 744 · both vertically centred
+ *   red curl 618 × 394.5 centred on the section, 101px above its top edge
+ *   small swoosh 189 × 278 at x 51, hanging 139px below the section
+ *   signature disc 134 × 135 near the right edge, level with the CTA row
+ * Everything decorative bleeds; `.site-section` clips it, so no layer can create page scroll.
+ */
+.site-video {
+  isolation: isolate;
+  background: var(--c-bg);
+}
+
+.site-video__decor,
+.site-video__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-decor);
+  pointer-events: none;
+}
+
+/* The scrim comes after the decor in the DOM, so it darkens the red shapes — and only them,
+   because the copy above sits in the content layer. */
+.site-video__scrim {
+  background-image: linear-gradient(269.585deg, rgb(0 0 0 / 0) 25.379%, var(--c-bg) 107.84%);
+}
+
+.site-video__swoosh {
+  position: absolute;
+  display: block;
+}
+
+.site-video__swoosh--large {
+  left: 50%;
+  top: 0;
+  width: min(618px, 62vw);
+  height: auto;
+  /* -25.6% of its own height = the 101px Figma lifts it above the section top. */
+  transform: translate(-50%, -25.6%);
+}
+
+.site-video__swoosh--small {
+  --sw-w: clamp(6rem, 4.063rem + 8.611vw, 11.813rem); /* 96 → 189px (the rotated width) */
+
+  left: 3.54%;
+  bottom: calc(var(--sw-w) * -278 / 378);
+  width: var(--sw-w);
+  height: calc(var(--sw-w) * 278 / 189);
+}
+
+/* The export is 278 × 189 and Figma places it turned a quarter turn; rotating around the centre
+   of an inverted box lands it exactly. */
+.site-video__swoosh--small img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--sw-w) * 278 / 189);
+  height: var(--sw-w);
+  max-width: none;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.site-video__inner {
+  position: relative;
+  z-index: var(--z-content);
+  display: grid;
+  gap: clamp(2rem, 1.333rem + 2.963vw, 4rem);
+  align-items: center;
+}
+
+/* ── Thumbnail ─────────────────────────────────────────────── */
+/* Grid children default to min-width:auto, which a wide poster would happily blow past. */
+.site-video__media {
+  min-width: 0;
+}
+
+.site-video__thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  /* Figma's white plate would flash on a black page while the poster decodes. */
+  background: var(--c-surface);
+}
+
+.site-video__poster-wrap {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.site-video__poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--dur-4) var(--ease-out);
+}
+
+.site-video__badge {
+  --badge: clamp(3rem, 2.813rem + 0.833vw, 3.563rem); /* 48 → 57px */
+
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  width: var(--badge);
+  height: var(--badge);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+
+.site-video__badge img {
+  width: 100%;
+  height: 100%;
+}
+
+/* A slow ring leaving the badge: one composited element, transform + opacity only. */
+.site-video__badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgb(255 255 255 / 0.45);
+  border-radius: var(--r-pill);
+  animation: site-video-pulse 2.8s var(--ease-out) infinite;
+}
+
+/* ── Copy ──────────────────────────────────────────────────── */
+.site-video__text {
+  display: grid;
+  gap: var(--space-5);
+  justify-items: start;
+}
+
+.site-video__title {
+  /* Figma sets 36px here against 40px in «Форматы»; tokens stop at --fs-h2 (40). */
+  font-size: var(--fs-h2);
+}
+
+.site-video__lead {
+  max-width: 62ch;
+  color: var(--c-text-muted);
+  font-size: var(--fs-body-lg);
+  line-height: var(--lh-normal);
+}
+
+.site-video__cta-row {
+  display: flex;
+}
+
+.site-video__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--c-text);
+}
+
+.site-video__cta-disc {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-pill);
+  background: var(--c-accent);
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-out),
+    transform var(--dur-2) var(--ease-out);
+}
+
+.site-video__cta-disc img {
+  width: 20px;
+  height: 20px;
+}
+
+.site-video__cta-label {
+  font-size: var(--fs-body-lg);
+  font-weight: 700;
+  text-align: start;
+}
+
+/* ── Signature badge ───────────────────────────────────────── */
+.site-video__signature {
+  position: absolute;
+  z-index: var(--z-content);
+  /* Hugs the content column on wide screens, the gutter on narrow ones. */
+  right: max(var(--gutter), calc(50% - var(--container-max) / 2));
+  bottom: calc(var(--section-y) * 0.53);
+  display: none;
+  width: clamp(5.5rem, 4.542rem + 4.259vw, 8.375rem); /* 88 → 134px */
+  aspect-ratio: 134 / 135;
+  pointer-events: none;
+}
+
+.site-video__signature-disc,
+.site-video__signature-mark {
+  position: absolute;
+}
+
+.site-video__signature-disc {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Figma offsets the autograph +13/+28 inside the 134 × 135 disc; that lopsidedness is the point. */
+.site-video__signature-mark {
+  left: 9.7%;
+  top: 20.74%;
+  width: 88.06%;
+  height: 64.44%;
+}
+
+@keyframes site-video-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+}
+
+/* ── Breakpoints ───────────────────────────────────────────── */
+@media (min-width: 768px) {
+  .site-video__signature {
+    display: block;
+  }
+}
+
+@media (min-width: 1024px) {
+  .site-video__inner {
+    /* 600 + 64 + 616 = the 1280 content column, exactly as in Figma. */
+    grid-template-columns: minmax(0, 600fr) minmax(0, 616fr);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-video__thumb:hover .site-video__poster {
+    transform: scale(1.04);
+  }
+
+  .site-video__thumb:hover .site-video__badge {
+    transform: scale(1.08);
+  }
+
+  .site-video__cta:hover .site-video__cta-disc {
+    background: var(--c-accent-hover);
+    box-shadow: 0 10px 28px -10px var(--c-accent-glow);
+    transform: scale(1.06);
+  }
+}
+
+.site-video__cta:active .site-video__cta-disc {
+  background: var(--c-accent-active);
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-video__badge::after {
+    animation: none;
+    opacity: 0;
+  }
+}

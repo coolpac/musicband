@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      /*
+       * The public site owns «/», which is also the URL Telegram opens for the Mini App
+       * (BotFather config, printed QR codes, bot buttons — none of which we can change retroactively).
+       * nginx already routes «/?screen=…» and «/?tgWebAppStartParam=…» to the Mini App, but a plain
+       * Telegram launch carries its data only in the URL *hash*, which a server never sees.
+       * So: detect Telegram here, before anything renders, and hand over to /app/ with query + hash intact.
+       */
+      (function () {
+        try {
+          var l = window.location;
+          var inTelegram =
+            l.hash.indexOf('tgWebAppData=') !== -1 ||
+            l.hash.indexOf('tgWebAppVersion=') !== -1 ||
+            /[?&](screen|tgWebAppStartParam)=/.test(l.search) ||
+            typeof window.TelegramWebviewProxy !== 'undefined' ||
+            !!sessionStorage.getItem('tg_webapp_init_data');
+          // Only positive, Telegram-specific signals: a false positive would send a real visitor
+          // (or a crawler) into the Mini App, which is far worse than a missed exotic client.
+          if (inTelegram && l.pathname.indexOf('/app') !== 0) {
+            l.replace('/app/' + l.search + l.hash);
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="icon" href="/site/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/site/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/site/apple-touch-icon.png" />
+    <link rel="manifest" href="/site/manifest.webmanifest" />
+    <script>
+      /*
+       * Scroll-reveal gate. Content is visible by default; this class lets CSS hold back
+       * below-the-fold elements until they scroll in. If the bundle never boots (blocked, offline,
+       * JS error) the failsafe removes the gate so nothing stays invisible.
+       */
+      (function (d) {
+        d.classList.add('site-js');
+        setTimeout(function () {
+          if (!window.__SITE_BOOTED__) d.classList.remove('site-js');
+        }, 5000);
+      })(document.documentElement);
+    </script>
+    <!--site-head-->
+  </head>
+  <body>
+    <div id="site-root"><!--site-html--></div>
+    <script>
+      window.__SITE_DATA__ = /*site-data*/ undefined;
+    </script>
+    <script type="module" src="/src/site/entry-client.tsx"></script>
+  </body>
+</html>

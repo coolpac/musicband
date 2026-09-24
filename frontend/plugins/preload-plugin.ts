@@ -14,6 +14,8 @@ export function htmlPreloadPlugin(): Plugin {
       order: 'post',
       handler(html, ctx) {
         if (!ctx.bundle) return html;
+        // Mini App only: site.html gets its own (responsive, route-aware) preloads from src/site/seo/head.ts.
+        if (!ctx.filename.endsWith('index.html')) return html;
 
         const preloads: string[] = [];
 

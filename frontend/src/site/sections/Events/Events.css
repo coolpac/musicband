@@ -1,0 +1,241 @@
+/*
+ * Афиша — Figma frame 345:1327 (1440×510, pure black).
+ *
+ * Every card is rebuilt from card 4, the only healthy one in the file. The others are
+ * abandoned experiments and their slips are NOT reproduced (spec/events-afisha.md §9):
+ * card 3 has no card frame at all and its CTA floats 153px below the grid, card 1's photo
+ * overflows the card and rounds at a different radius, card 2's surface is white, and every
+ * string on cards 1–2 is an outlined SVG. Here all four are one component with live text,
+ * and the photo is a clipped, darkened backdrop.
+ *
+ * Raw numbers below are Figma geometry, not design-system values.
+ */
+.site-events {
+  /* Figma: 212px card box; a min-height (not a height) so a three-line title cannot clip. */
+  --ev-card-h: 212px;
+  /* Figma: 6px inside the meta block, 34px under the heading. */
+  --ev-meta-gap: 6px;
+  --ev-heading-gap: clamp(20px, 2.4vw, 34px);
+
+  position: relative;
+  padding-block: var(--section-y) calc(var(--section-y) + var(--space-3));
+  background: var(--c-bg);
+  overflow: clip;
+}
+
+.site-events__heading {
+  margin-block-end: var(--ev-heading-gap);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-snug);
+  text-align: center;
+}
+
+.site-events__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap-grid);
+}
+
+.site-events__item {
+  display: flex;
+}
+
+/* ── Card ───────────────────────────────────────────────────── */
+.site-event-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: var(--ev-card-h);
+  padding: var(--space-5);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-card);
+  background: var(--c-surface);
+  overflow: clip;
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-3) var(--ease-out);
+}
+
+.site-event-card__media {
+  position: absolute;
+  inset: 0;
+  /* Behind the copy but above the #111 surface — the photo is the card's backdrop. */
+  z-index: -1;
+}
+
+/* The <picture> has to carry a definite height of its own: a percentage height on the <img>
+   resolves to `auto` against an auto-height parent, and `object-fit` would then never crop —
+   portrait photos would overflow the top of the card and landscape ones leave a strip of #111. */
+.site-event-card__frame {
+  width: 100%;
+  height: 100%;
+}
+
+.site-event-card__photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.5) saturate(0.85);
+  transition:
+    transform var(--dur-4) var(--ease-out),
+    filter var(--dur-3) var(--ease-out);
+}
+
+/* Legibility scrim: darkest where the date and the CTA sit. */
+.site-event-card__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.72) 0%, rgb(0 0 0 / 0.38) 46%, rgb(0 0 0 / 0.82) 100%);
+}
+
+.site-event-card__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ev-meta-gap);
+}
+
+.site-event-card__date {
+  color: var(--c-accent);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  line-height: 1.285;
+  text-transform: uppercase;
+}
+
+.site-event-card__title {
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  font-weight: 800;
+  line-height: var(--lh-snug);
+}
+
+.site-event-card__venue {
+  color: var(--c-text-muted);
+  font-size: var(--fs-body);
+  line-height: 1.4;
+}
+
+/* ── CTA ────────────────────────────────────────────────────────
+ * 123×42 in Figma — below the 44px touch minimum, which is fine here because the link is
+ * stretched over the entire card: the visible pill is the affordance, the card is the target.
+ */
+.site-event-card__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* The card is a stretching flex column: hug the label instead of spanning the card. */
+  align-self: flex-start;
+  /* Pins the CTA to the bottom whatever the title's length. */
+  margin-block-start: auto;
+  min-height: 42px;
+  padding-inline: 18px;
+  border: 2px solid var(--c-accent);
+  border-radius: var(--r-pill);
+  color: var(--c-accent);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
+}
+
+.site-event-card--photo .site-event-card__cta {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.site-event-card__cta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: var(--r-card);
+}
+
+.site-event-card__cta:active {
+  transform: scale(0.97);
+}
+
+/* The ring belongs on the card, because the card is what the link covers. Without :has()
+   the link keeps the default ring from base.css, so keyboard focus is never invisible. */
+@supports selector(:has(*)) {
+  .site-event-card:has(.site-event-card__cta:focus-visible) {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 3px;
+  }
+
+  .site-event-card__cta:focus-visible {
+    outline-color: transparent;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-event-card:hover {
+    transform: translate3d(0, -4px, 0);
+    border-color: color-mix(in srgb, var(--c-accent) 50%, transparent);
+    box-shadow: 0 20px 44px -26px var(--c-accent-glow);
+  }
+
+  .site-event-card:hover .site-event-card__photo {
+    transform: scale(1.06);
+    filter: brightness(0.58) saturate(1);
+  }
+
+  .site-event-card:hover .site-event-card__cta {
+    background: var(--c-accent);
+    color: var(--c-on-accent);
+  }
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1199px) {
+  .site-events__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Phones: a scroll-snap rail rather than a tall stacked list. The афиша reads as a strip of
+ * flyers, the section keeps the page short, and the gesture matches the hero carousel right
+ * above it. Pure CSS — nothing here needs JS.
+ */
+@media (max-width: 767px) {
+  .site-events__grid {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: min(80%, 300px);
+    /* Bleed to the screen edges so the next card can peek past the container. */
+    margin-inline: calc(var(--gutter) * -1);
+    padding-inline: var(--gutter);
+    /* `overflow-x: auto` forces `overflow-y` to `auto` too, which would clip the focus ring of
+       a card at the rail's edge — the block padding is the room that ring needs. */
+    padding-block: var(--space-2);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--gutter);
+    scrollbar-width: none;
+  }
+
+  .site-events__grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .site-events__item {
+    scroll-snap-align: start;
+  }
+
+  /* A scroll container cannot keep `overflow-y: visible`, so the reveal's 28px rise would
+     push a phantom scroll area under the rail — and fight the snap points. Inside the rail
+     the cards fade in on the spot instead. Specificity beats the shared rule in base.css. */
+  .site-events .site-events__grid .site-events__item:not(.is-revealed) {
+    transform: none;
+  }
+}

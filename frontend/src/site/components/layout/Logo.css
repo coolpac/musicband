@@ -1,0 +1,53 @@
+/*
+ * Figma 345:1454 — 40×40 red square (radius 8) + «В» in Unbounded ExtraBold 22px #111,
+ * gap 8, wordmark «ВГУЛ» in Unbounded Bold 20px white. The lock-up scales fluidly
+ * 32px → 40px between a 360px phone and the 1440px design.
+ */
+.site-logo {
+  --logo-mark: clamp(32px, 1.833rem + 0.741vw, 40px);
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--c-text);
+  font-family: var(--font-display);
+  line-height: 1;
+  white-space: nowrap;
+  /* The mark is 32px on phones; the link itself still has to be a 44px touch target. */
+  min-height: 44px;
+}
+
+.site-logo__mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--logo-mark);
+  height: var(--logo-mark);
+  border-radius: var(--r-sm);
+  background: var(--c-accent);
+  color: var(--c-surface);
+  font-size: calc(var(--logo-mark) * 0.55);
+  font-weight: 800;
+  /* Unbounded's «В» sits slightly high in its line box; nudge it back to the optical centre. */
+  padding-top: 0.04em;
+  transition:
+    transform var(--dur-2) var(--ease-spring),
+    box-shadow var(--dur-3) var(--ease-out);
+}
+
+.site-logo__word {
+  font-size: var(--fs-lead);
+  font-weight: 700;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-logo:hover .site-logo__mark {
+    transform: rotate(-6deg) scale(1.06);
+    box-shadow: 0 8px 24px -10px var(--c-accent-glow);
+  }
+}
+
+.site-logo:active .site-logo__mark {
+  transform: scale(0.94);
+  transition-duration: var(--dur-1);
+}

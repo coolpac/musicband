@@ -1,0 +1,192 @@
+.site-btn {
+  --btn-bg: var(--c-accent);
+  --btn-fg: var(--c-on-accent);
+  --btn-border: transparent;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625em;
+  isolation: isolate;
+  overflow: hidden;
+  border: 2px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-family: var(--font-text);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-3) var(--ease-out);
+}
+
+/* Sizes — the 1440px value matches Figma; phones never go below a 44px touch target. */
+.site-btn--sm {
+  min-height: 44px;
+  padding: 0 24px;
+  font-size: var(--fs-small);
+}
+
+.site-btn--md {
+  min-height: 52px;
+  padding: 0 clamp(22px, 1rem + 1vw, 32px);
+  font-size: clamp(0.9375rem, 0.875rem + 0.278vw, 1.125rem);
+}
+
+.site-btn--lg {
+  min-height: clamp(52px, 3.0625rem + 0.833vw, 61px); /* 52 → 61 (Figma hero buttons) */
+  padding: 0 clamp(24px, 1rem + 1.4vw, 36px);
+  font-size: var(--fs-lead);
+}
+
+.site-btn--pill {
+  border-radius: var(--r-pill);
+}
+
+.site-btn--rounded {
+  border-radius: clamp(14px, 0.75rem + 0.4vw, 20px);
+}
+
+.site-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+/* Variants */
+.site-btn--outline {
+  --btn-bg: transparent;
+  --btn-fg: var(--c-text);
+  --btn-border: var(--c-text);
+}
+
+.site-btn--light {
+  --btn-bg: var(--c-light);
+  --btn-fg: var(--c-on-light);
+}
+
+.site-btn--ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--c-accent);
+  --btn-border: var(--c-accent);
+}
+
+/* Light sweep: a single composited pseudo-element, only ever transformed. */
+.site-btn::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.28) 50%, transparent 65%);
+  transform: translate3d(-110%, 0, 0);
+  transition: transform 0s;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-btn:hover {
+    transform: translate3d(0, -2px, 0);
+  }
+
+  .site-btn:hover::after {
+    transform: translate3d(110%, 0, 0);
+    transition: transform 0.7s var(--ease-out);
+  }
+
+  .site-btn--primary:hover {
+    --btn-bg: var(--c-accent-hover);
+    box-shadow: 0 12px 32px -10px var(--c-accent-glow);
+  }
+
+  .site-btn--outline:hover {
+    --btn-bg: var(--c-light);
+    --btn-fg: var(--c-on-light);
+  }
+
+  .site-btn--light:hover {
+    box-shadow: 0 12px 32px -12px rgb(0 0 0 / 0.55);
+  }
+
+  .site-btn--ghost:hover {
+    --btn-bg: var(--c-accent);
+    --btn-fg: var(--c-on-accent);
+  }
+}
+
+.site-btn:active {
+  transform: scale(0.97);
+  transition-duration: var(--dur-1);
+}
+
+.site-btn--primary:active {
+  --btn-bg: var(--c-accent-active);
+}
+
+.site-btn:disabled,
+.site-btn[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+  box-shadow: none;
+}
+
+.site-btn:disabled::after {
+  display: none;
+}
+
+.site-btn__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.site-btn__icon > * {
+  width: 1.25em;
+  height: 1.25em;
+}
+
+/* Loading: the label keeps its box (no width jump), a spinner takes its place. */
+.site-btn.is-loading {
+  opacity: 1;
+  cursor: progress;
+}
+
+.site-btn.is-loading .site-btn__label,
+.site-btn.is-loading .site-btn__icon {
+  visibility: hidden;
+}
+
+.site-btn__spinner {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 1.25em;
+  height: 1.25em;
+  border: 2px solid currentcolor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: site-btn-spin 0.7s linear infinite;
+}
+
+@keyframes site-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-btn::after {
+    display: none;
+  }
+
+  .site-btn__spinner {
+    animation-duration: 1.6s;
+  }
+}
