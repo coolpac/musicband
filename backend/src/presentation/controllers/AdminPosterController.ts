@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PosterService } from '../../domain/services/PosterService';
 import { CreatePosterDto, UpdatePosterDto } from '../../application/dto/poster.dto';
+import { toPosterDto } from '../../application/mappers/poster.mapper';
 import { logger } from '../../shared/utils/logger';
 
 export class AdminPosterController {
@@ -11,7 +12,7 @@ export class AdminPosterController {
       const posters = await this.posterService.getAllPosters();
       res.json({
         success: true,
-        data: posters,
+        data: posters.map(toPosterDto),
       });
     } catch (error) {
       next(error);
@@ -30,7 +31,7 @@ export class AdminPosterController {
 
       res.status(201).json({
         success: true,
-        data: poster,
+        data: toPosterDto(poster),
       });
     } catch (error) {
       next(error);
@@ -45,7 +46,7 @@ export class AdminPosterController {
 
       res.json({
         success: true,
-        data: poster,
+        data: toPosterDto(poster),
       });
     } catch (error) {
       next(error);

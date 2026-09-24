@@ -15,6 +15,12 @@ export interface RateLimitOptions {
   max: number; // Максимальное количество запросов
   keyGenerator?: (req: Request) => string; // Функция для генерации ключа
   message?: string; // Сообщение об ошибке
+  /**
+   * При ошибке Redis пропускать запрос вместо 503.
+   * Только для кешируемых публичных GET-ов, где «сайт лежит» хуже,
+   * чем «минуту нет лимита». Любые записи обязаны оставаться fail-secure.
+   */
+  failOpen?: boolean;
 }
 
 /**
@@ -30,6 +36,7 @@ export function createRedisRateLimiter(options: RateLimitOptions) {
       return req.ip || req.socket.remoteAddress || 'unknown';
     },
     message = 'Too many requests, please try again later.',
+    failOpen = false,
   } = options;
 
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -80,6 +87,16 @@ export function createRedisRateLimiter(options: RateLimitOptions) {
 
       next();
     } catch (error) {
+      if (failOpen) {
+        // Публичный кешируемый GET: без Redis лучше отдать страницу, чем 503
+        logger.warn('Rate limiter error - allowing request (fail-open limiter)', {
+          error,
+          path: req.path,
+        });
+        next();
+        return;
+      }
+
       // В случае ошибки Redis, БЛОКИРУЕМ запрос (fail-secure)
       // Это защищает от DDoS атак, если Redis недоступен
       logger.error('Rate limiter error - denying request for security', {
@@ -262,6 +279,35 @@ export const publicVotePostRateLimiter = createRedisRateLimiter({
   max: RATE_LIMIT.PUBLIC_VOTE,
   keyGenerator: (req) => `public_vote:${req.ip || 'unknown'}`,
   message: 'Слишком много голосов. Подождите минуту.',
+});
+
+/**
+ * GET /api/public/site — свой бакет: SSR-сервер и посетители лендинга не должны
+ * выедать общий `api:<ip>`, который делят Mini App и все публичные GET-ы.
+ * Ответ кешируется на минуту, поэтому при падении Redis отдаём страницу (fail-open).
+ */
+export const sitePublicRateLimiter = createRedisRateLimiter({
+  windowMs: 60 * 1000,
+  max: RATE_LIMIT.SITE_PUBLIC,
+  keyGenerator: (req) => `site:${req.ip || 'unknown'}`,
+  message: 'Слишком много запросов. Подождите минуту.',
+  failOpen: true,
+});
+
+/** POST /api/public/site/bookings — 5 заявок в час с IP (fail-secure: это запись) */
+export const siteBookingHourRateLimiter = createRedisRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: RATE_LIMIT.SITE_BOOKING_HOUR,
+  keyGenerator: (req) => `site_booking_hour:${req.ip || 'unknown'}`,
+  message: 'Слишком много заявок. Попробуйте позже или позвоните нам.',
+});
+
+/** POST /api/public/site/bookings — 20 заявок в сутки с IP */
+export const siteBookingDayRateLimiter = createRedisRateLimiter({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: RATE_LIMIT.SITE_BOOKING_DAY,
+  keyGenerator: (req) => `site_booking_day:${req.ip || 'unknown'}`,
+  message: 'Слишком много заявок. Попробуйте позже или позвоните нам.',
 });
 
 // Referral endpoints - средний лимит

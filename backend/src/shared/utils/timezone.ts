@@ -29,6 +29,19 @@ export function getTodayDateString(timezone: string = APP_TIMEZONE): string {
 }
 
 /**
+ * `YYYY-MM-DD` → Date в UTC-полночь (так Prisma хранит и отдаёт колонки `@db.Date`).
+ * Возвращает null, если строка не является настоящей календарной датой
+ * («2026-02-31» Date молча нормализует в 3 марта — такое отбрасываем).
+ */
+export function parseDateOnly(value: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  if (formatInTimezone(date, 'UTC') !== value) return null;
+  return date;
+}
+
+/**
  * Проверяет, что дата (строка YYYY-MM-DD или Date) уже в прошлом в поясе приложения.
  */
 export function isDateInPast(

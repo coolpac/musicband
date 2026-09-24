@@ -21,6 +21,7 @@ import adminReviewsRoutes from './presentation/routes/admin/reviews.routes';
 import adminAgentsRoutes from './presentation/routes/admin/agents.routes';
 import adminUsersRoutes from './presentation/routes/admin/users.routes';
 import adminBookingsRoutes from './presentation/routes/admin/bookings.routes';
+import adminSiteRoutes from './presentation/routes/admin/site.routes';
 import formatsRoutes from './presentation/routes/formats.routes';
 import partnersRoutes from './presentation/routes/partners.routes';
 import postersRoutes from './presentation/routes/posters.routes';
@@ -28,6 +29,7 @@ import reviewsRoutes from './presentation/routes/reviews.routes';
 import agentRoutes from './presentation/routes/agent.routes';
 import uploadRoutes from './presentation/routes/upload.routes';
 import publicVoteRoutes from './presentation/routes/public/vote.routes';
+import publicSiteRoutes from './presentation/routes/public/site.routes';
 import healthRoutes from './presentation/routes/health.routes';
 import { SocketServer } from './presentation/socket/socketServer';
 import { VoteService } from './domain/services/VoteService';
@@ -152,6 +154,7 @@ app.use('/api/reviews', reviewsRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/public/vote', publicVoteRoutes);
+app.use('/api/public/site', publicSiteRoutes);
 
 // Admin routes
 app.use('/api/admin/songs', adminSongsRoutes);
@@ -163,6 +166,7 @@ app.use('/api/admin/posters', adminPostersRoutes);
 app.use('/api/admin/reviews', adminReviewsRoutes);
 app.use('/api/admin/agents', adminAgentsRoutes);
 app.use('/api/admin/users', adminUsersRoutes);
+app.use('/api/admin/site', adminSiteRoutes);
 
 // Error handler (должен быть последним)
 app.use(errorHandler);

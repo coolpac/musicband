@@ -124,4 +124,6 @@ export const CACHE_KEYS = {
   /** Кеш календаря админки (getCalendar) по месяцу */
   ADMIN_CALENDAR: (month: string) => `bookings:admin-calendar:${month}`,
   AGENT_STATS: (agentId: string) => `agent:stats:${agentId}`,
+  /** Единый кеш ответа GET /api/public/site (контент + афиша + форматы + партнёры) */
+  SITE_PUBLIC: 'site:public',
 } as const;

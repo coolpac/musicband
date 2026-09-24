@@ -21,7 +21,7 @@ export function validate(schema: ZodSchema) {
           }))
         );
         if (req.path?.includes('auth/telegram')) {
-          const initData = req.body?.initData;
+          const initData = (req.body as { initData?: unknown } | undefined)?.initData;
           logger.warn('auth/telegram validation failed', {
             path: req.path,
             hasInitData: initData != null,

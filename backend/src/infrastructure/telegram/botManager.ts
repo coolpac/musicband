@@ -99,10 +99,16 @@ export class BotManager {
   async notifyNewBooking(bookingData: {
     id: string;
     bookingDate: string;
+    /** Пожелание по времени (HH:mm) — приходит только с сайта */
+    bookingTime?: string;
     formatName?: string;
     fullName: string;
     contactValue: string;
+    email?: string;
+    comment?: string;
     city?: string;
+    /** 'website' — заявка с публичного сайта */
+    origin?: 'miniapp' | 'website';
     telegramId?: string;
     username?: string;
     firstName?: string;
@@ -226,9 +232,7 @@ export class BotManager {
       const users = await prisma.user.findMany({
         select: { telegramId: true },
       });
-      return users
-        .map((user) => Number(user.telegramId))
-        .filter((id) => !Number.isNaN(id));
+      return users.map((user) => Number(user.telegramId)).filter((id) => !Number.isNaN(id));
     }
 
     // Фильтрация по onboarding-роли через JOIN
@@ -238,9 +242,7 @@ export class BotManager {
       INNER JOIN onboarding_answers oa ON oa.telegram_id = u.telegram_id
       WHERE oa.role = ${segment}
     `;
-    return rows
-      .map((row) => Number(row.telegram_id))
-      .filter((id) => !Number.isNaN(id));
+    return rows.map((row) => Number(row.telegram_id)).filter((id) => !Number.isNaN(id));
   }
 
   /**

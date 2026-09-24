@@ -16,6 +16,34 @@ function looksLikeRussianPhone(digits: string): boolean {
 }
 
 /**
+ * Строгая нормализация телефона для публичной формы сайта: только цифры имеют значение,
+ * результат всегда `+7XXXXXXXXXX` (10 цифр национального номера). Если номер не похож
+ * на российский — возвращает null, и форма показывает ошибку поля.
+ *
+ * В отличие от normalizeContactValue() здесь нет «пропустим как есть»: заявка с сайта
+ * приходит от анонима, и телефон — единственный способ с ним связаться.
+ */
+export function normalizeRussianPhone(value: string): string | null {
+  const digits = value.replace(/\D/g, '');
+
+  let national: string;
+  if (digits.length === 11 && (digits[0] === '7' || digits[0] === '8')) {
+    national = digits.slice(1);
+  } else if (digits.length === 10) {
+    national = digits;
+  } else {
+    return null;
+  }
+
+  // Российские коды (мобильные и городские) начинаются с 3, 4, 8 или 9
+  if (!/^[3489]\d{9}$/.test(national)) {
+    return null;
+  }
+
+  return `+${RUSSIAN_COUNTRY_CODE}${national}`;
+}
+
+/**
  * Нормализует контактное значение: если это российский номер — к формату +79XXXXXXXXX,
  * иначе возвращает исходную строку (trim).
  */

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { PosterService } from '../../domain/services/PosterService';
+import { toPosterDto } from '../../application/mappers/poster.mapper';
 
 export class PosterController {
   constructor(private posterService: PosterService) {}
@@ -9,7 +10,7 @@ export class PosterController {
       const posters = await this.posterService.getAllPosters();
       res.json({
         success: true,
-        data: posters,
+        data: posters.map(toPosterDto),
       });
     } catch (error) {
       next(error);

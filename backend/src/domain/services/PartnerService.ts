@@ -1,6 +1,7 @@
 import { IPartnerRepository } from '../../infrastructure/database/repositories/PartnerRepository';
 import { NotFoundError, ValidationError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
+import { invalidatePublicSiteCache } from '../../infrastructure/site/siteCache';
 
 export class PartnerService {
   constructor(private partnerRepository: IPartnerRepository) {}
@@ -32,6 +33,7 @@ export class PartnerService {
     const partner = await this.partnerRepository.create(data);
 
     logger.info('Partner created', { partnerId: partner.id, name: partner.name });
+    await invalidatePublicSiteCache();
 
     return partner;
   }
@@ -41,13 +43,17 @@ export class PartnerService {
     data: { name?: string; logoUrl?: string; link?: string; order?: number }
   ) {
     await this.getPartnerById(id);
-    return this.partnerRepository.update(id, data);
+    const partner = await this.partnerRepository.update(id, data);
+    await invalidatePublicSiteCache();
+
+    return partner;
   }
 
   async reorderPartners(ids: string[]): Promise<void> {
     for (let i = 0; i < ids.length; i++) {
       await this.partnerRepository.updateOrder(ids[i], i);
     }
+    await invalidatePublicSiteCache();
   }
 
   async deletePartner(id: string) {
@@ -55,5 +61,6 @@ export class PartnerService {
     await this.partnerRepository.delete(id);
 
     logger.info('Partner deleted', { partnerId: id });
+    await invalidatePublicSiteCache();
   }
 }

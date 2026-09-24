@@ -1,16 +1,10 @@
 import { PrismaClient, BlockedDate } from '@prisma/client';
 import { prisma } from '../../../config/database';
-import {
-  getTodayDateString,
-  formatDateInTimezone,
-  APP_TIMEZONE,
-} from '../../../shared/utils/timezone';
 
 export interface IBlockedDateRepository {
   findAll(): Promise<BlockedDate[]>;
   findById(id: string): Promise<BlockedDate | null>;
   findByDate(date: Date): Promise<BlockedDate | null>;
-  isDateBlocked(date: Date): Promise<boolean>;
   create(data: CreateBlockedDateData): Promise<BlockedDate>;
   delete(id: string): Promise<void>;
   getBlockedDatesInRange(startDate: Date, endDate: Date): Promise<Date[]>;
@@ -43,17 +37,6 @@ export class PrismaBlockedDateRepository implements IBlockedDateRepository {
         blockedDate: date,
       },
     });
-  }
-
-  async isDateBlocked(date: Date): Promise<boolean> {
-    const todayStr = getTodayDateString(APP_TIMEZONE);
-    const checkDateStr = formatDateInTimezone(date, APP_TIMEZONE);
-    if (checkDateStr < todayStr) {
-      return true; // Прошедшие даты (в поясе приложения) всегда заблокированы
-    }
-
-    const blocked = await this.findByDate(date);
-    return blocked !== null;
   }
 
   async create(data: CreateBlockedDateData): Promise<BlockedDate> {

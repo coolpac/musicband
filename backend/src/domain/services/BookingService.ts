@@ -2,6 +2,8 @@ import {
   IBookingRepository,
   CreateBookingData,
   BookingWithUserAndFormat,
+  BookingOrigin,
+  FindBookingsOptions,
 } from '../../infrastructure/database/repositories/BookingRepository';
 import { IBlockedDateRepository } from '../../infrastructure/database/repositories/BlockedDateRepository';
 import { IUserRepository } from '../../infrastructure/database/repositories/UserRepository';
@@ -9,7 +11,19 @@ import { NotFoundError, ValidationError, ConflictError } from '../../shared/erro
 import { logger } from '../../shared/utils/logger';
 import { CacheService, CACHE_KEYS } from '../../shared/utils/cache';
 import { CACHE_TTL } from '../../shared/constants';
-import { getTodayDateString, formatDateInTimezone } from '../../shared/utils/timezone';
+import {
+  getTodayDateString,
+  formatDateInTimezone,
+  isDateInPast,
+} from '../../shared/utils/timezone';
+
+/** Почему заявку не удалось создать. Даёт вызывающему выбрать свой код ошибки. */
+export type CreateBookingOutcome =
+  | { status: 'created'; booking: BookingWithUserAndFormat }
+  /** Дата в прошлом или заблокирована (вручную либо автоблокировкой) */
+  | { status: 'blocked' }
+  /** На дату уже MAX_BOOKINGS_PER_DAY активных заявок */
+  | { status: 'full' };
 
 export class BookingService {
   constructor(
@@ -23,57 +37,87 @@ export class BookingService {
    */
   static readonly MAX_BOOKINGS_PER_DAY = 2;
 
-  async createBooking(data: CreateBookingData): Promise<BookingWithUserAndFormat> {
-    // Проверяем пользователя
-    const user = await this.userRepository.findById(data.userId);
-    if (!user) {
-      throw new NotFoundError('User');
-    }
+  static readonly AUTO_BLOCK_REASON = 'Автоблокировка: достигнут лимит заявок (2/2)';
 
-    // Проверяем, не заблокирована ли дата
-    const isBlocked = await this.blockedDateRepository.isDateBlocked(data.bookingDate);
-    if (isBlocked) {
-      throw new ValidationError('This date is blocked for booking');
-    }
-
-    // Проверяем лимит заявок на день (максимум 2, не считая отменённых)
-    const existingBookings = await this.bookingRepository.findByDate(data.bookingDate);
-    const activeBookings = existingBookings.filter((b) => b.status !== 'cancelled');
-    if (activeBookings.length >= BookingService.MAX_BOOKINGS_PER_DAY) {
-      throw new ConflictError('This date is fully booked (maximum 2 bookings per day)');
-    }
-
-    const booking = await this.bookingRepository.create(data);
-
-    // Если после создания достигнут лимит — автоматически блокируем дату
-    const totalActive = activeBookings.length + 1;
-    if (totalActive >= BookingService.MAX_BOOKINGS_PER_DAY) {
-      try {
-        await this.blockedDateRepository.create({
-          blockedDate: data.bookingDate,
-          reason: 'Автоблокировка: достигнут лимит заявок (2/2)',
-        });
-        logger.info('Date auto-blocked after reaching booking limit', { date: data.bookingDate });
-      } catch (err) {
-        // Игнорируем если дата уже заблокирована
-        logger.warn('Failed to auto-block date (may already be blocked)', { date: data.bookingDate, err });
+  /**
+   * Создание заявки без исключений: «дата занята» — это нормальный исход, а не ошибка.
+   * Используется и Mini App'ом (через createBooking), и публичной формой сайта.
+   *
+   * Проверка лимита и вставка выполняются одной транзакцией в репозитории
+   * (advisory-лок по дате), поэтому параллельные заявки не могут превысить лимит.
+   */
+  async tryCreateBooking(data: CreateBookingData): Promise<CreateBookingOutcome> {
+    // Telegram-заявка: пользователь обязан существовать. Заявка с сайта — userId = null.
+    if (data.userId) {
+      const user = await this.userRepository.findById(data.userId);
+      if (!user) {
+        throw new NotFoundError('User');
       }
     }
 
-    // Инвалидация кешей: доступные даты и календарь админки
-    const bookingMonth = `${data.bookingDate.getFullYear()}-${String(data.bookingDate.getMonth() + 1).padStart(2, '0')}`;
-    await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(bookingMonth));
-    await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(bookingMonth));
+    // Прошедшие даты «заблокированы» (в поясе приложения) — проверка чистая, до транзакции
+    if (isDateInPast(data.bookingDate)) {
+      return { status: 'blocked' };
+    }
+
+    const result = await this.bookingRepository.createGuarded(
+      data,
+      BookingService.MAX_BOOKINGS_PER_DAY,
+      BookingService.AUTO_BLOCK_REASON
+    );
+
+    if (result.status !== 'created') {
+      return result;
+    }
+
+    if (result.autoBlocked) {
+      logger.info('Date auto-blocked after reaching booking limit', { date: data.bookingDate });
+    }
+
+    await this.invalidateBookingMonthCaches(data.bookingDate, { includeAvailableDates: true });
 
     logger.info('Booking created', {
-      bookingId: booking.id,
-      userId: data.userId,
+      bookingId: result.booking.id,
+      userId: data.userId ?? null,
+      origin: data.origin ?? 'miniapp',
       date: data.bookingDate,
     });
 
-    const withRelations = await this.bookingRepository.findById(booking.id);
+    const withRelations = await this.bookingRepository.findById(result.booking.id);
     if (!withRelations) throw new NotFoundError('Booking');
-    return withRelations;
+    return { status: 'created', booking: withRelations };
+  }
+
+  /**
+   * Создание бронирования для Mini App: исходы «дата занята» превращаются в ошибки
+   * с теми же кодами, что и раньше (400 для блокировки, 409 для лимита).
+   */
+  async createBooking(data: CreateBookingData): Promise<BookingWithUserAndFormat> {
+    const outcome = await this.tryCreateBooking(data);
+
+    if (outcome.status === 'blocked') {
+      throw new ValidationError('This date is blocked for booking');
+    }
+    if (outcome.status === 'full') {
+      throw new ConflictError('This date is fully booked (maximum 2 bookings per day)');
+    }
+
+    return outcome.booking;
+  }
+
+  /**
+   * Инвалидация кешей месяца заявки. Месяц берётся в поясе приложения —
+   * ровно тот ключ, под которым его читают getAvailableDates/getCalendar.
+   */
+  private async invalidateBookingMonthCaches(
+    date: Date,
+    options: { includeAvailableDates: boolean }
+  ): Promise<void> {
+    const month = formatDateInTimezone(date).slice(0, 7);
+    if (options.includeAvailableDates) {
+      await CacheService.invalidate(CACHE_KEYS.AVAILABLE_DATES(month));
+    }
+    await CacheService.invalidate(CACHE_KEYS.ADMIN_CALENDAR(month));
   }
 
   /**
@@ -248,15 +292,11 @@ export class BookingService {
   async getAllBookings(options?: {
     date?: string;
     status?: 'pending' | 'confirmed' | 'cancelled';
+    origin?: BookingOrigin;
     page?: number;
     limit?: number;
   }) {
-    const findOptions: {
-      date?: Date;
-      status?: 'pending' | 'confirmed' | 'cancelled';
-      page?: number;
-      limit?: number;
-    } = {
+    const findOptions: FindBookingsOptions = {
       page: options?.page || 1,
       limit: options?.limit || 50,
     };
@@ -267,6 +307,10 @@ export class BookingService {
 
     if (options?.status) {
       findOptions.status = options.status;
+    }
+
+    if (options?.origin) {
+      findOptions.origin = options.origin;
     }
 
     return this.bookingRepository.findAll(findOptions);

@@ -8,6 +8,16 @@ import { IMAGE_LIMITS } from '../../shared/constants';
 const RESPONSIVE_WIDTHS = IMAGE_LIMITS.RESPONSIVE_WIDTHS;
 const DEFAULT_RESPONSIVE_WIDTH = 960; // для webpUrl / avifUrl
 
+/** Существует ли файл (без исключения). */
+async function exists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface ImageProcessingOptions {
   width?: number;
   height?: number;
@@ -309,6 +319,78 @@ export class ImageStorage {
         // ignore missing files
       }
     }
+  }
+
+  /**
+   * Восстанавливает responsive-варианты по URL любого варианта, сохранённого этим пайплайном
+   * (`<base>/original/<id>.<ext>`, `<base>/webp/<id>-<w>.webp`, `<base>/avif/<id>-<w>.avif`,
+   * `<base>/thumb/<id>-thumb.webp`).
+   *
+   * Наличие каждого файла проверяется на диске: варианты создаются best-effort
+   * (падение одной ширины логируется, но не фатально), а также существуют картинки,
+   * загруженные до появления AVIF/WebP-пайплайна. Отдавать `<source srcset>` на 404
+   * нельзя — браузер не откатится на `<img src>`, а покажет «битую» картинку.
+   *
+   * Для чужих/внешних URL возвращает пустой объект — вызывающий отдаёт просто `{ src }`.
+   */
+  async resolveResponsiveVariants(url: string): Promise<{
+    avifSrcSet?: string;
+    webpSrcSet?: string;
+  }> {
+    const baseId = this.getBaseIdFromUrl(url);
+    if (!baseId) return {};
+
+    const variants = await Promise.all(
+      RESPONSIVE_WIDTHS.map(async (width) => {
+        const webpPath = path.join(this.uploadDir, 'webp', `${baseId}-${width}.webp`);
+        const avifPath = path.join(this.uploadDir, 'avif', `${baseId}-${width}.avif`);
+        const [webp, avif] = await Promise.all([exists(webpPath), exists(avifPath)]);
+        return { width, webp, avif };
+      })
+    );
+
+    const webpSrcSet = variants
+      .filter((v) => v.webp)
+      .map(
+        (v) =>
+          `${this.getUrl(path.join(this.uploadDir, 'webp', `${baseId}-${v.width}.webp`))} ${v.width}w`
+      )
+      .join(', ');
+    const avifSrcSet = variants
+      .filter((v) => v.avif)
+      .map(
+        (v) =>
+          `${this.getUrl(path.join(this.uploadDir, 'avif', `${baseId}-${v.width}.avif`))} ${v.width}w`
+      )
+      .join(', ');
+
+    return {
+      ...(webpSrcSet ? { webpSrcSet } : {}),
+      ...(avifSrcSet ? { avifSrcSet } : {}),
+    };
+  }
+
+  /**
+   * `<baseUrl>/<dir>/<file>` → baseId, если URL действительно указывает в наше хранилище.
+   * Возвращает null для внешних URL, data:-блобов и любых путей нестандартной формы.
+   */
+  private getBaseIdFromUrl(url: string): string | null {
+    const prefix = this.baseUrl.endsWith('/') ? this.baseUrl : `${this.baseUrl}/`;
+    if (!url.startsWith(prefix)) return null;
+
+    const relative = url.slice(prefix.length).split(/[?#]/)[0];
+    const segments = relative.split('/');
+    if (segments.length !== 2) return null;
+
+    const [dir, file] = segments;
+    if (!['original', 'webp', 'avif', 'thumb'].includes(dir)) return null;
+
+    const baseId = this.getBaseIdFromPath(file);
+    // Имена генерирует saveOriginal(): `<timestamp>-<rand>`; всё остальное игнорируем,
+    // заодно это защита от «..» и прочих попыток выйти из каталога.
+    if (!/^[A-Za-z0-9_-]+$/.test(baseId)) return null;
+
+    return baseId;
   }
 
   private getUrl(filePath: string): string {

@@ -36,9 +36,12 @@ export class BookingController {
         userId: req.user.userId,
       });
 
-      // Отправляем уведомления через Telegram Bots
+      // Отправляем уведомления через Telegram Bots.
+      // booking.user может быть null (заявка с сайта) — но сюда такие не попадают:
+      // этот маршрут всегда за authenticate(). Проверка нужна, чтобы тип был честным.
       const botManager = getBotManager();
-      if (botManager) {
+      const bookingUser = booking.user;
+      if (botManager && bookingUser) {
         const bookingDateStr = formatDateInTimezone(booking.bookingDate);
         // Уведомление админам
         await botManager.notifyNewBooking({
@@ -48,14 +51,14 @@ export class BookingController {
           fullName: booking.fullName,
           contactValue: booking.contactValue,
           city: booking.city || undefined,
-          telegramId: booking.user.telegramId.toString(),
-          username: booking.user.username ?? undefined,
-          firstName: booking.user.firstName ?? undefined,
-          lastName: booking.user.lastName ?? undefined,
+          telegramId: bookingUser.telegramId.toString(),
+          username: bookingUser.username ?? undefined,
+          firstName: bookingUser.firstName ?? undefined,
+          lastName: bookingUser.lastName ?? undefined,
         });
 
         // Уведомление пользователю о получении заявки
-        await botManager.sendBookingReceived(Number(booking.user.telegramId), {
+        await botManager.sendBookingReceived(Number(bookingUser.telegramId), {
           bookingDate: bookingDateStr,
           formatName: booking.format?.name,
           fullName: booking.fullName,

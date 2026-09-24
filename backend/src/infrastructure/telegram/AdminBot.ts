@@ -252,7 +252,12 @@ export class AdminBot {
                   text: textContent,
                   includeDefaultButton: existing.includeDefaultButton ?? false,
                 }
-              : { text: textContent, buttons: [], includeDefaultButton: false, segment: 'all' as const };
+              : {
+                  text: textContent,
+                  buttons: [],
+                  includeDefaultButton: false,
+                  segment: 'all' as const,
+                };
             this.pendingBroadcasts.set(telegramId, nextDraft);
 
             await this.sendBroadcastPreview(chatId, telegramId);
@@ -433,9 +438,7 @@ export class AdminBot {
                 'Отправьте текст сообщения одним сообщением.',
               {
                 reply_markup: {
-                  inline_keyboard: [
-                    [{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }],
-                  ],
+                  inline_keyboard: [[{ text: '❌ Отмена', callback_data: 'broadcast_cancel' }]],
                 },
               }
             );
@@ -940,9 +943,7 @@ export class AdminBot {
     });
   }
 
-  private async getAudienceCount(
-    segment: 'all' | 'just_person' | 'organizer'
-  ): Promise<number> {
+  private async getAudienceCount(segment: 'all' | 'just_person' | 'organizer'): Promise<number> {
     try {
       if (segment === 'all') {
         return await prisma.user.count();
@@ -1027,24 +1028,34 @@ export class AdminBot {
   async notifyNewBooking(bookingData: {
     id: string;
     bookingDate: string;
+    /** Пожелание по времени (HH:mm) — приходит только с сайта */
+    bookingTime?: string;
     formatName?: string;
     fullName: string;
     contactValue: string;
+    email?: string;
+    comment?: string;
     city?: string;
+    /** 'website' — заявка с публичного сайта (Telegram-аккаунта у посетителя нет) */
+    origin?: 'miniapp' | 'website';
     telegramId?: string;
     username?: string;
     firstName?: string;
     lastName?: string;
   }): Promise<void> {
     try {
+      const isWebsite = bookingData.origin === 'website';
       const message =
-        '📅 Новое бронирование:\n\n' +
+        (isWebsite ? '🌐 Заявка с САЙТА:\n\n' : '📅 Новое бронирование:\n\n') +
         `🆔 ID заявки: ${bookingData.id}\n` +
         `📅 Дата: ${bookingData.bookingDate}\n` +
+        (bookingData.bookingTime ? `🕒 Время: ${bookingData.bookingTime}\n` : '') +
         (bookingData.formatName ? `🎤 Формат: ${bookingData.formatName}\n` : '') +
         `👤 Имя из формы: ${bookingData.fullName}\n` +
         `📞 Контакт: ${bookingData.contactValue}\n` +
+        (bookingData.email ? `✉️ E-mail: ${bookingData.email}\n` : '') +
         (bookingData.city ? `📍 Город: ${bookingData.city}\n` : '') +
+        (bookingData.comment ? `💬 Комментарий: ${bookingData.comment}\n` : '') +
         (bookingData.telegramId ? `🆔 Telegram ID: ${bookingData.telegramId}\n` : '') +
         (bookingData.username ? `👤 Username: @${bookingData.username}\n` : '') +
         (bookingData.firstName || bookingData.lastName

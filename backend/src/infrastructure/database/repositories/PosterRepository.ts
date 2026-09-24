@@ -15,6 +15,9 @@ export interface CreatePosterData {
   imageUrl?: string;
   link?: string;
   order?: number;
+  /** Дата события (без времени). null — баннер без даты, он не «протухает». */
+  eventDate?: Date | null;
+  venue?: string | null;
 }
 
 export interface UpdatePosterData {
@@ -23,6 +26,8 @@ export interface UpdatePosterData {
   imageUrl?: string;
   link?: string;
   order?: number;
+  eventDate?: Date | null;
+  venue?: string | null;
 }
 
 export class PrismaPosterRepository implements IPosterRepository {
@@ -48,6 +53,8 @@ export class PrismaPosterRepository implements IPosterRepository {
         imageUrl: data.imageUrl,
         link: data.link,
         order: data.order,
+        eventDate: data.eventDate ?? null,
+        venue: data.venue ?? null,
       },
     });
   }
@@ -61,6 +68,9 @@ export class PrismaPosterRepository implements IPosterRepository {
         imageUrl: data.imageUrl,
         link: data.link,
         order: data.order,
+        // undefined — «поле не прислали», null — «очистить»
+        ...(data.eventDate !== undefined && { eventDate: data.eventDate }),
+        ...(data.venue !== undefined && { venue: data.venue }),
       },
     });
   }

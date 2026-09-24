@@ -14,6 +14,11 @@ export const RATE_LIMIT = {
   ADMIN: 100, // запросов в минуту (для админов)
   /** POST /api/public/vote — концерт: много людей с одного WiFi (общий IP) */
   PUBLIC_VOTE: 300, // запросов в минуту с IP (чтобы 100+ зрителей могли проголосовать)
+  /** GET /api/public/site — свой бакет: SSR-сервер и посетители не должны выедать общий api:<ip> */
+  SITE_PUBLIC: 120, // запросов в минуту с IP
+  /** POST /api/public/site/bookings — анти-спам публичной формы */
+  SITE_BOOKING_HOUR: 5, // заявок в час с IP
+  SITE_BOOKING_DAY: 20, // заявок в сутки с IP
 } as const;
 
 // Лимиты данных
@@ -56,6 +61,7 @@ export const CACHE_TTL = {
   AVAILABLE_DATES: 5 * 60, // 5 минут — результат getAvailableDates
   ADMIN_CALENDAR: 2 * 60, // 2 минуты — календарь заявок для админки
   AGENT_STATS: 5 * 60, // 5 минут
+  SITE_PUBLIC: 60, // 1 минута — агрегированный ответ публичного сайта
 } as const;
 
 // Роли пользователей

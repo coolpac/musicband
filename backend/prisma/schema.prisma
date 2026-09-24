@@ -226,15 +226,20 @@ model Partner {
 }
 
 model Poster {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   title     String
   description String?
-  imageUrl  String?  @map("image_url")
+  imageUrl  String?   @map("image_url")
   link      String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  order     Int       @default(0)
+  /// Дата события для афиши на сайте (без времени). null — «бессрочный» баннер.
+  eventDate DateTime? @map("event_date") @db.Date
+  /// Площадка/время свободным текстом: «Начало в 20:30», «Парк «Зелёный»»
+  venue     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
+  @@index([eventDate])
   @@map("posters")
 }
 
@@ -250,16 +255,23 @@ model BlockedDate {
 
 model Booking {
   id          String        @id @default(uuid())
-  userId      String        @map("user_id")
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// null — заявка с публичного сайта: у посетителя нет Telegram-аккаунта
+  userId      String?       @map("user_id")
+  user        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
   formatId    String?       @map("format_id")
   format      Format?       @relation(fields: [formatId], references: [id], onDelete: SetNull)
   bookingDate DateTime      @map("booking_date") @db.Date
+  /// Пожелание по времени начала, HH:mm. Заполняется только с сайта.
+  bookingTime String?       @map("booking_time")
   fullName    String        @map("full_name")
   contactType String?       @map("contact_type")
   contactValue String       @map("contact_value")
+  email       String?
+  comment     String?
   city        String?
   source      String?
+  /// Откуда пришла заявка: "miniapp" (Telegram) | "website"
+  origin      String        @default("miniapp")
   income      Decimal?      @db.Decimal(10, 2)
   status      BookingStatus @default(pending)
   createdAt   DateTime      @default(now()) @map("created_at")
@@ -270,6 +282,7 @@ model Booking {
   @@index([userId])
   @@index([bookingDate, status])
   @@index([userId, bookingDate(sort: Desc)]) // Для findByUserId + сортировка (до 100x быстрее!)
+  @@index([origin, bookingDate(sort: Desc)]) // Фильтр «Заявки с сайта» в админке
   @@map("bookings")
 }
 
@@ -299,6 +312,17 @@ model UserActivityLog {
   @@index([userId, createdAt])
   @@index([actionType])
   @@map("user_activity_logs")
+}
+
+/// Контент публичного сайта: одна строка на секцию (hero, seo, footer…).
+/// Хранится только то, что админ реально изменил — дефолты живут во фронтенде
+/// (frontend/src/site/content/sections/*.ts) и мержатся поверх при рендере.
+model SiteContent {
+  section   String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_content")
 }
 
 /// Ответы при первом старте бота (до приветственного сообщения): «Кто вы?» → «Просто чел» / «Орг»

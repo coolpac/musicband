@@ -6,6 +6,7 @@ import {
   CompleteBookingDto,
   BlockDateDto,
 } from '../../application/dto/booking.dto';
+import { toAdminBookingDto } from '../../application/mappers/booking.mapper';
 import { logger } from '../../shared/utils/logger';
 import { getBotManager } from '../../infrastructure/telegram/botManager';
 import { ValidationError } from '../../shared/errors';
@@ -24,10 +25,15 @@ export class AdminBookingController {
       const status = req.query.status as 'pending' | 'confirmed' | 'cancelled' | undefined;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
+      // ?origin=website — вкладка «Заявки с сайта»; неизвестное значение просто игнорируем
+      const originParam = req.query.origin;
+      const origin =
+        originParam === 'website' || originParam === 'miniapp' ? originParam : undefined;
 
       const result = await this.bookingService.getAllBookings({
         date,
         status,
+        origin,
         page,
         limit,
       });
@@ -35,7 +41,7 @@ export class AdminBookingController {
       res.json({
         success: true,
         data: {
-          bookings: result.bookings,
+          bookings: result.bookings.map(toAdminBookingDto),
           total: result.total,
           page,
           limit,

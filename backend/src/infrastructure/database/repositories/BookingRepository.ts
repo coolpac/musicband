@@ -1,16 +1,62 @@
-import { PrismaClient, Booking, BookingStatus, User, Format } from '@prisma/client';
+import { Prisma, PrismaClient, Booking, BookingStatus, User, Format } from '@prisma/client';
 import { prisma } from '../../../config/database';
+import { formatDateInTimezone } from '../../../shared/utils/timezone';
 
-export type BookingWithUserAndFormat = Booking & { user: User; format: Format | null };
+/** CreateBookingData → Prisma-инпут. */
+function toCreateInput(data: CreateBookingData): Prisma.BookingUncheckedCreateInput {
+  return {
+    userId: data.userId ?? null,
+    formatId: data.formatId,
+    bookingDate: data.bookingDate,
+    bookingTime: data.bookingTime,
+    fullName: data.fullName,
+    contactType: data.contactType,
+    contactValue: data.contactValue,
+    email: data.email,
+    comment: data.comment,
+    city: data.city,
+    source: data.source,
+    origin: data.origin ?? 'miniapp',
+    status: 'pending',
+  };
+}
+
+/** `user` = null у заявок с публичного сайта: у посетителя нет Telegram-аккаунта. */
+export type BookingWithUserAndFormat = Booking & { user: User | null; format: Format | null };
+
+/** Откуда пришла заявка. Колонка `bookings.origin`. */
+export type BookingOrigin = 'miniapp' | 'website';
+
+/** Краткая карточка пользователя, которую подтягивает список заявок админки. */
+export type BookingListUser = Pick<
+  User,
+  'id' | 'telegramId' | 'username' | 'firstName' | 'lastName'
+>;
+
+/** Строка списка заявок в админке. `user` = null у заявок с сайта. */
+export type BookingListItem = Booking & {
+  user: BookingListUser | null;
+  format: Format | null;
+};
 
 export interface FindBookingsOptions {
   date?: Date;
   status?: BookingStatus;
+  origin?: BookingOrigin;
   startDate?: Date;
   endDate?: Date;
   page?: number;
   limit?: number;
 }
+
+/**
+ * Результат «безопасного» создания заявки: проверка лимита и вставка выполнены
+ * в одной транзакции под advisory-локом по дате, поэтому гонок read-then-write нет.
+ */
+export type GuardedBookingResult =
+  | { status: 'created'; booking: Booking; autoBlocked: boolean }
+  | { status: 'blocked' }
+  | { status: 'full' };
 
 export interface IBookingRepository {
   findById(id: string): Promise<BookingWithUserAndFormat | null>;
@@ -18,8 +64,12 @@ export interface IBookingRepository {
   findByDate(date: Date): Promise<Booking[]>;
   findByDateRange(startDate: Date, endDate: Date): Promise<Booking[]>;
   findByStatus(status: BookingStatus): Promise<Booking[]>;
-  findAll(options?: FindBookingsOptions): Promise<{ bookings: Booking[]; total: number }>;
-  create(data: CreateBookingData): Promise<Booking>;
+  findAll(options?: FindBookingsOptions): Promise<{ bookings: BookingListItem[]; total: number }>;
+  createGuarded(
+    data: CreateBookingData,
+    maxPerDay: number,
+    autoBlockReason: string
+  ): Promise<GuardedBookingResult>;
   update(id: string, data: UpdateBookingData): Promise<Booking>;
   updateStatus(id: string, status: BookingStatus): Promise<Booking>;
   updateIncome(id: string, income: number): Promise<Booking>;
@@ -28,14 +78,20 @@ export interface IBookingRepository {
 }
 
 export interface CreateBookingData {
-  userId: string;
+  /** null/undefined — заявка с сайта (анонимный посетитель) */
+  userId?: string | null;
   formatId?: string;
   bookingDate: Date;
+  /** Пожелание по времени, HH:mm. Только для заявок с сайта. */
+  bookingTime?: string;
   fullName: string;
   contactType?: string;
   contactValue: string;
+  email?: string;
+  comment?: string;
   city?: string;
   source?: string;
+  origin?: BookingOrigin;
 }
 
 export interface UpdateBookingData {
@@ -63,14 +119,13 @@ export class PrismaBookingRepository implements IBookingRepository {
   constructor(private client: PrismaClient = prisma) {}
 
   async findById(id: string): Promise<BookingWithUserAndFormat | null> {
-    const row = await this.client.booking.findUnique({
+    return this.client.booking.findUnique({
       where: { id },
       include: {
         user: true,
         format: true,
       },
     });
-    return row as BookingWithUserAndFormat | null;
   }
 
   async findByUserId(userId: string): Promise<Booking[]> {
@@ -124,7 +179,9 @@ export class PrismaBookingRepository implements IBookingRepository {
     });
   }
 
-  async findAll(options?: FindBookingsOptions): Promise<{ bookings: Booking[]; total: number }> {
+  async findAll(
+    options?: FindBookingsOptions
+  ): Promise<{ bookings: BookingListItem[]; total: number }> {
     const page = options?.page || 1;
     const limit = options?.limit || 50;
     const skip = (page - 1) * limit;
@@ -132,7 +189,12 @@ export class PrismaBookingRepository implements IBookingRepository {
     const where: {
       bookingDate?: Date | { gte?: Date; lte?: Date };
       status?: BookingStatus;
+      origin?: BookingOrigin;
     } = {};
+
+    if (options?.origin) {
+      where.origin = options.origin;
+    }
 
     if (options?.date) {
       where.bookingDate = options.date;
@@ -175,23 +237,54 @@ export class PrismaBookingRepository implements IBookingRepository {
     return { bookings, total };
   }
 
-  async create(data: CreateBookingData): Promise<Booking> {
-    return this.client.booking.create({
-      data: {
-        userId: data.userId,
-        formatId: data.formatId,
-        bookingDate: data.bookingDate,
-        fullName: data.fullName,
-        contactType: data.contactType,
-        contactValue: data.contactValue,
-        city: data.city,
-        source: data.source,
-        status: 'pending',
-      },
-      include: {
-        user: true,
-        format: true,
-      },
+  /**
+   * Создание заявки с проверкой «дата свободна и на ней меньше maxPerDay активных заявок».
+   *
+   * Проверка и вставка выполняются в одной транзакции под `pg_advisory_xact_lock`
+   * по ключу даты: без этого два параллельных запроса на одну дату оба видели бы
+   * «1 активная из 2» и создавали бы третью заявку. Лок снимается вместе с транзакцией.
+   */
+  async createGuarded(
+    data: CreateBookingData,
+    maxPerDay: number,
+    autoBlockReason: string
+  ): Promise<GuardedBookingResult> {
+    const lockKey = `booking:${formatDateInTimezone(data.bookingDate)}`;
+
+    return this.client.$transaction(async (tx) => {
+      // hashtext() → int4, неявно расширяется до bigint-сигнатуры pg_advisory_xact_lock
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+
+      const blocked = await tx.blockedDate.findUnique({
+        where: { blockedDate: data.bookingDate },
+        select: { id: true },
+      });
+      if (blocked) {
+        return { status: 'blocked' as const };
+      }
+
+      const activeCount = await tx.booking.count({
+        where: { bookingDate: data.bookingDate, status: { not: 'cancelled' } },
+      });
+      if (activeCount >= maxPerDay) {
+        return { status: 'full' as const };
+      }
+
+      const booking = await tx.booking.create({ data: toCreateInput(data) });
+
+      // Лимит исчерпан — сразу закрываем дату, чтобы календарь не показывал её свободной.
+      // upsert (а не create) — чтобы конфликт с ручной блокировкой админа не оборвал транзакцию.
+      let autoBlocked = false;
+      if (activeCount + 1 >= maxPerDay) {
+        await tx.blockedDate.upsert({
+          where: { blockedDate: data.bookingDate },
+          create: { blockedDate: data.bookingDate, reason: autoBlockReason },
+          update: {},
+        });
+        autoBlocked = true;
+      }
+
+      return { status: 'created' as const, booking, autoBlocked };
     });
   }
 

@@ -1,6 +1,7 @@
 import { IFormatRepository } from '../../infrastructure/database/repositories/FormatRepository';
 import { NotFoundError, ValidationError, ConflictError } from '../../shared/errors';
 import { logger } from '../../shared/utils/logger';
+import { invalidatePublicSiteCache } from '../../infrastructure/site/siteCache';
 
 export class FormatService {
   constructor(private formatRepository: IFormatRepository) {}
@@ -61,6 +62,7 @@ export class FormatService {
     });
 
     logger.info('Format created', { formatId: format.id, name: format.name });
+    await invalidatePublicSiteCache();
 
     return format;
   }
@@ -92,7 +94,10 @@ export class FormatService {
       updateData.status = 'available';
     }
 
-    return this.formatRepository.update(id, updateData);
+    const format = await this.formatRepository.update(id, updateData);
+    await invalidatePublicSiteCache();
+
+    return format;
   }
 
   async deleteFormat(id: string) {
@@ -100,5 +105,6 @@ export class FormatService {
     await this.formatRepository.delete(id);
 
     logger.info('Format deleted', { formatId: id });
+    await invalidatePublicSiteCache();
   }
 }
