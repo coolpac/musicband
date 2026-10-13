@@ -23,15 +23,11 @@ export interface RepertoireContent {
  * The strings ship WITHOUT their numbers: the site renders an <ol>, so adding or removing a song in
  * the admin never leaves a hole in the sequence (the numbers are the position in this array).
  *
- * Spelling is the client's and kept verbatim — lowercase titles after Cyrillic artists, hyphen/en dash
- * mixed as drawn, «Zdob si zdub», «Beggin you», the trailing «*» markers (they flag names designated
- * «иностранный агент»; their legend is the editable `footnote`). Only unambiguous typos are fixed:
- *   – 34  «Stend dy me»            -> «Stand by me»          (John Lennon)
- *   – 39  «январская въюга»        -> «январская вьюга»      («въюга» is not a Russian word)
- *   – 24  «weeked game»            -> «Wicked game»          (Chris Isaak)
- *   – 25, 26  «Michel Bublé»       -> «Michael Bublé»
- *   – 52  «Banny Benassi»          -> «Benny Benassi»
- *   – 28  «Brothers Moving- Minnie» -> «Brothers Moving - Minnie» (missing space before the dash)
+ * Spelling is the client's and kept verbatim, typos included («Stend dy me», «Michel Bublé»,
+ * «weeked game», «Banny Benassi», «въюга») — the owner asked for the list letter for letter as in
+ * Figma; the admin can correct any title. Lowercase titles after Cyrillic artists, hyphen/en dash
+ * mixed as drawn and the trailing «*» markers (they flag names designated «иностранный агент»;
+ * their legend is the editable `footnote`) are kept as well.
  */
 const figmaTracks: string[] = [
   // 1–30 (354:2377)
@@ -58,23 +54,23 @@ const figmaTracks: string[] = [
   'Ленинград - начинаем отмечать! (Новый год)',
   'Женя Трофимов - самолёты',
   'Imagine dragons - demons',
-  'Chris Isaak - Wicked game',
-  'Michael Bublé - feeling good',
-  'Michael Bublé - Sway',
+  'Chris Isaak - weeked game',
+  'Michel Bublé - feeling good',
+  'Michel Bublé - Sway',
   'Bill Withers - Ain’t no sunshine',
-  'Brothers Moving - Minnie the moocher',
+  'Brothers Moving- Minnie the moocher',
   'Maneskin - Beggin you (2 версии)',
   'Annie Lennox - sweet dreams (2 версии)',
   // 31–60 (354:2383)
   'The white stripes - Seven nation army',
   'Alex Clare - Caroline',
   'Alex Clare - Close to love you',
-  'John Lennon - Stand by me',
+  'John Lennon - Stend dy me',
   'The Animals - the house of the rising sun',
   'Федук - хлопья летят наверх',
   'Губин - ночь',
   'Отпетые мошенники - люби меня, люби',
-  'Нина Бродская - Звенит январская вьюга',
+  'Нина Бродская - Звенит январская въюга',
   'Зацепин, Золотухин - разговор со счастьем',
   'Евгений Крылатов - 3 белых коня',
   'Васюта (Сладкий сон) - на белом покрывале января',
@@ -87,7 +83,7 @@ const figmaTracks: string[] = [
   'Муслим Магомаев - синяя вечность (танцевальный cover)',
   'Чайф - 17 лет',
   'JONY - комета',
-  'Benny Benassi - Satisfaction',
+  'Banny Benassi - Satisfaction',
   'Звери - все что тебя касается',
   'Есенин - заметался пожар голубой',
   'Малинин - очи черные',
