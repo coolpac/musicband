@@ -30,9 +30,8 @@
 }
 
 /*
- * The logo link is a 44px touch target around Figma's 40px lock-up. Negative margins hand the
- * extra 4px back to the layout (the tagline sits 52px under the top, as drawn) while the hit
- * area stays 44px tall.
+ * The logo link is a 44px touch target; negative margins hand 4px back to the layout so the
+ * tagline keeps the 52px offset from the top drawn in Figma, while the hit area stays 44px tall.
  */
 .site-footer__logo {
   margin-block: -2px;

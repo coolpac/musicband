@@ -98,7 +98,7 @@ export function Header() {
   return (
     <header className={className}>
       <div className="site-header__bar">
-        <Logo variant="wordmark" className="site-header__logo" />
+        <Logo className="site-header__logo" />
 
         {/* Nothing to reveal — no nav, no phone, no CTA, no socials — means no burger either. */}
         {hasMenu ? (

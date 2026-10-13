@@ -4,33 +4,18 @@ import './Logo.css';
 
 interface LogoProps {
   className?: string;
-  /**
-   * `wordmark` — the exported «ВГУЛ» glyph set, white, as in the header bar (Figma 393:1210).
-   * `lockup` — red rounded square with «В» plus the typeset wordmark, as in the footer (Figma 345:1454).
-   */
-  variant?: 'lockup' | 'wordmark';
 }
 
 /**
- * The brand mark. Figma uses two treatments: the header carries the custom-glyph wordmark
- * (an exported SVG, never redrawn), the footer carries the live-text lock-up.
- * The wordmark is the trademark itself, so it is a constant, not admin-editable copy.
+ * The brand mark: the band's own «ВГУЛ» glyph set (exported SVG, never redrawn), white, as in the
+ * Figma header bar (393:1210). The footer uses the same mark — the owner replaced the red-square
+ * «В» lock-up drawn there with the real logo. It is the trademark itself, so it is a constant,
+ * not admin-editable copy.
  */
-export function Logo({ className, variant = 'lockup' }: LogoProps) {
-  const cls = ['site-logo', variant === 'wordmark' ? 'site-logo--wordmark' : '', className ?? ''].filter(Boolean).join(' ');
-
+export function Logo({ className }: LogoProps) {
   return (
-    <Link to="/" className={cls} aria-label="ВГУЛ — на главную">
-      {variant === 'wordmark' ? (
-        <img className="site-logo__img" src={wordmarkUrl} width={103} height={27} alt="" decoding="async" />
-      ) : (
-        <>
-          <span className="site-logo__mark" aria-hidden="true">
-            В
-          </span>
-          <span className="site-logo__word">ВГУЛ</span>
-        </>
-      )}
+    <Link to="/" className={['site-logo', className ?? ''].filter(Boolean).join(' ')} aria-label="ВГУЛ — на главную">
+      <img className="site-logo__img" src={wordmarkUrl} width={103} height={27} alt="" decoding="async" />
     </Link>
   );
 }
