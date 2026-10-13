@@ -15,10 +15,9 @@ export interface WhyUsContent {
 }
 
 /**
- * Copy verbatim from Figma `WhyUsSection` 345:1358 (spec/why-us.md §5).
- * Typographic fix, the only change to the Figma strings:
- *   card 3 — straight ASCII quotes "ПРИЗВАНИЕ АРТИСТ 2025" → «ПРИЗВАНИЕ АРТИСТ 2025»
- *   (Russian typography; the same normalisation is applied in formats.ts).
+ * Copy verbatim from Figma `WhyUsSection` 345:1358 (spec/why-us.md), including the straight
+ * ASCII quotes around "ПРИЗВАНИЕ АРТИСТ 2025" on card 3 — as drawn, so the text wraps in the
+ * same four lines as the design.
  */
 export const whyUsDefaults: WhyUsContent = {
   heading: 'Почему мы?',
@@ -33,7 +32,7 @@ export const whyUsDefaults: WhyUsContent = {
     },
     {
       label: '03 / СТАТУС',
-      text: 'Призеры престижной профессиональной премии «ПРИЗВАНИЕ АРТИСТ 2025». Гарантия высочайшего качества работы.',
+      text: 'Призеры престижной профессиональной премии "ПРИЗВАНИЕ АРТИСТ 2025". Гарантия высочайшего качества работы.',
     },
   ],
   image: null,

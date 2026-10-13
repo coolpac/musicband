@@ -1,7 +1,8 @@
 /*
- * Figma 345:1454 — 40×40 red square (radius 8) + «В» in Unbounded ExtraBold 22px #111,
+ * Lock-up (footer), Figma 345:1454 — 40×40 red square (radius 8) + «В» in Unbounded ExtraBold 22px #111,
  * gap 8, wordmark «ВГУЛ» in Unbounded Bold 20px white. The lock-up scales fluidly
  * 32px → 40px between a 360px phone and the 1440px design.
+ * Wordmark (header), Figma 393:1210 — the exported white glyph SVG, 103×27 at 1440px.
  */
 .site-logo {
   --logo-mark: clamp(32px, 1.833rem + 0.741vw, 40px);
@@ -49,5 +50,32 @@
 
 .site-logo:active .site-logo__mark {
   transform: scale(0.94);
+  transition-duration: var(--dur-1);
+}
+
+/* ── Wordmark variant (header) ────────────────────────────────── */
+.site-logo--wordmark {
+  /* 88px on a 360px phone → Figma's 103px at 1440px. The link stays a 44px touch target. */
+  --logo-w: clamp(88px, 5.1875rem + 1.389vw, 103px);
+}
+
+.site-logo__img {
+  display: block;
+  flex: none;
+  width: var(--logo-w);
+  /* The SVG is exported with preserveAspectRatio="none": height must follow the 103∶27 box. */
+  height: auto;
+  aspect-ratio: 103 / 27;
+  transition: opacity var(--dur-2) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-logo--wordmark:hover .site-logo__img {
+    opacity: 0.72;
+  }
+}
+
+.site-logo--wordmark:active .site-logo__img {
+  opacity: 0.55;
   transition-duration: var(--dur-1);
 }

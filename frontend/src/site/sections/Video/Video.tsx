@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSection } from '../../content/SiteDataContext';
+import { videoDefaults } from '../../content/sections/video';
 import { Picture } from '../../components/ui/Picture';
 import { Reveal } from '../../components/ui/Reveal';
 import { VideoLightbox } from '../../components/ui/VideoLightbox';
@@ -13,23 +14,25 @@ import signatureMarkUrl from '../../assets/video/signature-mark.svg';
 import './Video.css';
 
 /**
- * «Посмотрите наше Live-видео» — Figma `VideoSection` 345:1389.
- * Figma paints the black scrim ABOVE the text column, which knocks the headline down to ~#d2d2d2
- * and the red CTA disc to #bf2528 (spec §9.2). That is a layer-order slip, not a design intent:
- * here the scrim sits under the copy, so the headline is white and the disc is brand red.
+ * «Посмотрите наше Live-видео» — Figma `VideoSection` 345:1389. Always rendered: with no link
+ * saved in the admin it plays the showreel from `videoDefaults`.
+ * Figma paints the black scrim ABOVE the text column, which knocks the headline down to ~#d2d2d2,
+ * the grey paragraph below AA contrast (≈3:1) and the red CTA disc to #bf2528. That is a layer-order
+ * slip, not a design intent: here the scrim sits under the copy, so the headline is white and the
+ * disc is brand red (#ff3135 — the fill Figma itself specifies for it).
  */
 export function Video() {
   const content = useSection('video');
   const [open, setOpen] = useState(false);
 
-  const url = content.videoUrl.trim();
+  // A cleared field falls back to the default showreel: the block never renders a dead player.
+  const url = content.videoUrl.trim() || videoDefaults.videoUrl;
   const heading = content.heading.trim();
-  // Nothing to play means nothing to show — no poster teasing a player that does not exist.
-  if (!url) return null;
 
   const poster = content.poster ?? siteImages['video/video-thumbnail-band'];
   const label = content.buttonLabel.trim() || 'Смотреть видео';
   const dialogTitle = heading || label;
+  const headingParts = /^(.*\s)(\S+)$/.exec(heading);
 
   return (
     <section
@@ -70,7 +73,14 @@ export function Video() {
         <div className="site-video__text">
           {heading ? (
             <Reveal as="h2" id="video-title" className="site-video__title" index={1}>
-              {heading}
+              {headingParts ? (
+                <>
+                  {headingParts[1]}
+                  <span className="site-video__nowrap">{headingParts[2]}</span>
+                </>
+              ) : (
+                heading
+              )}
             </Reveal>
           ) : null}
           {content.text.trim() ? (

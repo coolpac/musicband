@@ -70,10 +70,20 @@ function EventCard({ event, detailsLabel, bookLabel, index }: CardProps) {
   const venue = event.venue?.trim() ?? '';
   const href = safeLink(event.link);
   const label = (href ? detailsLabel : bookLabel).trim();
+  // Two looks, as drawn in Figma: a poster with its own link gets the red «Подробнее» pill,
+  // one without a link is a booking card with the white-outline «ЗАБРОНИРОВАТЬ» pill.
+  const variant = href ? 'details' : 'book';
+  const cardClass = [
+    'site-event-card',
+    `site-event-card--${variant}`,
+    event.image ? 'site-event-card--photo' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <Reveal as="li" className="site-events__item" index={Math.min(index, 5)}>
-      <article className={event.image ? 'site-event-card site-event-card--photo' : 'site-event-card'}>
+      <article className={cardClass}>
         {event.image ? (
           <div className="site-event-card__media">
             {/* Backdrop only: the card's meaning is fully carried by the text next to it. */}
@@ -102,7 +112,7 @@ function EventCard({ event, detailsLabel, bookLabel, index }: CardProps) {
             readers: a links list of four identical «Подробнее» is useless. <Link> renders a
             real <a href> and adds target/rel itself when the destination is external. */}
         {label ? (
-          <Link className="site-event-card__cta" to={href ?? '/booking'}>
+          <Link className={`site-event-card__cta site-event-card__cta--${variant}`} to={href ?? '/booking'}>
             {label}
             <span className="site-visually-hidden">: {event.title}</span>
           </Link>

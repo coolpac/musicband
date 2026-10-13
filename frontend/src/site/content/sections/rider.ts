@@ -9,13 +9,13 @@ export interface RiderContent {
 }
 
 /**
- * Figma (345:1402) is a stub: a red band with the word «РАЙДЕР» and nothing else — no copy, no
- * button. Nothing is invented here: with an empty `text` and `fileUrl` the section renders nothing
- * at all, so the band appears only once the client supplies the real rider.
+ * Figma (345:1402) is a red band with «РАЙДЕР» and nothing else — no copy, no button. The band
+ * always renders; the text and the download button stay empty until the client supplies them.
+ * Nothing is invented here.
  */
 export const riderDefaults: RiderContent = {
-  // Figma draws «РАЙДЕР»; stored in sentence case and uppercased by CSS.
-  heading: 'Райдер',
+  // Verbatim from Figma (345:1403).
+  heading: 'РАЙДЕР',
   text: '',
   buttonLabel: 'Скачать райдер',
   fileUrl: '',
@@ -24,7 +24,7 @@ export const riderDefaults: RiderContent = {
 export const riderSchema: SectionSchema = {
   id: 'rider',
   title: 'Райдер',
-  description: 'Пока не заполнены ни текст, ни файл — секция не выводится на сайте.',
+  description: 'Красная полоса с заголовком выводится всегда. Текст и кнопка скачивания появятся, когда их заполнят.',
   fields: [
     { kind: 'text', key: 'heading', label: 'Заголовок', hint: 'На сайте выводится заглавными буквами', maxLength: 40 },
     {

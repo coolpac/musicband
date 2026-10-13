@@ -31,6 +31,10 @@
   /* One reusable Figma layer (350:2320 / 350:2344): darkens the left so red decor never fights the copy. */
   --scrim-left: linear-gradient(269.585deg, rgb(0 0 0 / 0) 25.379%, #000 107.84%);
 
+  /* ── Repertoire section ── */
+  /* Figma 345:1399 paints the closed slab pure red (bg-[red]) — deliberately NOT --c-accent (#ff3135). */
+  --c-repertoire-red: #ff0000;
+
   /* ── Typography ─────────────────────────────────────────── */
   --font-display: 'Unbounded', 'Unbounded Fallback', 'Arial Black', Arial, sans-serif;
   --font-text: 'Geologica', 'Geologica Fallback', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
@@ -81,6 +85,14 @@
 
   --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 24px 48px -24px rgb(0 0 0 / 0.8);
   --shadow-glow: 0 0 0 1px var(--c-accent), 0 0 48px -8px var(--c-accent-glow);
+
+  /* Formats / Video sections: Figma uses 25px (not 24) on card photos and the video thumbnail. */
+  --r-thumb: clamp(18px, 0.979rem + 0.648vw, 25px);
+
+  /* Formats: the «welcome» script laid over the WELCOME card photo (Figma 345:2012,
+     Island Moments 48px #ff4a3e). Latin face imported by Formats.tsx from @fontsource/island-moments. */
+  --c-script-red: #ff4a3e;
+  --font-script: 'Island Moments', 'Snell Roundhand', 'Segoe Script', 'Brush Script MT', cursive;
 
   /* ── Motion ─────────────────────────────────────────────── */
   --dur-1: 140ms; /* press, colour */

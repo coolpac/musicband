@@ -176,17 +176,23 @@ export function VideoLightbox({ url, title, open, onClose }: VideoLightboxProps)
     };
   }, [open]);
 
-  // Focus in on open, back to the trigger on close.
+  // Back to the trigger on close.
   useEffect(() => {
     if (!open) return;
     restoreRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const frame = requestAnimationFrame(() => closeRef.current?.focus());
     return () => {
-      cancelAnimationFrame(frame);
       restoreRef.current?.focus({ preventScroll: true });
       restoreRef.current = null;
     };
   }, [open]);
+
+  // Focus in once the dialog is actually in the DOM: on the first open `present` flips one render
+  // after `open`, so focusing on `open` alone would find `closeRef` still empty.
+  useEffect(() => {
+    if (!open || !present) return;
+    const frame = requestAnimationFrame(() => closeRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open, present]);
 
   useEffect(() => {
     if (!open) return;

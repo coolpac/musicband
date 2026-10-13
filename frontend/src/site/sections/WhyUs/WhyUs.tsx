@@ -7,9 +7,10 @@ import './WhyUs.css';
 
 /**
  * «Почему мы?» — Figma `WhyUsSection` 345:1358.
- * A full-bleed concert photograph with three solid cards punched out of it. Figma paints the
- * section root red under a photo that covers it completely; the root here is black instead, so a
- * photo that fails to load degrades to the page background rather than to a scarlet band.
+ * A full-bleed concert photograph with three solid cards punched out of it. The photograph is
+ * shown exactly as Figma has it — no scrim, no tint. Figma paints the section root red under a
+ * photo that covers it completely; the root here is black instead, so a photo that fails to
+ * load degrades to the page background rather than to a scarlet band.
  */
 export function WhyUs() {
   const content = useSection('whyUs');
@@ -73,7 +74,6 @@ export function WhyUs() {
           wrapperClassName="site-why__photo-wrap"
         />
       </div>
-      <div className="site-why__scrim" aria-hidden="true" />
 
       <div className="site-container site-why__inner">
         {heading ? (

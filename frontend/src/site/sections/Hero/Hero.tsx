@@ -129,6 +129,8 @@ export function Hero() {
                   image={poster}
                   /* One poster, several crops: only the first copy carries the description. */
                   alt={index === 0 ? imageAlt : ''}
+                  /* Keep in step with `imagesizes` of the hero preload in seo/head.ts: a different value
+                     makes the browser fetch a second candidate and waste the preloaded one. */
                   sizes="100vw"
                   priority
                   wrapperClassName="site-hero__panel-media"

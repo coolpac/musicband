@@ -13,7 +13,7 @@ export interface HeroPanel {
   titleLine2: string;
   primaryLabel: string;
   secondaryLabel: string;
-  /** Promo video opened by the secondary button. Empty = button hidden. */
+  /** Promo video opened by the secondary button in a lightbox. Empty = the button is not shown. */
   promoVideoUrl: string;
 }
 
@@ -25,7 +25,7 @@ export interface HeroContent {
 }
 
 /**
- * Verbatim Figma copy (frame 345:1667), with three deliberate deviations:
+ * Verbatim Figma copy (frame 345:1667), with these deliberate deviations:
  *  1. stored in sentence case — the design's ALL CAPS is done by CSS `text-transform`, so the
  *     admin types normal Russian and the layout stays uppercase (Figma's own right badge is
  *     typed lowercase «порядочные события» and only *rendered* uppercase);
@@ -33,9 +33,13 @@ export interface HeroContent {
  *     «В ГОСТЯХ У ЭЛЕМЕНТАЛИЯ», but the typed text lost its leading «Э» — spec/hero.md §9.2
  *     says the rendered string is the source of truth, so it ships unchanged;
  *  3. both Figma headlines are identical (spec §9.1 calls the right one placeholder copy).
- *     Kept as the default and editable per panel, per the plan's «Figma gaps» table.
- * `promoVideoUrl` ships empty: no promo URL exists in the design, and an empty value hides
- * the secondary button rather than shipping a dead one.
+ *     Kept as the default and editable per panel, per the plan's «Figma gaps» table;
+ *  4. the right button reads «Смотреть промо 90х» with a Cyrillic «х» (Figma's rendered
+ *     string), not a Latin «x»;
+ *  5. the designer's stray «Афиша» text inside the hero overlay (345:1755) is NOT a field here:
+ *     it duplicates the title of the next section.
+ * The promo links are the band's real Rutube videos (the same ones the Telegram Mini App uses):
+ * left — «ГАНГСТЕРЫ» 2025, right — «По-новее русские!» (the 90s show).
  */
 export const heroDefaults: HeroContent = {
   panels: [
@@ -45,7 +49,7 @@ export const heroDefaults: HeroContent = {
       titleLine2: 'Лементалия',
       primaryLabel: 'Оставить заявку',
       secondaryLabel: 'Смотреть промо',
-      promoVideoUrl: '',
+      promoVideoUrl: 'https://rutube.ru/video/56fd172a86aff0d705834ea2bab83d2d/',
     },
     {
       badge: 'Порядочные события',
@@ -53,7 +57,7 @@ export const heroDefaults: HeroContent = {
       titleLine2: 'Лементалия',
       primaryLabel: 'Оставить заявку',
       secondaryLabel: 'Смотреть промо 90х',
-      promoVideoUrl: '',
+      promoVideoUrl: 'https://rutube.ru/video/d51aff7f8075421432de4660a262ba38/',
     },
   ],
   image: null,

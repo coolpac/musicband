@@ -5,7 +5,7 @@ export interface VideoContent {
   heading: string;
   text: string;
   buttonLabel: string;
-  /** YouTube / VK Video / Rutube link or a direct .mp4. Empty = section hidden. */
+  /** YouTube / VK Video / Rutube link or a direct .mp4. Empty = the default showreel plays. */
   videoUrl: string;
   poster: RemoteImage | null;
   /** ISO date the video was published (YYYY-MM-DD). Required for VideoObject rich results; empty = no video markup. */
@@ -16,14 +16,14 @@ export interface VideoContent {
  * Copy verbatim from Figma `VideoSection` 345:1389 (spec/video.md §5). The headline is stored
  * as one string — Figma's hard line break after «Посмотрите наше » was a manual wrap and would
  * fight the responsive column, so the browser breaks it instead.
- * `videoUrl` ships empty on purpose: no showreel link exists in the design, and the section
- * renders nothing until the admin supplies one (no placeholder player in production).
+ * `videoUrl` is the band's real Rutube showreel «Наши форматы» (the link the Telegram Mini App
+ * uses); the design itself has no URL. The section is always rendered.
  */
 export const videoDefaults: VideoContent = {
   heading: 'Посмотрите наше Live-видео',
   text: 'Почувствуйте невероятную энергетику живого звука и убедитесь в непревзойденном мастерстве наших музыкантов. Никакой фанеры, только чистый драйв.',
   buttonLabel: 'Смотреть шоурил',
-  videoUrl: '',
+  videoUrl: 'https://rutube.ru/video/a9885aeae1d2219c9378d86b4314be76/',
   poster: null,
   uploadDate: '',
 };
@@ -31,13 +31,14 @@ export const videoDefaults: VideoContent = {
 export const videoSchema: SectionSchema = {
   id: 'video',
   title: 'Видео',
-  description: 'Блок с шоурилом. Пока ссылка на видео пустая, блок на сайте не показывается.',
+  description:
+    'Блок с шоурилом: обложка с кнопкой «play», заголовок, описание и кнопка. Блок показывается всегда; если ссылку на видео убрать, играет шоурил по умолчанию. Описание и обложка необязательны.',
   fields: [
     {
       kind: 'url',
       key: 'videoUrl',
       label: 'Ссылка на видео',
-      hint: 'YouTube, VK Видео, Rutube или прямой файл .mp4. Пусто — блок скрыт целиком.',
+      hint: 'YouTube, VK Видео, Rutube или прямой файл .mp4. Пусто — играет шоурил по умолчанию («Наши форматы» на Rutube).',
       placeholder: 'https://vkvideo.ru/video-12345_67890',
       maxLength: 500,
     },

@@ -5,9 +5,9 @@
  * hides the section. The only reference to it is guarded by `import.meta.env.DEV`, which the
  * production build folds to `false`, so nothing here can reach a visitor.
  *
- * Copy is verbatim from the design, with the two fixes the spec asks for:
- *   · cards 1–2 used English curly quotes “…” — normalised to Russian guillemets «…» (§9.7);
- *   · «Парк «Зеленый»» was missing its ё → «Зелёный» (§9.8).
+ * Copy is verbatim from the design — English curly quotes “…” on cards 1–2 and «Парк «Зеленый»»
+ * without ё included — so a local preview reads exactly like the Figma frame. Real афиша data
+ * comes from the admin and is never rewritten.
  */
 import type { RemoteImage, SiteEvent } from '../types';
 import { siteImages, type SiteImageKey } from '../../assets/opt/manifest';
@@ -28,15 +28,16 @@ function bundled(key: SiteImageKey): RemoteImage {
 }
 
 /**
- * Cards 2 and 3 carry a link so the «Подробнее» branch of the CTA is exercised locally;
- * it points at this site's own афиша anchor rather than inventing a third-party URL.
+ * Cards 2–4 carry a link so the red «Подробнее» branch of the CTA is exercised locally, exactly
+ * as in the design; card 1 has none and shows the white «ЗАБРОНИРОВАТЬ» booking pill. The link
+ * points at this site's own афиша anchor rather than inventing a third-party URL.
  */
 const DEMO_LINK = 'https://vgulcover.ru/#events';
 
 export const demoEvents: SiteEvent[] = [
   {
     id: 'demo-1',
-    title: '«КАМОН В КАРДАМОН»',
+    title: '“КАМОН В КАРДАМОН”',
     date: '2026-05-12',
     venue: 'Начинаем в 21:30',
     description: null,
@@ -45,7 +46,7 @@ export const demoEvents: SiteEvent[] = [
   },
   {
     id: 'demo-2',
-    title: '«MONTEBRAU»',
+    title: '“MONTEBRAU”',
     date: '2026-05-18',
     venue: 'Начало в 20:30',
     description: null,
@@ -65,9 +66,9 @@ export const demoEvents: SiteEvent[] = [
     id: 'demo-4',
     title: 'Фестиваль «Лето 2026»',
     date: '2026-06-02',
-    venue: 'Парк «Зелёный»',
+    venue: 'Парк «Зеленый»',
     description: null,
     image: null,
-    link: null,
+    link: DEMO_LINK,
   },
 ];

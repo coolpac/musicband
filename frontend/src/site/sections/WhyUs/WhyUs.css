@@ -1,6 +1,6 @@
 /*
- * Figma `WhyUsSection` 345:1358 — 1440 × 640.
- *   headline box top 145 · cards 314…540 · 100px of photograph below the cards
+ * Figma `WhyUsSection` 345:1358 — 1440 × 660.
+ *   headline box top 145 · cards 314…540 · 120px of photograph below the cards
  *   card 405.333 × 226, #111, radius 24, padding 32, gap 24
  * The 150px-tall headline wrapper in Figma held a deleted subtitle; only the resulting
  * spacing is reproduced (spec §9.2), not the empty box.
@@ -12,15 +12,16 @@
   --why-pad-top: clamp(3.5rem, 1.646rem + 8.241vw, 9.0625rem);
   /* 40 → 109px: headline bottom (205) to cards top (314). */
   --why-title-gap: clamp(2.5rem, 1.0625rem + 6.389vw, 6.813rem);
+  /* 56 → 120px: cards bottom (540) to the section's bottom edge (660). */
+  --why-pad-bottom: clamp(3.5rem, 2.167rem + 5.926vw, 7.5rem);
 
   isolation: isolate;
-  padding-block: var(--why-pad-top) var(--section-y);
+  padding-block: var(--why-pad-top) var(--why-pad-bottom);
   /* Figma's #ff3135 root fill is dead paint under a full-cover photo — black is the honest fallback. */
   background: var(--c-bg);
 }
 
-.site-why__bg,
-.site-why__scrim {
+.site-why__bg {
   position: absolute;
   inset: 0;
   z-index: var(--z-decor);
@@ -33,22 +34,14 @@
   height: 100%;
 }
 
+/* Figma: the 1440×759 photograph (2048×1080, the same ratio) sits in a 660px window with its top
+   99px cropped and nothing cropped below — i.e. cover, anchored to the bottom edge. No overlay
+   or filter of any kind lies on it: the bright stage lights are part of the design. */
 .site-why__photo {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* Figma shifts the 759px-tall image up by 99px inside a 660px window; against a 640px
-     section that framing lands at ~83% down. Keeps the stage lights level with the cards. */
-  object-position: center 83%;
-}
-
-/*
- * Figma applies no overlay at all — but 48px white type sitting directly on a live photograph
- * is a contrast gamble, and the two blown-out stage lights land right behind the outer cards.
- * A soft vertical scrim buys AA without visibly touching the picture.
- */
-.site-why__scrim {
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.58) 0%, rgb(0 0 0 / 0.26) 38%, rgb(0 0 0 / 0.24) 62%, rgb(0 0 0 / 0.62) 100%);
+  object-position: center bottom;
 }
 
 .site-why__inner {
@@ -63,7 +56,6 @@
   max-width: 20ch;
   font-size: var(--fs-h1);
   text-align: center;
-  text-shadow: 0 2px 28px rgb(0 0 0 / 0.55);
 }
 
 .site-why__grid {

@@ -1,12 +1,15 @@
 /*
  * Афиша — Figma frame 345:1327 (1440×510, pure black).
  *
- * Every card is rebuilt from card 4, the only healthy one in the file. The others are
- * abandoned experiments and their slips are NOT reproduced (spec/events-afisha.md §9):
- * card 3 has no card frame at all and its CTA floats 153px below the grid, card 1's photo
- * overflows the card and rounds at a different radius, card 2's surface is white, and every
- * string on cards 1–2 is an outlined SVG. Here all four are one component with live text,
- * and the photo is a clipped, darkened backdrop.
+ * Four 296×212 cards in a 1280 container, 32px apart, 24px radius, 24px padding. In the file
+ * only card 4 is a proper component; cards 1–3 are drawn ad hoc (card 1's photo overflows its
+ * frame by 3/7px, card 2 is a white tile, card 3 has no frame and its CTA floats below the grid,
+ * every string on cards 1–2 is an outlined SVG). Here all four are ONE live-text component
+ * built from card 4's geometry, wearing the Figma look of each variant:
+ *   · photo cards — the photograph itself is the card: no dimming, no scrim (Figma paints none);
+ *   · booking card (no link) — white-outline «ЗАБРОНИРОВАТЬ» pill, 50% black behind it on a photo;
+ *   · details card (has a link) — red-outline «Подробнее» pill;
+ *   · card without a photo — #111 surface with a 17% white hairline.
  *
  * Raw numbers below are Figma geometry, not design-system values.
  */
@@ -16,9 +19,12 @@
   /* Figma: 6px inside the meta block, 34px under the heading. */
   --ev-meta-gap: 6px;
   --ev-heading-gap: clamp(20px, 2.4vw, 34px);
+  /* Figma: the 50% black pill behind «ЗАБРОНИРОВАТЬ» on a photo. */
+  --ev-cta-backdrop: rgb(0 0 0 / 0.5);
 
   position: relative;
-  padding-block: var(--section-y) calc(var(--section-y) + var(--space-3));
+  /* Figma: heading at y=100, cards end at 396, frame ends at 510 → 114px below the cards. */
+  padding-block: var(--section-y) calc(var(--section-y) + 14px);
   background: var(--c-bg);
   overflow: clip;
 }
@@ -47,9 +53,13 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-4);
+  /* Figma: 16px between meta and CTA. Here 12 — the CTA is pinned to the bottom edge (below),
+     and with 12 a two-line title still fits the 212px frame exactly. */
+  gap: var(--space-3);
   min-height: var(--ev-card-h);
-  padding: var(--space-5);
+  /* Figma draws the hairline inside its 24px padding: copy and pill sit 24px from the outer
+     edge, i.e. 23px of padding + the 1px border. */
+  padding: calc(var(--space-5) - 1px);
   border: 1px solid var(--c-border);
   border-radius: var(--r-card);
   background: var(--c-surface);
@@ -60,10 +70,17 @@
     box-shadow var(--dur-3) var(--ease-out);
 }
 
+/* A photo card is its picture, edge to edge — the hairline would only frame it with a dark ring.
+   Its 1px border becomes padding, so the copy keeps exactly the same position (24px in). */
+.site-event-card--photo {
+  padding: var(--space-5);
+  border-width: 0;
+}
+
 .site-event-card__media {
   position: absolute;
   inset: 0;
-  /* Behind the copy but above the #111 surface — the photo is the card's backdrop. */
+  /* Behind the copy but above the card surface — the photo is the card's backdrop. */
   z-index: -1;
 }
 
@@ -75,22 +92,15 @@
   height: 100%;
 }
 
+/* Figma shows the photograph untouched: no filter, no gradient over it.
+   The crop is weighted towards the top (Figma: portrait photo 296×444 sitting at −49px in a
+   212px window = 21% from the top), because on a poster or a portrait the faces live up there. */
 .site-event-card__photo {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(0.5) saturate(0.85);
-  transition:
-    transform var(--dur-4) var(--ease-out),
-    filter var(--dur-3) var(--ease-out);
-}
-
-/* Legibility scrim: darkest where the date and the CTA sit. */
-.site-event-card__media::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.72) 0%, rgb(0 0 0 / 0.38) 46%, rgb(0 0 0 / 0.82) 100%);
+  object-position: 50% 21%;
+  transition: transform var(--dur-4) var(--ease-out);
 }
 
 .site-event-card__meta {
@@ -122,8 +132,11 @@
 }
 
 /* ── CTA ────────────────────────────────────────────────────────
- * 123×42 in Figma — below the 44px touch minimum, which is fine here because the link is
- * stretched over the entire card: the visible pill is the affordance, the card is the target.
+ * Pill, 2px outline, radius 25 (= a pill at this height), 20px side padding including the
+ * outline, Geologica Bold 14. Figma's 42px height is a real text line + 12px padding; the
+ * outlined-SVG labels of cards 1–2 gave shorter boxes (34/37px) that are not reproduced.
+ * 123×42 is below the 44px touch minimum, which is fine here because the link is stretched
+ * over the entire card: the visible pill is the affordance, the card is the target.
  */
 .site-event-card__cta {
   display: inline-flex;
@@ -143,12 +156,27 @@
   white-space: nowrap;
   transition:
     background-color var(--dur-2) var(--ease-out),
+    border-color var(--dur-2) var(--ease-out),
     color var(--dur-2) var(--ease-out),
     transform var(--dur-1) var(--ease-out);
 }
 
-.site-event-card--photo .site-event-card__cta {
-  background: rgb(0 0 0 / 0.5);
+/* Booking card (no link): white outline, white capitals — «ЗАБРОНИРОВАТЬ» in the design. */
+.site-event-card__cta--book {
+  border-color: var(--c-text);
+  color: var(--c-text);
+  text-transform: uppercase;
+}
+
+/* Only the booking pill sits on 50% black; the red «Подробнее» pill over a photo is bare. */
+.site-event-card--photo .site-event-card__cta--book {
+  background: var(--ev-cta-backdrop);
+}
+
+/* Over a photo the booking card's venue/time line is white (Figma card 1); everywhere else the
+   subtitle is the 50% muted grey. */
+.site-event-card--photo.site-event-card--book .site-event-card__venue {
+  color: var(--c-text);
 }
 
 .site-event-card__cta::after {
@@ -183,14 +211,25 @@
     box-shadow: 0 20px 44px -26px var(--c-accent-glow);
   }
 
-  .site-event-card:hover .site-event-card__photo {
-    transform: scale(1.06);
-    filter: brightness(0.58) saturate(1);
+  /* A photo card has no border to recolour — the ring goes outside instead. */
+  .site-event-card--photo:hover {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--c-accent) 50%, transparent),
+      0 20px 44px -26px var(--c-accent-glow);
   }
 
-  .site-event-card:hover .site-event-card__cta {
+  .site-event-card:hover .site-event-card__photo {
+    transform: scale(1.06);
+  }
+
+  .site-event-card:hover .site-event-card__cta--details {
     background: var(--c-accent);
     color: var(--c-on-accent);
+  }
+
+  .site-event-card:hover .site-event-card__cta--book {
+    background: var(--c-text);
+    color: var(--c-on-light);
   }
 }
 

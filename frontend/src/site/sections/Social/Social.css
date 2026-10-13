@@ -4,9 +4,7 @@
  */
 /* Two classes on purpose: .site-section (base.css) sets --section-y and may load after this file. */
 .site-section.site-social {
-  /* Figma pads this band 80px, not the 100px page rhythm — same local token as Cta/Partners. */
-  --band-y: clamp(3.5rem, 2.583rem + 4.074vw, 5rem);
-
+  /* Figma pads this band 80px, not the 100px page rhythm (`--band-y` in styles/tokens.css). */
   padding-block: var(--band-y);
   background: var(--c-bg);
 }
@@ -58,7 +56,7 @@
 }
 
 /*
- * The exported glyphs carry their 50% white as baked-in alpha, which neither `opacity` nor
+ * The glyphs (Figma exports and network logos alike) carry their 50% white as baked-in alpha, which neither `opacity` nor
  * `color` can raise (and `filter: opacity()` above 1 is clamped by the spec). Two zero-offset
  * drop shadows in the same white stack the silhouette behind itself — 0.5 → 0.75 → 0.94 alpha —
  * so the icons brighten on hover exactly like the text badges. Declared transparent at rest so

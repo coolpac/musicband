@@ -1,10 +1,15 @@
 /*
- * Site header. Figma: bar 1440×90, black, 1px rgba(255,255,255,0.17) bottom rule,
- * logo lock-up left, 5-item uppercase nav optically centred, phone + red pill CTA right.
- * Figma's asymmetric gutters (80 left / 52 right) are a slip — `.site-container` makes
- * them symmetric, which lands the nav on the same optical centre anyway.
+ * Site header, Figma 345:1298: bar 1440×90, black, 1px rgba(255,255,255,0.17) bottom rule,
+ * wordmark at x=77, five uppercase nav links centred on the page (x=450…991, 32px apart,
+ * 16px; current = SemiBold white, rest = Regular 50% white, no underline), phone at x=1092 and
+ * the red pill CTA ending 52px from the right edge.
+ * The bar is a 1440px frame centred on wider screens; below 1440 the insets shrink with `--gutter`.
  */
 .site-header {
+  /* Figma's 77 / 52 insets at 1440px (`--gutter` is 80 there). Only the desktop grid uses them. */
+  --hdr-inset-l: calc(var(--gutter) - 3px);
+  --hdr-inset-r: max(var(--space-5), calc(var(--gutter) - 28px));
+
   position: fixed;
   inset: 0 0 auto 0;
   z-index: var(--z-header);
@@ -48,7 +53,11 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+  width: 100%;
+  max-width: 1440px;
   height: 100%;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
 }
 
 /* Logo and burger float above the open menu sheet so the bar stays usable. */
@@ -177,27 +186,10 @@
   user-select: none;
 }
 
-/* Sits 3px under the label's line box, wherever the touch padding puts that. */
-.site-header__nav-link::before {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: calc(50% - 0.75em - 5px);
-  left: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--c-accent);
-  transform: scaleX(0);
-  transition: transform var(--dur-3) var(--ease-emphasis);
-}
-
+/* Figma shows the current item by weight and colour alone — there is no underline on the bar. */
 .site-header__nav-link[aria-current] {
   color: var(--c-text);
   font-weight: 600;
-}
-
-.site-header__nav-link[aria-current]::before {
-  transform: scaleX(1);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -364,15 +356,19 @@
     display: none;
   }
 
+  /* Current-item marker of the full-screen menu: a red bar hanging off the left edge. */
   .site-js .site-header__nav-link::before {
-    right: auto;
-    bottom: auto;
-    left: -12px;
+    content: '';
+    position: absolute;
     top: 50%;
+    left: -12px;
     width: 4px;
     height: 22px;
     margin-top: -11px;
+    border-radius: 2px;
+    background: var(--c-accent);
     transform: scaleY(0);
+    transition: transform var(--dur-3) var(--ease-emphasis);
   }
 
   .site-js .site-header__nav-link[aria-current]::before {
@@ -452,10 +448,30 @@
 
 /* ── Desktop ──────────────────────────────────────────────────── */
 @media (min-width: 1024px) {
+  /*
+   * Equal outer columns keep the nav on the page centre (Figma x=450…991) even though the
+   * insets differ; the insets are margins of the two end cells, not padding of the bar.
+   */
   .site-header__bar {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     gap: var(--space-5);
+    padding-inline: 0;
+  }
+
+  .site-header__logo {
+    margin-left: var(--hdr-inset-l);
+  }
+
+  /* Figma centres the wordmark and the nav ~2px above the bar's midline (CTA and phone sit on it). */
+  .site-header__logo .site-logo__img {
+    position: relative;
+    top: -2.5px;
+  }
+
+  .site-header__nav {
+    position: relative;
+    top: -2px;
   }
 
   /* The panel stops being a box: nav and actions become cells of the bar's grid. */
@@ -474,6 +490,19 @@
   .site-header__actions {
     grid-column: 3;
     justify-self: end;
+    margin-right: var(--hdr-inset-r);
+  }
+
+  /* Figma pill: 167×42 — 24px padding around the label (the 2px transparent border is part of it). */
+  .site-header .site-header__cta {
+    padding-inline: 22px;
+  }
+
+  /* 42px is the drawn height; touch screens keep the 44px target of `.site-btn--sm`. */
+  @media (pointer: fine) {
+    .site-header .site-header__cta {
+      min-height: 42px;
+    }
   }
 
   .site-header__social,
@@ -489,7 +518,7 @@
     font-size: var(--fs-small);
   }
 
-  /* Below 1280px the phone is the first thing to go, exactly as the spec suggests. */
+  /* The phone is the first thing to go when the bar gets tight (see the 1360px step below). */
   .site-header__phone {
     display: none;
   }
@@ -503,7 +532,14 @@
   .site-header__nav-link {
     font-size: var(--fs-body);
   }
+}
 
+/*
+ * Figma's phone slot. A real number («+7 (922) 750-00-00») is ~134px wide, 36px more than the
+ * masked placeholder the design was drawn with; with the nav centred on the page it only fits
+ * beside the CTA from ~1360px. Narrower screens still get it in the footer and the menu.
+ */
+@media (min-width: 1360px) {
   .site-header__phone {
     display: inline-flex;
   }

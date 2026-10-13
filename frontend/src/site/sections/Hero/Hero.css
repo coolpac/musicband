@@ -1,13 +1,20 @@
 /*
  * Hero — Figma frame 345:1667 (1440×800, sitting directly under the 90px header).
  *
+ * Reproduced 1:1 at 1440 (checked against the Figma render): the poster crop (1463×823 at −25/−36),
+ * the black scrim (transparent at y=206 → solid at y=657), the 10% red wash that is painted OVER
+ * the copy, the 236px-wide badges, the 242 / 286 × 61 buttons, the 20px gap between them.
+ * The «ВГУЛ» wordmark, the cracked glass and the «90е / По-новее русские!» lettering are part of
+ * the poster raster itself (nodes 345:1719 / 1738 / 1720 / 1729 are the same art on the Figma
+ * canvas, not extra layers over it), so they come for free and stay glued to the photo.
+ *
  * Figma slips that are deliberately NOT reproduced (spec/hero.md §9):
  *   · the 2px white sliver on the right edge and the #FFFFFF frame fill — background is black;
- *   · the left badge's 16px / right badge's 27px text inset — normalised to one value;
  *   · the left secondary button sitting 3px higher than the primary — both are aligned;
- *   · the 1–3px gutter drift from the overlay's −27px offset — built to a clean 80px gutter;
- *   · the «Афиша» heading duplicated at the bottom — it belongs to the Events section only;
- *   · the red wash painted OVER the copy — it sits under the content so the type stays clean.
+ *   · the 1–3px gutter drift from the overlay's −27px offset — built to a clean 80px gutter,
+ *     the same edge as the header and every other section;
+ *   · the «Афиша» heading (345:1755) at the bottom — a designer leftover that duplicates the
+ *     title of the Events section; it is not rendered here.
  *
  * The few raw numbers below are Figma geometry, not design-system values, so they live here
  * as named component constants rather than in tokens.css.
@@ -17,9 +24,13 @@
   --hero-h: clamp(560px, calc(100svh - var(--header-h)), 800px);
   /* Phone panel: tall enough to read as a poster, short enough to show the section below. */
   --hero-panel-h: max(520px, min(86svh, 720px));
-  /* Black bottom gradient: transparent at 26% of the frame, solid black from 82% (Figma: 657/800). */
-  --hero-scrim-start: 26%;
-  --hero-scrim-end: 82%;
+  /* Black bottom gradient (Figma Overlay 345:1314): transparent at y=206/800, solid black from
+     y=657/800 (206 + 75.941% of its 594px height). */
+  --hero-scrim-start: 25.75%;
+  --hero-scrim-end: 82.14%;
+  /* Badge: Figma draws both pills 236px wide whatever the text inside (text centred). */
+  --hero-badge-w: 236px;
+
   /* Figma: 20px between the two buttons of a column. */
   --hero-actions-gap: clamp(12px, 1.39vw, 20px);
   /* Figma: the content bottom edge sits 91px above the frame bottom. */
@@ -74,13 +85,19 @@
  * Every panel paints the WHOLE hero and clips it to its own column, so the diptych stays one
  * continuous photograph across the seam at any viewport width. Same src + same `sizes` in
  * every panel means the browser downloads exactly one file.
+ *
+ * Geometry is Figma's «постер1 1» (345:1666): a 1463×823 box at (−25, −36) of the 1440×800 frame,
+ * i.e. the photo is slightly oversized and shifted up-left. Expressed in hero-relative units so
+ * it holds at any width; the extra 2px on the right close the sliver Figma leaves uncovered.
+ * (`cqw` resolves against .site-hero, the inline-size container.)
  */
 .site-hero__panel-media {
   position: absolute;
-  inset-block: 0;
-  left: calc(-100% * var(--hero-index, 0));
+  top: -4.5%; /* −36 / 800 */
+  height: 102.875%; /* 823 / 800 */
+  left: calc(-100% * var(--hero-index, 0) - 1.736cqw); /* −25 / 1440 */
   z-index: 0;
-  width: calc(100% * var(--hero-panels, 1));
+  width: 101.736cqw; /* 1463 / 1440 + the 2px sliver */
   /* base.css caps every <picture> at 100% — that cap would collapse the shared poster. */
   max-width: none;
   pointer-events: none;
@@ -90,7 +107,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
+  /* Exactly the Figma box at 1440×800; on wider or shorter heroes the crop eats the bottom of
+     the photo (hidden by the black scrim anyway) and never the «ВГУЛ» wordmark at the top. */
+  object-position: center top;
 }
 
 /* Black bottom gradient — per panel, but identical, so it reads as one band. */
@@ -103,13 +122,14 @@
   pointer-events: none;
 }
 
-/* Red wash — spans the whole hero like the poster does, so it does not restart per column. */
+/* Red wash (Figma 345:1313) — spans the whole hero like the poster does, so it does not restart
+   per column. In Figma it is the topmost layer, painted over the copy and the scrim alike. */
 .site-hero__panel::before {
   content: '';
   position: absolute;
   inset-block: 0;
   left: calc(-100% * var(--hero-index, 0));
-  z-index: 2;
+  z-index: 4;
   width: calc(100% * var(--hero-panels, 1));
   background: linear-gradient(90deg, color-mix(in srgb, var(--c-accent) 10%, transparent) 0%, transparent 60%);
   pointer-events: none;
@@ -146,6 +166,8 @@
   isolation: isolate;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: var(--hero-badge-w);
   padding: 8px 15px;
   border: 1px solid var(--c-accent);
   border-radius: var(--r-pill);
@@ -168,6 +190,18 @@
   display: block;
 }
 
+/* Side by side the column is only half the hero, and «ЛЕМЕНТАЛИЯ» is ~9.4em wide: below ~1100px
+   the fluid display size would break it mid-word. Cap the size by the column it sits in — the
+   cap is inactive from 1280px up, where Figma's 56px fits with room to spare. */
+@media (min-width: 900px) {
+  .site-hero__title {
+    font-size: min(
+      var(--fs-display),
+      calc((100cqw / var(--hero-panels, 1) - var(--hero-edge) - var(--gutter) / 2) / 9.6)
+    );
+  }
+}
+
 .site-hero__title-line--accent {
   color: var(--c-accent);
 }
@@ -176,8 +210,19 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--hero-actions-gap);
-  /* 12px column gap + 4px = Figma's 16px between the headline and the buttons. */
-  margin-block-start: var(--space-1);
+}
+
+/* Figma: the red pill has no border and the outline one draws its 2px white border INSIDE the
+   frame, so both are `text + 2 × 36px` wide (242 / 242 / 286px) and 61px tall. .site-btn adds
+   a 2px border to every variant on top of the padding, which would make the pills 4px wider
+   than the design — so the red one drops it and the outline one gives the 2px back. */
+.site-hero__actions > .site-btn--primary {
+  border-width: 0;
+}
+
+.site-hero__actions > .site-btn--outline {
+  /* same clamp as .site-btn--lg, minus the border */
+  padding-inline: calc(clamp(24px, 1rem + 1.4vw, 36px) - 2px);
 }
 
 /* ── Entrance ───────────────────────────────────────────────────
@@ -211,9 +256,23 @@
 }
 
 .site-hero__badge,
-.site-hero__title-line,
 .site-hero__actions {
   animation: site-hero-rise var(--dur-4) var(--ease-out) both;
+}
+
+/* The <h1> is never held at opacity 0 (LCP / crawlers / no-JS): its lines only slide up. */
+@keyframes site-hero-slide {
+  from {
+    transform: translate3d(0, 0.4em, 0);
+  }
+
+  to {
+    transform: none;
+  }
+}
+
+.site-hero__title-line {
+  animation: site-hero-slide var(--dur-4) var(--ease-out) both;
 }
 
 .site-hero__title-line:first-child {
@@ -414,8 +473,14 @@
     scroll-snap-align: end;
   }
 
-  /* One panel = one full-width crop of the shared poster. */
-  .site-hero__panel-media,
+  /* One panel = one full-width crop of the shared poster (no desktop bleed). */
+  .site-hero__panel-media {
+    top: 0;
+    height: 100%;
+    left: 0;
+    width: 100%;
+  }
+
   .site-hero__panel::before {
     left: 0;
     width: 100%;

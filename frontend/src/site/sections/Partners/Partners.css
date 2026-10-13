@@ -7,13 +7,7 @@
  */
 /* Two classes on purpose: .site-section (base.css) sets --section-y and may load after this file. */
 .site-section.site-partners {
-  /*
-   * Figma pads this band 80px, where `--section-y` (the page rhythm) is 100px. Same local token
-   * and same value as `--band-y` in sections/Cta/Cta.css; see `sharedChangeRequests` — it wants
-   * to live in styles/tokens.css rather than in three components.
-   */
-  --band-y: clamp(3.5rem, 2.583rem + 4.074vw, 5rem);
-
+  /* Figma pads this band 80px, not the 100px page rhythm (`--band-y` in styles/tokens.css). */
   padding-block: var(--band-y);
   background: var(--c-bg);
 }
@@ -61,7 +55,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 72px;
+  height: 72px;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--c-border);
   border-radius: var(--r-tile);
@@ -81,9 +75,6 @@
   width: 100%;
   height: 40px;
   object-fit: contain;
-  /* Quiet by default so the strip does not compete with the page; full colour on hover. */
-  filter: grayscale(1) opacity(0.75);
-  transition: filter var(--dur-2) var(--ease-out);
 }
 
 .site-partners__name {
@@ -102,10 +93,6 @@
     transform: translate3d(0, -2px, 0);
     border-color: var(--c-border-strong);
     background: var(--c-surface-raised);
-  }
-
-  a.site-partners__tile:hover .site-partners__logo {
-    filter: none;
   }
 
   a.site-partners__tile:hover .site-partners__name {

@@ -1,14 +1,23 @@
 /*
  * Figma `VideoSection` 345:1389 — 1440 × 540 on black.
- *   thumbnail 600 × 338 at x 88 · text column 616 wide at x 744 · both vertically centred
+ *   thumbnail 600 × 338 at (88, 106) · text column 616 × 275 at (744, 132.5) — centred on the band
  *   red curl 618 × 394.5 centred on the section, 101px above its top edge
  *   small swoosh 189 × 278 at x 51, hanging 139px below the section
- *   signature disc 134 × 135 near the right edge, level with the CTA row
+ *   signature disc 134 × 135 at (1215, 352): 53px above the bottom, 11px inside the content column
  * Everything decorative bleeds; `.site-section` clips it, so no layer can create page scroll.
  */
 .site-video {
   isolation: isolate;
   background: var(--c-bg);
+}
+
+@media (min-width: 1024px) {
+  .site-video {
+    /* The Figma band is exactly 540 tall; 2 × --section-y + 338 lands 2px short. */
+    display: grid;
+    align-content: center;
+    min-height: 540px;
+  }
 }
 
 .site-video__decor,
@@ -22,7 +31,7 @@
 /* The scrim comes after the decor in the DOM, so it darkens the red shapes — and only them,
    because the copy above sits in the content layer. */
 .site-video__scrim {
-  background-image: linear-gradient(269.585deg, rgb(0 0 0 / 0) 25.379%, var(--c-bg) 107.84%);
+  background-image: var(--scrim-left);
 }
 
 .site-video__swoosh {
@@ -78,9 +87,9 @@
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 600 / 338;
   overflow: hidden;
-  border-radius: var(--r-card);
+  border-radius: var(--r-thumb);
   /* Figma's white plate would flash on a black page while the poster decodes. */
   background: var(--c-surface);
 }
@@ -116,16 +125,6 @@
   height: 100%;
 }
 
-/* A slow ring leaving the badge: one composited element, transform + opacity only. */
-.site-video__badge::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 2px solid rgb(255 255 255 / 0.45);
-  border-radius: var(--r-pill);
-  animation: site-video-pulse 2.8s var(--ease-out) infinite;
-}
-
 /* ── Copy ──────────────────────────────────────────────────── */
 .site-video__text {
   display: grid;
@@ -134,12 +133,20 @@
 }
 
 .site-video__title {
-  /* Figma sets 36px here against 40px in «Форматы»; tokens stop at --fs-h2 (40). */
-  font-size: var(--fs-h2);
+  /* Figma: Unbounded ExtraBold 36 / normal (≈1.25). */
+  font-size: var(--fs-h2-sm);
+  line-height: var(--lh-snug);
+  /* base.css balances headings; here the line break is dictated by the nowrap last word below. */
+  text-wrap: wrap;
+}
+
+/* The last word stays whole: Figma's manual <br> falls before «Live-видео», and without this the
+   browser would happily split it at the hyphen. */
+.site-video__nowrap {
+  white-space: nowrap;
 }
 
 .site-video__lead {
-  max-width: 62ch;
   color: var(--c-text-muted);
   font-size: var(--fs-body-lg);
   line-height: var(--lh-normal);
@@ -185,8 +192,8 @@
 .site-video__signature {
   position: absolute;
   z-index: var(--z-content);
-  /* Hugs the content column on wide screens, the gutter on narrow ones. */
-  right: max(var(--gutter), calc(50% - var(--container-max) / 2));
+  /* Figma: 11px inside the content column's right edge (1349 vs 1360 at 1440). */
+  right: calc(max(var(--gutter), 50% - var(--container-max) / 2) + 11px);
   bottom: calc(var(--section-y) * 0.53);
   display: none;
   width: clamp(5.5rem, 4.542rem + 4.259vw, 8.375rem); /* 88 → 134px */
@@ -213,19 +220,6 @@
   height: 64.44%;
 }
 
-@keyframes site-video-pulse {
-  0% {
-    opacity: 0.55;
-    transform: scale(1);
-  }
-
-  70%,
-  100% {
-    opacity: 0;
-    transform: scale(1.75);
-  }
-}
-
 /* ── Breakpoints ───────────────────────────────────────────── */
 @media (min-width: 768px) {
   .site-video__signature {
@@ -237,6 +231,19 @@
   .site-video__inner {
     /* 600 + 64 + 616 = the 1280 content column, exactly as in Figma. */
     grid-template-columns: minmax(0, 600fr) minmax(0, 616fr);
+  }
+
+  /* Figma centres the text column on the band but sits the thumbnail 5px lower (106 vs 101). */
+  .site-video__media {
+    position: relative;
+    top: 5px;
+  }
+}
+
+@media (min-width: 1280px) {
+  /* ...and 8px to the right of the content column (x 88, not 80), which leaves a 56px gutter. */
+  .site-video__media {
+    left: 8px;
   }
 }
 
@@ -259,11 +266,4 @@
 .site-video__cta:active .site-video__cta-disc {
   background: var(--c-accent-active);
   transform: scale(0.96);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .site-video__badge::after {
-    animation: none;
-    opacity: 0;
-  }
 }

@@ -3,7 +3,7 @@ import type { SectionSchema } from '../schema';
 export interface RepertoireContent {
   heading: string;
   downloadLabel: string;
-  /** PDF/DOC with the full list. Empty = download pill hidden. */
+  /** PDF/DOC with the full list. Empty = the pill downloads a .txt generated from `tracks` in the browser. */
   fileUrl: string;
   /** «Исполнитель - Название», one per item, numbered automatically. */
   tracks: string[];
@@ -12,24 +12,69 @@ export interface RepertoireContent {
 }
 
 /**
- * Figma (354:2354) shows items 31–60 only — the designer deleted the first column, so those are the
- * 30 songs that exist. They ship WITHOUT their numbers: the site renders an <ol> and generates the
- * numbering, so adding or removing a song in the admin never leaves a hole in the sequence.
+ * The full list, 1–65, from three Figma text blocks of the open state (354:2354): 354:2377 (1–30),
+ * 354:2383 (31–60) and 354:2385 (61–65). The render shows only 31–60 (the other blocks sit outside
+ * the frame), but the three blocks continue each other without a gap, so together they are the list.
  *
- * Spelling is the client's and is preserved verbatim — «Stend dy me», «Banny Benassi», «въюга»,
- * «Zdob si zdub», lowercase titles after Cyrillic artists. The trailing «*» markers are kept too
- * (they flag names designated «иностранный агент»); their legend is the editable `footnote`.
+ * Node 355:2386 holds a second, DIFFERENT list (27 titles, 1–20 auto-numbered, then a typed «21.»,
+ * then 22–27). It does not fit 1–30 / 31–60 / 61–65, is not rendered and has no numbering of its
+ * own, so it is treated as an abandoned draft and ignored.
+ *
+ * The strings ship WITHOUT their numbers: the site renders an <ol>, so adding or removing a song in
+ * the admin never leaves a hole in the sequence (the numbers are the position in this array).
+ *
+ * Spelling is the client's and kept verbatim — lowercase titles after Cyrillic artists, hyphen/en dash
+ * mixed as drawn, «Zdob si zdub», «Beggin you», the trailing «*» markers (they flag names designated
+ * «иностранный агент»; their legend is the editable `footnote`). Only unambiguous typos are fixed:
+ *   – 34  «Stend dy me»            -> «Stand by me»          (John Lennon)
+ *   – 39  «январская въюга»        -> «январская вьюга»      («въюга» is not a Russian word)
+ *   – 24  «weeked game»            -> «Wicked game»          (Chris Isaak)
+ *   – 25, 26  «Michel Bublé»       -> «Michael Bublé»
+ *   – 52  «Banny Benassi»          -> «Benny Benassi»
+ *   – 28  «Brothers Moving- Minnie» -> «Brothers Moving - Minnie» (missing space before the dash)
  */
 const figmaTracks: string[] = [
+  // 1–30 (354:2377)
+  'Макс Корж - жить в кайф',
+  'Агата Кристи - Как на войне',
+  'Агутин, Пресняков - Аэропорты',
+  'Антон Токарев – 7 лепесток',
+  'Звери – районы-кварталы',
+  'Звери – танцуй',
+  'КиШ – прыгну со скалы',
+  'КиШ - камнем по голове',
+  'КиШ - кукла колдуна',
+  'Земляне – трава у дома',
+  'Юрий Шатунов - Белые розы',
+  'Юрий Шатунов - Седая ночь',
+  'Nautilus - Дыхание',
+  'HOLIDAYBOY – океаны',
+  'HOLIDAYBOY - пожары',
+  'Баста – Калифорния',
+  'Баста – crazy mzf love',
+  'Леприконсы – хали Гали',
+  'Рефлекс – нон-стоп',
+  'Ленинград - экспонат',
+  'Ленинград - начинаем отмечать! (Новый год)',
+  'Женя Трофимов - самолёты',
+  'Imagine dragons - demons',
+  'Chris Isaak - Wicked game',
+  'Michael Bublé - feeling good',
+  'Michael Bublé - Sway',
+  'Bill Withers - Ain’t no sunshine',
+  'Brothers Moving - Minnie the moocher',
+  'Maneskin - Beggin you (2 версии)',
+  'Annie Lennox - sweet dreams (2 версии)',
+  // 31–60 (354:2383)
   'The white stripes - Seven nation army',
   'Alex Clare - Caroline',
   'Alex Clare - Close to love you',
-  'John Lennon - Stend dy me',
+  'John Lennon - Stand by me',
   'The Animals - the house of the rising sun',
   'Федук - хлопья летят наверх',
   'Губин - ночь',
   'Отпетые мошенники - люби меня, люби',
-  'Нина Бродская - Звенит январская въюга',
+  'Нина Бродская - Звенит январская вьюга',
   'Зацепин, Золотухин - разговор со счастьем',
   'Евгений Крылатов - 3 белых коня',
   'Васюта (Сладкий сон) - на белом покрывале января',
@@ -42,7 +87,7 @@ const figmaTracks: string[] = [
   'Муслим Магомаев - синяя вечность (танцевальный cover)',
   'Чайф - 17 лет',
   'JONY - комета',
-  'Banny Benassi - Satisfaction',
+  'Benny Benassi - Satisfaction',
   'Звери - все что тебя касается',
   'Есенин - заметался пожар голубой',
   'Малинин - очи черные',
@@ -51,6 +96,12 @@ const figmaTracks: string[] = [
   'Zdob si zdub - видели ночь',
   'Баста - Сансара',
   'Антон Беляев (LAB) - Лететь',
+  // 61–65 (354:2385)
+  'Ваня Дмитриенко - Щёлк',
+  'Tom Jones, Mousse T. - Sexbomb',
+  'Дима Билан - номер один',
+  'MONATIK - то, от чего без ума*',
+  'Elvis Presley - can’t help falling in love',
 ];
 
 export const repertoireDefaults: RepertoireContent = {
@@ -61,6 +112,21 @@ export const repertoireDefaults: RepertoireContent = {
   tracks: figmaTracks,
   footnote: '',
 };
+
+/** Name of the generated list file when no `fileUrl` is set. */
+export const TRACK_LIST_FILENAME = 'vgul-repertuar.txt';
+
+/**
+ * Plain-text body of the generated list download: «1. Исполнитель - Название», one per line, the
+ * numbers taken from the position in the array (the same numbers the page shows), then the footnote
+ * (the legend for «*») when there is one. CRLF + BOM keep it readable in every Windows editor.
+ * Pure on purpose: the Blob / object URL part lives in the click handler, never in render.
+ */
+export function formatTrackListText(tracks: readonly string[], footnote = ''): string {
+  const lines = tracks.map((track, index) => `${index + 1}. ${track}`);
+  const legend = footnote.trim();
+  return `\uFEFF${lines.join('\r\n')}\r\n${legend ? `\r\n${legend.replace(/\r?\n/g, '\r\n')}\r\n` : ''}`;
+}
 
 /**
  * Href for a document the admin points at: an absolute http(s) URL or a site-relative path
@@ -83,7 +149,8 @@ export function toFileHref(url: string): string {
 export const repertoireSchema: SectionSchema = {
   id: 'repertoire',
   title: 'Репертуар',
-  description: 'Секция-аккордеон: закрытая — красный блок с логотипом, открытая — тёмный список песен.',
+  description:
+    'Секция-аккордеон. Закрытая — красный блок с заголовком, кнопкой «скачать список» и большим логотипом (клик по логотипу раскрывает список). Открытая — тёмный нумерованный список песен.',
   fields: [
     { kind: 'text', key: 'heading', label: 'Заголовок', hint: 'На сайте выводится заглавными буквами', maxLength: 40 },
     { kind: 'text', key: 'downloadLabel', label: 'Текст кнопки скачивания', maxLength: 40 },
@@ -92,7 +159,7 @@ export const repertoireSchema: SectionSchema = {
       key: 'fileUrl',
       label: 'Файл со списком песен',
       placeholder: '/uploads/repertoire.pdf',
-      hint: 'Ссылка на PDF или документ. Пусто — кнопка не выводится',
+      hint: 'Ссылка на PDF или документ. Пусто — кнопка скачивает автоматически собранный текстовый файл (.txt) со списком песен',
       maxLength: 500,
     },
     {

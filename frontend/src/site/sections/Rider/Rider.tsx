@@ -6,11 +6,9 @@ import { Reveal } from '../../components/ui/Reveal';
 import './Rider.css';
 
 /**
- * Райдер. The Figma frame (345:1402) is an empty red band with one word on it, so the body is
- * designed here: a dark #111 card with a red edge instead of a second red slab, because the section
- * sits directly under the repertoire block, which is brand red in its default (collapsed) state.
- *
- * Nothing is invented: with no text and no file the section renders nothing at all.
+ * Райдер. Figma 345:1402 is a full-width #ff3135 band with «РАЙДЕР» centred on it. The band always
+ * renders. The optional text and the download button appear only once the admin fills them, and
+ * they extend the band downwards; with neither, the band is exactly the Figma frame.
  */
 export function Rider() {
   const content = useSection('rider');
@@ -21,24 +19,24 @@ export function Rider() {
   const buttonLabel = content.buttonLabel.trim() || riderDefaults.buttonLabel;
   const heading = content.heading.trim() || riderDefaults.heading;
 
-  if (!text && !fileHref) return null;
-
   return (
     <section id="rider" className="site-section site-rider" aria-labelledby="rider-title">
-      <div className="site-container">
-        <Reveal className="site-rider__card">
-          <div className="site-rider__body">
-            <h2 id="rider-title" className="site-rider__title">
-              {heading}
-            </h2>
-            {text ? <p className="site-rider__text">{text}</p> : null}
-          </div>
-          {fileHref ? (
-            <Button href={fileHref} download variant="light" size="lg" className="site-rider__cta">
+      <div className="site-container site-rider__inner">
+        <Reveal as="h2" id="rider-title" className="site-rider__title">
+          {heading}
+        </Reveal>
+        {text ? (
+          <Reveal as="p" index={1} className="site-rider__text">
+            {text}
+          </Reveal>
+        ) : null}
+        {fileHref ? (
+          <Reveal index={2}>
+            <Button href={fileHref} download variant="light" size="lg">
               {buttonLabel}
             </Button>
-          ) : null}
-        </Reveal>
+          </Reveal>
+        ) : null}
       </div>
     </section>
   );

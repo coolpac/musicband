@@ -2,19 +2,16 @@ import type { SectionSchema } from '../schema';
 
 export interface FormatsContent {
   heading: string;
-  /** Text link under every card. Always points at /booking. */
-  linkLabel: string;
 }
 
 export const formatsDefaults: FormatsContent = {
   heading: 'Форматы выступлений',
-  linkLabel: 'Выбрать дату',
 };
 
 /**
  * A format as it ships with the site, used only while the admin collection is empty
  * (`SiteData.formats` === []). Photos are NOT part of this data: the section pairs the
- * bundled Figma photo to the card by index, so this file stays pure data and can be
+ * bundled Figma photo to a card by its name, so this file stays pure data and can be
  * imported by the admin bundle without dragging in image assets.
  */
 export interface FallbackFormat {
@@ -48,7 +45,7 @@ export const formatsSchema: SectionSchema = {
   id: 'formats',
   title: 'Форматы',
   description:
-    'Заголовок и подпись ссылки. Сами форматы (название, описание, фото) редактируются в общем списке форматов — он же используется в приложении и в форме брони.',
+    'Заголовок блока. Карточки (название, описание, фото) редактируются в общем списке форматов — он же используется в приложении и в форме брони. Если у формата нет своего фото, подставляется фото из макета по названию («Welcome», «По-новее русские», «Гангстеры»).',
   fields: [
     {
       kind: 'text',
@@ -56,14 +53,6 @@ export const formatsSchema: SectionSchema = {
       label: 'Заголовок',
       hint: 'Белый заголовок по центру, поверх красной волны.',
       maxLength: 80,
-    },
-    {
-      kind: 'text',
-      key: 'linkLabel',
-      label: 'Подпись ссылки на карточке',
-      hint: 'Ведёт на страницу брони /booking. Например «Выбрать дату».',
-      placeholder: 'Выбрать дату',
-      maxLength: 32,
     },
   ],
 };

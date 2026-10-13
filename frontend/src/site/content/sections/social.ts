@@ -42,15 +42,19 @@ export const socialDefaults: SocialContent = {
   heading: 'Мы в социальных сетях',
   // Verbatim from Figma (345:1437).
   text: 'Подпишитесь на нас и следите за новыми шоу, репетициями и закулисными моментами.',
-  // Figma draws four buttons with no links behind them: nothing is shipped until the real
-  // profiles are known — a button that leads nowhere is worse than no button.
-  links: [],
+  // The band's real profiles, in Figma's icon order (VK, Telegram, YouTube, Instagram). YouTube has
+  // no profile yet, so it is left out rather than linked to a guess.
+  links: [
+    { network: 'vk', url: 'https://vk.ru/vgulvgul' },
+    { network: 'telegram', url: 'https://t.me/vgulcover' },
+    { network: 'instagram', url: 'https://www.instagram.com/lementaliygroup' },
+  ],
 };
 
 export const socialSchema: SectionSchema = {
   id: 'social',
   title: 'Соцсети',
-  description: 'Кнопка появляется только у тех сетей, где заполнена ссылка. Нет ни одной ссылки — секция не выводится.',
+  description: 'Заголовок и подпись выводятся всегда. Кнопка появляется только у тех сетей, где заполнена ссылка.',
   fields: [
     { kind: 'text', key: 'heading', label: 'Заголовок', maxLength: 60 },
     { kind: 'textarea', key: 'text', label: 'Подпись', rows: 2, maxLength: 300 },

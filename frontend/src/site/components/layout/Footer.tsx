@@ -8,7 +8,10 @@ import { Reveal } from '../ui/Reveal';
 import { Logo } from './Logo';
 import './Footer.css';
 
-/** Order of the «Документы» column; each one appears only once its text is filled in. */
+/**
+ * Order of the «Документы» column, as in Figma. Titles come from `legal`; a document with an empty body
+ * 404s (see `legal.ts`), so only filled-in documents are linked and the column needs at least one.
+ */
 const LEGAL_DOCS = [
   { key: 'privacy', path: '/privacy' },
   { key: 'terms', path: '/terms' },
@@ -16,20 +19,21 @@ const LEGAL_DOCS = [
 ] as const;
 
 /**
- * Site footer (Figma 345:1451): brand block + three link columns, hairline, centred copyright.
- * Everything data-driven disappears when empty — the Figma placeholders («hello@vgul.ru»,
+ * Site footer (Figma 345:1451): brand block + «Навигация» / «Документы» / «Контакты» columns,
+ * hairline, centred copyright. The contacts column is data-driven and disappears while the
+ * admin has not entered a phone or an e-mail — the Figma placeholders («hello@vgul.ru»,
  * «+7 (999) 123-45-67») are not defaults anywhere, so an unconfigured site shows no fake contacts.
  */
 export function Footer() {
   const data = useSiteData();
-  const { footer, header, contacts, legal } = data.content;
+  const { footer, contacts, legal } = data.content;
 
   const tagline = footer.tagline.trim();
-  const nav = visibleNav(sanitizeNav(header.nav), data);
-  const docs = LEGAL_DOCS.filter((doc) => legal[doc.key].body.trim().length > 0);
+  const nav = visibleNav(sanitizeNav(footer.nav), data);
   const phone = contacts.phone.trim();
   const phoneHref = phoneToHref(phone);
   const email = contacts.email.trim();
+  const docs = LEGAL_DOCS.filter((doc) => legal[doc.key].body.trim());
   const mailable = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   // Server and client agree on this except for a few hours around New Year (and in the static

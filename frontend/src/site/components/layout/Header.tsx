@@ -27,7 +27,8 @@ const SOCIAL_LABELS: Record<SocialNetwork, string> = {
 const MAX_STAGGER = 5;
 
 /**
- * Fixed site header (Figma 345:1298 for the bar, 355:2414 for the logo lock-up).
+ * Fixed site header (Figma 345:1298): wordmark left, five uppercase nav links centred,
+ * phone + red pill CTA right. The phone is the `contacts.phone` field — empty means no phone.
  *
  * One nav lives in the DOM and CSS decides what it is: a centred row at ≥1024px, a
  * full-screen dialog behind the burger below it, and a plain stacked list when JS never
@@ -96,8 +97,8 @@ export function Header() {
 
   return (
     <header className={className}>
-      <div className="site-header__bar site-container">
-        <Logo className="site-header__logo" />
+      <div className="site-header__bar">
+        <Logo variant="wordmark" className="site-header__logo" />
 
         {/* Nothing to reveal — no nav, no phone, no CTA, no socials — means no burger either. */}
         {hasMenu ? (

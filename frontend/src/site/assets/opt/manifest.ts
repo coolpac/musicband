@@ -172,7 +172,7 @@ export const siteImages = {
     height: 2160,
     avif: [{ w: 480, url: video_video_thumbnail_band_480_avif }, { w: 768, url: video_video_thumbnail_band_768_avif }, { w: 1080, url: video_video_thumbnail_band_1080_avif }, { w: 1440, url: video_video_thumbnail_band_1440_avif }, { w: 1920, url: video_video_thumbnail_band_1920_avif }, { w: 2560, url: video_video_thumbnail_band_2560_avif }],
     webp: [{ w: 480, url: video_video_thumbnail_band_480_webp }, { w: 768, url: video_video_thumbnail_band_768_webp }, { w: 1080, url: video_video_thumbnail_band_1080_webp }, { w: 1440, url: video_video_thumbnail_band_1440_webp }, { w: 1920, url: video_video_thumbnail_band_1920_webp }, { w: 2560, url: video_video_thumbnail_band_2560_webp }],
-    placeholder: 'data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAADQAwCdASoUAAsAPu1iqU2ppaQiMAgBMB2JbAC06CHceG6sAEFhChgA/vGAbKApJ73DdjMsKYZp/B0oWyD6ibyDDiwvKNSegcGw2p4sJEoAAA==',
+    placeholder: 'data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAAAwBACdASoUAAsAPu1iqk2ppaQiMAgBMB2JaAC1CIjDA1zCOxCQkPN3jIAA/vGAbJzU3UzwhSTF7YzObVyTH9uG7lOJtiNOwiQH0R2E8mfunyAA',
     color: '#080808',
   },
   'why-us/why-us-band-bg': {
