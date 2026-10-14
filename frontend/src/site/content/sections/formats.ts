@@ -2,11 +2,26 @@ import type { SectionSchema } from '../schema';
 
 export interface FormatsContent {
   heading: string;
+  /**
+   * Names of formats from the shared collection that the website does not show (case-insensitive,
+   * whole name). The Mini App and the booking form are unaffected — they read the collection directly.
+   */
+  hiddenNames: string[];
 }
 
 export const formatsDefaults: FormatsContent = {
   heading: 'Форматы выступлений',
+  // The owner wants the site to show only the three formats drawn in Figma; «Дуэт» stays bookable in the app.
+  hiddenNames: ['Дуэт'],
 };
+
+const normaliseName = (name: string) => name.trim().replace(/\s+/g, ' ').toLocaleLowerCase('ru');
+
+/** True when `name` is listed in `hiddenNames` (same normalisation on both sides). */
+export function isHiddenFormat(name: string, hiddenNames: readonly string[]): boolean {
+  const target = normaliseName(name);
+  return hiddenNames.some((hidden) => typeof hidden === 'string' && hidden.trim() !== '' && normaliseName(hidden) === target);
+}
 
 /**
  * A format as it ships with the site, used only while the admin collection is empty
@@ -53,6 +68,14 @@ export const formatsSchema: SectionSchema = {
       label: 'Заголовок',
       hint: 'Белый заголовок по центру, поверх красной волны.',
       maxLength: 80,
+    },
+    {
+      kind: 'stringList',
+      key: 'hiddenNames',
+      label: 'Не показывать на сайте',
+      hint: 'Названия форматов из общего списка, которые сайт скрывает — по одному в строке, точно как в списке форматов (регистр не важен). В приложении и при бронировании они остаются.',
+      itemPlaceholder: 'Дуэт',
+      maxItems: 20,
     },
   ],
 };

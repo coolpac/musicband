@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useSection, useSiteData } from '../../content/SiteDataContext';
-import { fallbackFormats } from '../../content/sections/formats';
+import { fallbackFormats, isHiddenFormat } from '../../content/sections/formats';
 import { Picture, type OptimizedImage } from '../../components/ui/Picture';
 import { Reveal } from '../../components/ui/Reveal';
 import { siteImages } from '../../assets/opt/manifest';
@@ -52,8 +52,8 @@ function renderName(name: string): ReactNode {
   );
 }
 
-function toCards(formats: SiteFormat[]): SiteFormat[] {
-  if (formats.length) return formats.filter((format) => format.name.trim());
+function toCards(formats: SiteFormat[], hiddenNames: readonly string[]): SiteFormat[] {
+  if (formats.length) return formats.filter((format) => format.name.trim() && !isHiddenFormat(format.name, hiddenNames));
   return fallbackFormats.map((format, index) => ({
     id: `default-${index}`,
     name: format.name,
@@ -71,7 +71,7 @@ function toCards(formats: SiteFormat[]): SiteFormat[] {
 export function Formats() {
   const content = useSection('formats');
   const { formats } = useSiteData();
-  const cards = toCards(formats);
+  const cards = toCards(formats, content.hiddenNames);
   const heading = content.heading.trim();
   if (!cards.length) return null;
 
